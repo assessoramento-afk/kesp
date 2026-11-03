@@ -159,6 +159,7 @@ window.KESP_BUSCA = (function () {
     if (m.id === 'andamento') return pagAndamento();
     if (m.id === 'usuarios' && window.KESP_USUARIOS) return window.KESP_USUARIOS.abrir(sb, eu);
     if (m.id === 'kolping' && window.KESP_KOLPING) return window.KESP_KOLPING.abrir(sb, eu);
+    if (m.id === 'sistema' && window.KESP_SISTEMA) return window.KESP_SISTEMA.abrir(sb, eu);
     pagConstrucao(m);
     window.scrollTo(0, 0);
   }
@@ -440,4 +441,84 @@ window.KESP_BUSCA = (function () {
   }
 
   window.KESP_KOLPING = { async abrir(cliente, perfil) { sb = cliente; eu = perfil; verBanco = false; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>'; await carregar(); render(); } };
+})();
+
+// ===================== Sistema (saúde, módulos e cópia) =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const TABELAS = ['kolping_cadastro', 'kolping_dados_bancarios', 'unidades', 'perfis', 'permissoes', 'modelos_cargo', 'funcoes', 'modulos', 'dominios_permitidos', 'convites', 'avisos', 'novidades', 'trilha_concluida', 'historico_permissoes', 'historico_cadastro', 'erros_sistema'];
+  const SIT = { em_breve: 'Em breve', ativo: 'Ativo', manutencao: 'Em manutenção' };
+  let sb, eu, aba = 'saude';
+
+  function render() {
+    const pg = document.getElementById('pg');
+    pg.innerHTML = `<h1>Sistema</h1><p class="sub">Painel de Controle · saúde, módulos e cópias de segurança</p>
+      <div class="abas"><a data-a="saude" class="${aba === 'saude' ? 'on' : ''}">Saúde</a><a data-a="modulos" class="${aba === 'modulos' ? 'on' : ''}">Módulos</a><a data-a="copia" class="${aba === 'copia' ? 'on' : ''}">Cópia</a></div><div id="cont"><p class="sm">Carregando…</p></div>`;
+    pg.querySelectorAll('[data-a]').forEach(x => x.onclick = () => { aba = x.dataset.a; render(); });
+    ({ saude: abaSaude, modulos: abaModulos, copia: abaCopia })[aba]();
+  }
+
+  async function abaSaude() {
+    const sete = new Date(Date.now() - 7 * 864e5).toISOString();
+    const [er, er7, at, ag, pf] = await Promise.all([
+      sb.from('erros_sistema').select('*').order('criado_em', { ascending: false }).limit(30),
+      sb.from('erros_sistema').select('id', { count: 'exact', head: true }).gte('criado_em', sete),
+      sb.from('perfis').select('id', { count: 'exact', head: true }).eq('situacao', 'ativo'),
+      sb.from('perfis').select('id', { count: 'exact', head: true }).eq('situacao', 'aguardando'),
+      sb.from('perfis').select('id,nome,email')
+    ]);
+    const nome = id => { const p = (pf.data || []).find(x => x.id === id); return p ? (p.nome || p.email) : 'sem login'; };
+    let ultima = null; try { ultima = localStorage.getItem('kesp.ultimaCopia'); } catch (_) {}
+    const diasCopia = ultima ? Math.floor((Date.now() - new Date(ultima)) / 864e5) : null;
+    const n7 = er7.count || 0;
+    document.getElementById('cont').innerHTML = `<div class="g4">
+      <div class="cd" style="--c:${n7 ? '#E5484D' : '#22C984'}"><div class="hd"><span>ERROS · 7 DIAS</span></div><div class="big">${n7}</div><div class="sm">${n7 ? 'veja a lista abaixo' : 'tudo funcionando'}</div></div>
+      <div class="cd" style="--c:#3B82F6"><div class="hd"><span>USUÁRIOS</span></div><div class="big">${at.count || 0}</div><div class="sm">ativos · ${ag.count || 0} aguardando</div></div>
+      <div class="cd" style="--c:#6E6A7C"><div class="hd"><span>KAI</span><span class="pl" style="background:rgba(255,255,255,.08);color:#A8A3B4">Em construção</span></div><div class="sm" style="margin-top:6px">Chega na próxima parte da etapa 1A</div></div>
+      <div class="cd" style="--c:${diasCopia === null || diasCopia > 7 ? '#F5A524' : '#22C984'}"><div class="hd"><span>ÚLTIMA CÓPIA</span></div><div class="big">${diasCopia === null ? '—' : diasCopia === 0 ? 'Hoje' : diasCopia + ' dia' + (diasCopia > 1 ? 's' : '')}</div><div class="sm">${diasCopia === null || diasCopia > 7 ? 'faça uma cópia na aba Cópia' : 'neste computador'}</div></div>
+      <div class="cd s4" style="--c:#E5484D"><div class="hd"><span>ERROS REGISTRADOS</span><span>últimos 30</span></div>
+        ${(er.data || []).map(e => `<div class="lin"><b style="font-size:13px">${esc(e.mensagem)}</b><div class="sm">${esc(e.tela || '—')} · ${esc(nome(e.perfil_id))} · ${new Date(e.criado_em).toLocaleString('pt-BR')}</div>${e.detalhe ? `<div class="sm">${esc(e.detalhe)}</div>` : ''}</div>`).join('') || '<p class="sm" style="margin:0">Nenhum erro registrado.</p>'}</div></div>`;
+  }
+
+  async function abaModulos() {
+    const { data } = await sb.from('modulos').select('*').order('ordem');
+    const c = document.getElementById('cont');
+    c.innerHTML = `<p class="sm">Use "Em manutenção" para desligar um módulo temporariamente. O restante do KESP continua funcionando.</p>` + (data || []).map(m => `<div class="pe fm" style="--c:${m.situacao === 'ativo' ? '#22C984' : m.situacao === 'manutencao' ? '#F5A524' : '#6E6A7C'};flex-wrap:wrap" data-m="${m.id}">
+      <div style="flex:1;min-width:160px"><b>${esc(m.nome)}</b><div class="sm">${esc(m.secao)} · etapa ${esc(m.etapa)}</div></div>
+      <select name="situacao" style="width:auto">${Object.entries(SIT).map(([k, v]) => `<option value="${k}"${m.situacao === k ? ' selected' : ''}>${v}</option>`).join('')}</select>
+      <input name="percentual" type="number" min="0" max="100" value="${m.percentual}" style="width:74px" aria-label="Percentual">
+      <div class="mt" style="width:100%;display:${m.situacao === 'manutencao' ? 'grid' : 'none'};grid-template-columns:1fr 160px;gap:8px"><input name="motivo_manutencao" placeholder="Motivo" value="${esc(m.motivo_manutencao || '')}"><input name="previsao_retorno" type="date" value="${m.previsao_retorno || ''}"></div>
+      <button class="mini" data-salvar>Salvar</button></div>`).join('');
+    c.querySelectorAll('[data-m]').forEach(row => {
+      const sel = row.querySelector('[name="situacao"]');
+      sel.onchange = () => { row.querySelector('.mt').style.display = sel.value === 'manutencao' ? 'grid' : 'none'; };
+      row.querySelector('[data-salvar]').onclick = async () => {
+        const v = { situacao: sel.value, percentual: Math.max(0, Math.min(100, parseInt(row.querySelector('[name="percentual"]').value, 10) || 0)),
+          motivo_manutencao: sel.value === 'manutencao' ? (row.querySelector('[name="motivo_manutencao"]').value.trim() || null) : null,
+          previsao_retorno: sel.value === 'manutencao' ? (row.querySelector('[name="previsao_retorno"]').value || null) : null };
+        const r = await sb.from('modulos').update(v).eq('id', row.dataset.m);
+        if (r.error) { alert('Não foi possível salvar.'); return; }
+        const b = row.querySelector('[data-salvar]'); b.textContent = 'Salvo ✓'; setTimeout(() => { location.reload(); }, 700);
+      };
+    });
+  }
+
+  function abaCopia() {
+    document.getElementById('cont').innerHTML = `<div class="cd" style="--c:#3B82F6;max-width:640px"><div class="hd"><span>CÓPIA DE SEGURANÇA</span></div>
+      <p style="margin:0 0 10px;line-height:1.55">Baixa um arquivo com <b>todos os dados do KESP</b> (cadastros, usuários, permissões, avisos e históricos). Guarde em local seguro, como a pasta "99 Sistema" do Drive. Recomendação: <b>uma vez por semana</b>, até a cópia automática para o Google Drive chegar na etapa 1B.</p>
+      <p class="sm" style="margin:0 0 12px">O arquivo contém dados pessoais e bancários: não envie por WhatsApp nem e-mail.</p>
+      <button class="btn" id="baixar">Baixar cópia agora</button><p class="sm" id="st" style="margin:10px 0 0"></p></div>`;
+    document.getElementById('baixar').onclick = async () => {
+      const st = document.getElementById('st'), b = document.getElementById('baixar'); b.disabled = true;
+      const copia = { sistema: 'KESP', versao: '1A', gerado_em: new Date().toISOString(), gerado_por: eu.email, tabelas: {} };
+      for (const t of TABELAS) { st.textContent = 'Copiando ' + t + '…'; const r = await sb.from(t).select('*'); copia.tabelas[t] = r.error ? { erro: r.error.message } : r.data; }
+      const blob = new Blob([JSON.stringify(copia, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'KESP_copia_' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); a.remove();
+      try { localStorage.setItem('kesp.ultimaCopia', new Date().toISOString()); } catch (_) {}
+      st.textContent = 'Cópia baixada: ' + TABELAS.length + ' tabelas.'; b.disabled = false;
+    };
+  }
+
+  window.KESP_SISTEMA = { abrir(cliente, perfil) { sb = cliente; eu = perfil; aba = 'saude'; render(); } };
 })();
