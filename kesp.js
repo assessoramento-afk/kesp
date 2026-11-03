@@ -30,8 +30,12 @@
   }
   function ocupado(form, sim) { form.querySelectorAll('button').forEach(b => (b.disabled = sim)); }
 
+  function tirarSplash() { const sp = document.getElementById('splash'); if (sp && !sp.classList.contains('sai')) { sp.classList.add('sai'); setTimeout(() => sp.remove(), 300); } }
+  function mostrarColmeia(sim) { document.getElementById('colmeia').style.display = sim ? 'block' : 'none'; }
+
   // ---------- Telas ----------
   function telaEntrar(aviso) {
+    mostrarColmeia(true); tirarSplash();
     app.innerHTML = `${topo()}<form class="cartao" id="f" novalidate>
       ${aviso || ''}
       <label for="em">E-mail</label><input id="em" type="email" autocomplete="username" placeholder="seu.nome@kolpingsp.org" required>
@@ -93,6 +97,7 @@
   }
 
   function telaNovaSenha() {
+    mostrarColmeia(true); tirarSplash();
     app.innerHTML = `${topo()}<form class="cartao" id="f" novalidate>
       <h2>Criar nova senha</h2>
       <label for="pw">Nova senha (mínimo 8 caracteres)</label><input id="pw" type="password" autocomplete="new-password" minlength="8" required>
@@ -114,6 +119,7 @@
   }
 
   function telaAguardando(perfil) {
+    mostrarColmeia(true); tirarSplash();
     const recusado = perfil.situacao === 'recusado' || perfil.situacao === 'desativado';
     const data = new Date(perfil.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     app.innerHTML = `${topo()}<div class="cartao" style="text-align:center">
@@ -132,13 +138,13 @@
   }
 
   function telaInicio(perfil) {
-    document.getElementById('colmeia').style.display = 'none';
-    window.KESP_APP.iniciar(sb, perfil, () => { document.getElementById('colmeia').style.display = ''; });
+    mostrarColmeia(false);
+    window.KESP_APP.iniciar(sb, perfil).then(tirarSplash, tirarSplash);
   }
 
   // ---------- Fluxo ----------
   async function decidir(session) {
-    if (!session) { document.getElementById('colmeia').style.display = ''; document.body.classList.remove('logado'); return telaEntrar(); }
+    if (!session) { document.body.classList.remove('logado'); return telaEntrar(); }
     const { data: perfil, error } = await sb.from('perfis').select('*').eq('id', session.user.id).maybeSingle();
     if (error || !perfil) { await registrarErro('login', error || 'perfil não encontrado'); return telaEntrar(msg('Não encontramos seu cadastro. Fale com ' + C.admins + '.')); }
     if (perfil.situacao !== 'ativo') return telaAguardando(perfil);

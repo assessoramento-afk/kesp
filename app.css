@@ -107,3 +107,11 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
 .lk{color:#FFB070;cursor:pointer;letter-spacing:0}
 @media (max-width:1100px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g4 .s4{grid-column:span 2}}
 @media (max-width:640px){.g4{grid-template-columns:1fr}.g4 .s2,.g4 .s4{grid-column:span 1}.acm{grid-template-columns:1fr}}
+.big{min-height:1.3em}
+/* Cadastro da Kolping */
+.kv{display:grid;grid-template-columns:minmax(120px,38%) 1fr;gap:6px 12px;font-size:13px}
+.kv span:nth-child(odd){color:#A8A3B4}
+.fm label{display:block;font-size:11px;color:#A8A3B4;margin:8px 0 3px}
+.fm input,.fm select{width:100%;padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-size:14px;margin:0}
+.fm .dois{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.restr{font-size:10px;padding:2px 8px;border-radius:9px;background:rgba(229,72,77,.15);color:#FF9A9D}

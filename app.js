@@ -137,6 +137,7 @@
     if (m.id === 'inicio') return pagInicio();
     if (m.id === 'andamento') return pagAndamento();
     if (m.id === 'usuarios' && window.KESP_USUARIOS) return window.KESP_USUARIOS.abrir(sb, eu);
+    if (m.id === 'kolping' && window.KESP_KOLPING) return window.KESP_KOLPING.abrir(sb, eu);
     pagConstrucao(m);
     window.scrollTo(0, 0);
   }
@@ -169,8 +170,8 @@
   }
 
   window.KESP_APP = {
-    async iniciar(cliente, perfil, aoSair) {
-      sb = cliente; eu = perfil; sair = aoSair;
+    async iniciar(cliente, perfil) {
+      sb = cliente; eu = perfil;
       try { await carregar(); } catch (e) { try { await sb.from('erros_sistema').insert({ tela: 'inicio', mensagem: String(e && e.message || e) }); } catch (_) {} }
       moldura();
       window.onhashchange = rota; rota();
@@ -335,4 +336,84 @@
   }
 
   window.KESP_USUARIOS = { async abrir(cliente, perfil) { sb = cliente; eu = perfil; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>'; await carregar(); render(); } };
+})();
+
+// ===================== Cadastro da Kolping Estadual =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let sb, eu, k = {}, bancos = null, unidades = [], pessoas = [], verBanco = false;
+  const linha = (r, v) => `<span>${esc(r)}</span><span>${v ? esc(v) : '<span class="sm">—</span>'}</span>`;
+
+  async function carregar() {
+    const [a, u, p] = await Promise.all([
+      sb.from('kolping_cadastro').select('*').eq('id', 1).maybeSingle(),
+      sb.from('unidades').select('*').order('ordem'),
+      sb.from('perfis').select('id,nome,email').eq('situacao', 'ativo').order('nome')
+    ]);
+    k = a.data || {}; unidades = u.data || []; pessoas = p.data || [];
+    const b = await sb.from('kolping_dados_bancarios').select('*').eq('id', 1).maybeSingle();
+    bancos = b.data || null;
+  }
+  const nomePessoa = id => { const p = pessoas.find(x => x.id === id); return p ? (p.nome || p.email) : ''; };
+
+  function render() {
+    const pg = document.getElementById('pg');
+    const end = [k.logradouro, k.numero].filter(Boolean).join(', ') + (k.bairro ? ' – ' + k.bairro : '');
+    const dir = Array.isArray(k.diretoria) ? k.diretoria : [];
+    const tit = Array.isArray(k.titulos) ? k.titulos : [];
+    pg.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap"><div><h1>Kolping Estadual</h1><p class="sub">Painel de Controle · Cadastro${k.atualizado_em ? ' · atualizado em ' + new Date(k.atualizado_em).toLocaleDateString('pt-BR') : ''}</p></div>${eu.admin ? '<button class="btn" id="edK">Editar</button>' : ''}</div>
+      <div class="g4">
+        <div class="cd s2" style="--c:#F07830"><div class="hd"><span>IDENTIFICAÇÃO</span></div><div class="kv">${linha('Razão social', k.razao_social)}${linha('CNPJ', k.cnpj)}${linha('Presidente', k.presidente)}</div></div>
+        <div class="cd s2" style="--c:#3B82F6"><div class="hd"><span>CONTATO E ENDEREÇO</span></div><div class="kv">${linha('Telefones', [k.telefone, k.telefone2].filter(Boolean).join(' / '))}${linha('E-mail', k.email)}${linha('Site', k.site)}${linha('Facebook', k.facebook)}${linha('Endereço', end)}${linha('Cidade', [k.cidade, k.uf].filter(Boolean).join(' – ') + (k.cep ? ', ' + k.cep : ''))}</div></div>
+        <div class="cd s2" style="--c:#22C984"><div class="hd"><span>UNIDADES</span></div>${unidades.map(u => `<div class="lin" style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><b>${esc(u.nome)}</b>${u.principal ? ' <span class="pl" style="background:rgba(240,120,48,.15);color:#FFB070">Principal</span>' : ''}<div class="sm">${esc([u.logradouro, u.numero].filter(Boolean).join(', ') || 'Endereço a cadastrar')}${u.bairro ? ' – ' + esc(u.bairro) : ''}${u.cidade ? ' · ' + esc(u.cidade) : ''}</div><div class="sm">Responsável: ${esc(nomePessoa(u.responsavel) || 'a definir')}</div></div>${eu.admin ? `<button class="mini neu" data-un="${u.id}">Editar</button>` : ''}</div>`).join('')}</div>
+        <div class="cd s2" style="--c:#8B5CF6"><div class="hd"><span>DIRETORIA · IDENTIDADE VISUAL · TÍTULOS</span></div><div class="kv">${linha('Presidente', k.presidente)}${dir.map(d => linha(d.cargo, d.nome)).join('')}${linha('Logo oficial', 'Em uso nos documentos')}${linha('Títulos e certificações', tit.length ? tit.length + ' cadastrado(s)' : '')}</div></div>
+        <div class="cd s4" style="--c:#E5484D"><div class="hd"><span>DADOS BANCÁRIOS</span><span class="restr"><i class="ti ti-lock"></i> Restrito</span></div>
+          ${bancos ? (verBanco ? `<div class="kv">${linha('Banco', bancos.banco)}${linha('Agência', bancos.agencia)}${linha('Conta', bancos.conta)}${linha('Chave PIX', bancos.chave_pix)}</div>${eu.admin ? '<button class="mini neu" id="edB" style="margin-top:8px">Editar dados bancários</button>' : ''}` : '<a class="lk" id="verB">Toque para ver</a>') : '<p class="sm" style="margin:0">Visível só para quem tem a permissão.</p>'}</div>
+      </div>`;
+    const v = document.getElementById('verB'); if (v) v.onclick = () => { verBanco = true; render(); };
+    const e = document.getElementById('edK'); if (e) e.onclick = editarKolping;
+    const eb = document.getElementById('edB'); if (eb) eb.onclick = editarBancos;
+    pg.querySelectorAll('[data-un]').forEach(b => b.onclick = () => editarUnidade(unidades.find(u => u.id === b.dataset.un)));
+  }
+
+  function modal(titulo, campos, aoSalvar) {
+    const d = document.createElement('div'); d.className = 'conf';
+    d.innerHTML = `<div class="cx fm" style="max-width:520px;max-height:90vh;overflow-y:auto"><b>${esc(titulo)}</b>${campos}<div style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok>Salvar</button></div></div>`;
+    document.body.appendChild(d);
+    d.querySelector('[data-x]').onclick = () => d.remove();
+    d.querySelector('[data-ok]').onclick = async () => {
+      const val = {}; d.querySelectorAll('[name]').forEach(i => (val[i.name] = i.value.trim() || null));
+      const btn = d.querySelector('[data-ok]'); btn.disabled = true;
+      const r = await aoSalvar(val); btn.disabled = false;
+      if (r && r.cancel) return;
+      if (r && r.error) { alert('Não foi possível salvar. Tente de novo.'); try { await sb.from('erros_sistema').insert({ tela: 'kolping', mensagem: r.error.message }); } catch (_) {} return; }
+      d.remove(); await carregar(); render();
+    };
+  }
+  const campo = (n, r, v, t) => `<label>${esc(r)}</label><input name="${n}" value="${esc(v || '')}"${t ? ` type="${t}"` : ''}>`;
+
+  function editarKolping() {
+    modal('Editar cadastro da Kolping', `${campo('razao_social', 'Razão social', k.razao_social)}${campo('cnpj', 'CNPJ', k.cnpj)}${campo('presidente', 'Presidente', k.presidente)}
+      <div class="dois"><div>${campo('telefone', 'Telefone', k.telefone)}</div><div>${campo('telefone2', 'Telefone 2', k.telefone2)}</div></div>
+      ${campo('email', 'E-mail', k.email, 'email')}<div class="dois"><div>${campo('site', 'Site', k.site)}</div><div>${campo('facebook', 'Facebook', k.facebook)}</div></div>
+      <div class="dois"><div>${campo('logradouro', 'Rua', k.logradouro)}</div><div>${campo('numero', 'Número', k.numero)}</div></div>
+      <div class="dois"><div>${campo('bairro', 'Bairro', k.bairro)}</div><div>${campo('cep', 'CEP', k.cep)}</div></div>
+      <div class="dois"><div>${campo('cidade', 'Cidade', k.cidade)}</div><div>${campo('uf', 'UF', k.uf)}</div></div>`,
+      val => { if (!val.razao_social || !val.cnpj) { alert('Razão social e CNPJ são obrigatórios.'); return { error: null, cancel: true }; } return sb.from('kolping_cadastro').update(val).eq('id', 1); });
+  }
+  function editarBancos() {
+    const b = bancos || {};
+    modal('Editar dados bancários', `${campo('banco', 'Banco', b.banco)}<div class="dois"><div>${campo('agencia', 'Agência', b.agencia)}</div><div>${campo('conta', 'Conta', b.conta)}</div></div>${campo('chave_pix', 'Chave PIX', b.chave_pix)}`,
+      val => sb.from('kolping_dados_bancarios').update(val).eq('id', 1));
+  }
+  function editarUnidade(u) {
+    const opts = '<option value="">A definir</option>' + pessoas.map(p => `<option value="${p.id}"${u.responsavel === p.id ? ' selected' : ''}>${esc(p.nome || p.email)}</option>`).join('');
+    modal('Editar ' + u.nome, `<div class="dois"><div>${campo('logradouro', 'Rua', u.logradouro)}</div><div>${campo('numero', 'Número', u.numero)}</div></div>
+      <div class="dois"><div>${campo('bairro', 'Bairro', u.bairro)}</div><div>${campo('cep', 'CEP', u.cep)}</div></div>${campo('cidade', 'Cidade', u.cidade)}
+      <label>Responsável</label><select name="responsavel">${opts}</select>`,
+      val => sb.from('unidades').update(val).eq('id', u.id));
+  }
+
+  window.KESP_KOLPING = { async abrir(cliente, perfil) { sb = cliente; eu = perfil; verBanco = false; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>'; await carregar(); render(); } };
 })();
