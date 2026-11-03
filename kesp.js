@@ -132,17 +132,13 @@
   }
 
   function telaInicio(perfil) {
-    // Provisório: o Início completo é a próxima parte da construção
-    app.innerHTML = `${topo()}<div class="cartao" style="text-align:center">
-      <h2>Bem-vindo(a), ${esc((perfil.nome || perfil.email).split(' ')[0])}!</h2>
-      <p class="texto">Login funcionando. O Início do KESP chega na próxima parte da construção.</p>
-      <button class="botao sec" id="sair">Sair</button></div>${rodape}`;
-    document.getElementById('sair').onclick = () => sb.auth.signOut();
+    document.getElementById('colmeia').style.display = 'none';
+    window.KESP_APP.iniciar(sb, perfil, () => { document.getElementById('colmeia').style.display = ''; });
   }
 
   // ---------- Fluxo ----------
   async function decidir(session) {
-    if (!session) return telaEntrar();
+    if (!session) { document.getElementById('colmeia').style.display = ''; document.body.classList.remove('logado'); return telaEntrar(); }
     const { data: perfil, error } = await sb.from('perfis').select('*').eq('id', session.user.id).maybeSingle();
     if (error || !perfil) { await registrarErro('login', error || 'perfil não encontrado'); return telaEntrar(msg('Não encontramos seu cadastro. Fale com ' + C.admins + '.')); }
     if (perfil.situacao !== 'ativo') return telaAguardando(perfil);
