@@ -71,7 +71,8 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
 .bloco{background:linear-gradient(160deg,#1B2332,#141B27);border-radius:14px;padding:12px;margin-bottom:12px;box-shadow:0 4px 10px rgba(0,0,0,.35)}
 .tab{overflow-x:auto}
 .tg{display:grid;align-items:center;gap:6px 8px;min-width:max-content}
-.tg .nm{font-size:13px;position:sticky;left:0;background:#171E2C;padding-right:8px;z-index:1;min-width:180px;max-width:220px}
+.tg .nm{font-size:13px;padding-right:8px;min-width:180px;max-width:220px}
+@media (max-width:860px){.tg .nm{position:sticky;left:0;z-index:1;background:#182031}}
 .tg .ds{font-size:11px;color:#8E899A}
 .tg .col{text-align:center;font-size:11px;color:#A8A3B4;width:64px}
 .chv{width:50px;height:28px;border-radius:14px;position:relative;cursor:pointer;padding:0;margin:0 auto;display:block;transition:all .25s}

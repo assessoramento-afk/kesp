@@ -1,3 +1,24 @@
+// ===================== Busca de CEP e CNPJ =====================
+window.KESP_BUSCA = (function () {
+  const so = v => String(v || '').replace(/\D/g, '');
+  const mCEP = v => { const d = so(v).slice(0, 8); return d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; };
+  const mCNPJ = v => { const d = so(v).slice(0, 14); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2'); };
+  async function cep(v) { const d = so(v); if (d.length !== 8) return null; try { const r = await fetch('https://viacep.com.br/ws/' + d + '/json/'); const j = await r.json(); return j.erro ? null : { logradouro: j.logradouro, bairro: j.bairro, cidade: j.localidade, uf: j.uf }; } catch (_) { return null; } }
+  async function cnpj(v) { const d = so(v); if (d.length !== 14) return null; try { const r = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + d); if (!r.ok) return null; const j = await r.json();
+    const tel = String(j.ddd_telefone_1 || '').replace(/\D/g, ''); return { razao_social: j.razao_social, nome_fantasia: j.nome_fantasia || null, situacao_receita: j.descricao_situacao_cadastral, data_fundacao: j.data_inicio_atividade, natureza_juridica: j.natureza_juridica, logradouro: [j.descricao_tipo_de_logradouro, j.logradouro].filter(Boolean).join(' '), numero: j.numero, bairro: j.bairro, cidade: j.municipio, uf: j.uf, cep: mCEP(j.cep), telefone: tel.length >= 10 ? '(' + tel.slice(0, 2) + ') ' + tel.slice(2, -4) + '-' + tel.slice(-4) : null }; } catch (_) { return null; } }
+  function preencher(form, dados) {
+    if (!dados) return;
+    const ocupados = Object.keys(dados).filter(n => { const i = form.querySelector('[name="' + n + '"]'); return i && i.value.trim() && dados[n] && i.value.trim() !== String(dados[n]).trim(); });
+    const trocar = !ocupados.length || confirm('Encontramos dados para este campo. Substituir o que já está preenchido?');
+    Object.entries(dados).forEach(([n, v]) => { const i = form.querySelector('[name="' + n + '"]'); if (i && v && (trocar || !i.value.trim())) i.value = v; });
+  }
+  function ligar(form) {
+    form.querySelectorAll('[data-cep]').forEach(i => { i.addEventListener('input', () => { i.value = mCEP(i.value); }); i.addEventListener('blur', async () => preencher(form, await cep(i.value))); });
+    form.querySelectorAll('[data-cnpj]').forEach(i => { i.addEventListener('input', () => { i.value = mCNPJ(i.value); }); i.addEventListener('blur', async () => { const d = await cnpj(i.value); if (d) { delete d.situacao_receita; delete d.data_fundacao; delete d.natureza_juridica; } preencher(form, d); }); });
+  }
+  return { cep, cnpj, ligar, mCEP, mCNPJ };
+})();
+
 // KESP · Etapa 1A · Início, menu e páginas base
 (function () {
   'use strict';
@@ -289,7 +310,7 @@
       const fs = funcoes.filter(f => f.modulo_id === m.id && (!busca || f.descricao.toLowerCase().includes(busca.toLowerCase())));
       if (!fs.length) return;
       const nTem = pessoas.filter(p => p.admin || fs.some(f => perm.get(chave(p.id, f.id)))).length;
-      html += `<div class="bloco"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><b>${esc(m.nome)}</b><div class="sm">${esc(m.secao)} · ${nTem} de ${pessoas.length} pessoas</div></div></div>
+      html += `<div class="bloco"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><b>${esc(m.nome)}</b><div class="sm">${esc(m.secao)} · ${nTem} de ${pessoas.length} ${pessoas.length === 1 ? 'pessoa' : 'pessoas'}</div></div></div>
         <div class="tab"><div class="tg" style="grid-template-columns:${cols}"><span class="nm" style="background:transparent"></span>${pessoas.map(p => `<span class="col"><span class="av" style="margin:0 auto 3px;width:30px;height:30px;font-size:11px">${esc(ini(p))}</span>${esc((p.nome || p.email).split(' ')[0])}</span>`).join('')}
         <span class="nm ds">Módulo inteiro</span>${pessoas.map(p => { const todos = fs.every(f => p.admin || perm.get(chave(p.id, f.id))); return `<button class="chv ${todos ? 'on' : 'off'}${p.admin ? ' trava' : ''}" data-mod="${m.id}" data-p="${p.id}" aria-label="Módulo inteiro"><i>${todos ? '✓' : '✕'}</i></button>`; }).join('')}
         ${fs.map(f => `<span class="nm">${esc(f.descricao)}${f.sensivel ? '<span class="sens">Sensível</span>' : ''}</span>${pessoas.map(p => { const on = p.admin || perm.get(chave(p.id, f.id)); const mud = !p.admin && !!perm.get(chave(p.id, f.id)) !== !!orig.get(chave(p.id, f.id)); return `<button class="chv ${on ? 'on' : 'off'}${p.admin ? ' trava' : ''}${mud ? ' mud' : ''}" data-f="${f.id}" data-p="${p.id}" data-s="${f.sensivel ? 1 : ''}" aria-label="${esc(f.descricao)}"><i>${on ? '✓' : '✕'}</i></button>`; }).join('')}`).join('')}
@@ -364,7 +385,7 @@
     const tit = Array.isArray(k.titulos) ? k.titulos : [];
     pg.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap"><div><h1>Kolping Estadual</h1><p class="sub">Painel de Controle · Cadastro${k.atualizado_em ? ' · atualizado em ' + new Date(k.atualizado_em).toLocaleDateString('pt-BR') : ''}</p></div>${eu.admin ? '<button class="btn" id="edK">Editar</button>' : ''}</div>
       <div class="g4">
-        <div class="cd s2" style="--c:#F07830"><div class="hd"><span>IDENTIFICAÇÃO</span></div><div class="kv">${linha('Razão social', k.razao_social)}${linha('CNPJ', k.cnpj)}${linha('Presidente', k.presidente)}</div></div>
+        <div class="cd s2" style="--c:#F07830"><div class="hd"><span>IDENTIFICAÇÃO</span></div><div class="kv">${linha('Razão social', k.razao_social)}${linha('Nome fantasia', k.nome_fantasia)}${linha('CNPJ', k.cnpj)}${linha('Data de fundação', k.data_fundacao ? new Date(k.data_fundacao + 'T12:00').toLocaleDateString('pt-BR') : '')}${linha('Natureza jurídica', k.natureza_juridica)}${linha('Inscrição municipal', k.inscricao_municipal)}<span>Situação na Receita</span><span>${k.situacao_receita ? `<b style="color:${/ativa/i.test(k.situacao_receita) ? '#5FE0A8' : '#FF9A9D'}">${esc(k.situacao_receita)}</b> <span class="sm">· ${new Date(k.situacao_receita_em).toLocaleDateString('pt-BR')}</span>` : '<span class="sm">—</span>'}${eu.admin ? ' <a class="lk" id="cRec">Consultar agora</a>' : ''}</span></div></div>
         <div class="cd s2" style="--c:#3B82F6"><div class="hd"><span>CONTATO E ENDEREÇO</span></div><div class="kv">${linha('Telefones', [k.telefone, k.telefone2].filter(Boolean).join(' / '))}${linha('E-mail', k.email)}${linha('Site', k.site)}${linha('Facebook', k.facebook)}${linha('Endereço', end)}${linha('Cidade', [k.cidade, k.uf].filter(Boolean).join(' – ') + (k.cep ? ', ' + k.cep : ''))}</div></div>
         <div class="cd s2" style="--c:#22C984"><div class="hd"><span>UNIDADES</span></div>${unidades.map(u => `<div class="lin" style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><b>${esc(u.nome)}</b>${u.principal ? ' <span class="pl" style="background:rgba(240,120,48,.15);color:#FFB070">Principal</span>' : ''}<div class="sm">${esc([u.logradouro, u.numero].filter(Boolean).join(', ') || 'Endereço a cadastrar')}${u.bairro ? ' – ' + esc(u.bairro) : ''}${u.cidade ? ' · ' + esc(u.cidade) : ''}</div><div class="sm">Responsável: ${esc(nomePessoa(u.responsavel) || 'a definir')}</div></div>${eu.admin ? `<button class="mini neu" data-un="${u.id}">Editar</button>` : ''}</div>`).join('')}</div>
         <div class="cd s2" style="--c:#8B5CF6"><div class="hd"><span>DIRETORIA · IDENTIDADE VISUAL · TÍTULOS</span></div><div class="kv">${linha('Presidente', k.presidente)}${dir.map(d => linha(d.cargo, d.nome)).join('')}${linha('Logo oficial', 'Em uso nos documentos')}${linha('Títulos e certificações', tit.length ? tit.length + ' cadastrado(s)' : '')}</div></div>
@@ -373,6 +394,7 @@
       </div>`;
     const v = document.getElementById('verB'); if (v) v.onclick = () => { verBanco = true; render(); };
     const e = document.getElementById('edK'); if (e) e.onclick = editarKolping;
+    const cr = document.getElementById('cRec'); if (cr) cr.onclick = async () => { cr.textContent = 'Consultando…'; const d = await window.KESP_BUSCA.cnpj(k.cnpj); if (!d) { cr.textContent = 'Não foi possível consultar agora'; return; } await sb.from('kolping_cadastro').update({ situacao_receita: d.situacao_receita, situacao_receita_em: new Date().toISOString(), natureza_juridica: k.natureza_juridica || d.natureza_juridica, data_fundacao: k.data_fundacao || d.data_fundacao, nome_fantasia: k.nome_fantasia || d.nome_fantasia }).eq('id', 1); await carregar(); render(); };
     const eb = document.getElementById('edB'); if (eb) eb.onclick = editarBancos;
     pg.querySelectorAll('[data-un]').forEach(b => b.onclick = () => editarUnidade(unidades.find(u => u.id === b.dataset.un)));
   }
@@ -381,6 +403,7 @@
     const d = document.createElement('div'); d.className = 'conf';
     d.innerHTML = `<div class="cx fm" style="max-width:520px;max-height:90vh;overflow-y:auto"><b>${esc(titulo)}</b>${campos}<div style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok>Salvar</button></div></div>`;
     document.body.appendChild(d);
+    window.KESP_BUSCA.ligar(d);
     d.querySelector('[data-x]').onclick = () => d.remove();
     d.querySelector('[data-ok]').onclick = async () => {
       const val = {}; d.querySelectorAll('[name]').forEach(i => (val[i.name] = i.value.trim() || null));
@@ -394,11 +417,12 @@
   const campo = (n, r, v, t) => `<label>${esc(r)}</label><input name="${n}" value="${esc(v || '')}"${t ? ` type="${t}"` : ''}>`;
 
   function editarKolping() {
-    modal('Editar cadastro da Kolping', `${campo('razao_social', 'Razão social', k.razao_social)}${campo('cnpj', 'CNPJ', k.cnpj)}${campo('presidente', 'Presidente', k.presidente)}
+    modal('Editar cadastro da Kolping', `${campo('razao_social', 'Razão social', k.razao_social)}${campo('nome_fantasia', 'Nome fantasia', k.nome_fantasia)}<div class="dois"><div><label>CNPJ</label><input name="cnpj" data-cnpj value="${esc(k.cnpj || '')}" inputmode="numeric"></div><div>${campo('data_fundacao', 'Data de fundação', k.data_fundacao, 'date')}</div></div>
+      <div class="dois"><div>${campo('natureza_juridica', 'Natureza jurídica', k.natureza_juridica)}</div><div>${campo('inscricao_municipal', 'Inscrição municipal', k.inscricao_municipal)}</div></div>${campo('presidente', 'Presidente', k.presidente)}
       <div class="dois"><div>${campo('telefone', 'Telefone', k.telefone)}</div><div>${campo('telefone2', 'Telefone 2', k.telefone2)}</div></div>
       ${campo('email', 'E-mail', k.email, 'email')}<div class="dois"><div>${campo('site', 'Site', k.site)}</div><div>${campo('facebook', 'Facebook', k.facebook)}</div></div>
       <div class="dois"><div>${campo('logradouro', 'Rua', k.logradouro)}</div><div>${campo('numero', 'Número', k.numero)}</div></div>
-      <div class="dois"><div>${campo('bairro', 'Bairro', k.bairro)}</div><div>${campo('cep', 'CEP', k.cep)}</div></div>
+      <div class="dois"><div>${campo('bairro', 'Bairro', k.bairro)}</div><div><label>CEP</label><input name="cep" data-cep value="${esc(k.cep || '')}" inputmode="numeric"></div></div>
       <div class="dois"><div>${campo('cidade', 'Cidade', k.cidade)}</div><div>${campo('uf', 'UF', k.uf)}</div></div>`,
       val => { if (!val.razao_social || !val.cnpj) { alert('Razão social e CNPJ são obrigatórios.'); return { error: null, cancel: true }; } return sb.from('kolping_cadastro').update(val).eq('id', 1); });
   }
@@ -410,7 +434,7 @@
   function editarUnidade(u) {
     const opts = '<option value="">A definir</option>' + pessoas.map(p => `<option value="${p.id}"${u.responsavel === p.id ? ' selected' : ''}>${esc(p.nome || p.email)}</option>`).join('');
     modal('Editar ' + u.nome, `<div class="dois"><div>${campo('logradouro', 'Rua', u.logradouro)}</div><div>${campo('numero', 'Número', u.numero)}</div></div>
-      <div class="dois"><div>${campo('bairro', 'Bairro', u.bairro)}</div><div>${campo('cep', 'CEP', u.cep)}</div></div>${campo('cidade', 'Cidade', u.cidade)}
+      <div class="dois"><div>${campo('bairro', 'Bairro', u.bairro)}</div><div><label>CEP</label><input name="cep" data-cep value="${esc(u.cep || '')}" inputmode="numeric"></div></div>${campo('cidade', 'Cidade', u.cidade)}
       <label>Responsável</label><select name="responsavel">${opts}</select>`,
       val => sb.from('unidades').update(val).eq('id', u.id));
   }
