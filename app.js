@@ -110,6 +110,8 @@ window.KESP_BUSCA = (function () {
     document.querySelectorAll('[data-ir]').forEach(c => c.onclick = e => { e.stopPropagation(); location.hash = '#' + c.dataset.ir; });
     document.querySelectorAll('[data-bv]').forEach(c => c.onclick = () => boasVindas(true));
     if (eu.admin) {
+      const v = window.KESP_CONFIG.kaiChaveVence, d = v ? Math.ceil((new Date(v + 'T12:00') - Date.now()) / 864e5) : null;
+      if (d !== null && d <= 15) document.getElementById('pg').insertAdjacentHTML('afterbegin', `<div class="cd" style="--c:#F5A524;margin-bottom:12px"><b>A chave da KAI vence em ${Math.max(0, d)} dia(s).</b> <span class="sm">Crie uma nova no Claude Console e troque o segredo ANTHROPIC_API_KEY no Supabase.</span></div>`);
       sb.from('perfis').select('id', { count: 'exact', head: true }).eq('situacao', 'aguardando').then(r => { const el = document.getElementById('cAg'); if (el) el.textContent = r.count || 0; });
       sb.from('perfis').select('id', { count: 'exact', head: true }).eq('situacao', 'ativo').then(r => { const el = document.getElementById('cAt'); if (el) el.textContent = (r.count || 0) + (r.count === 1 ? ' pessoa ativa' : ' pessoas ativas'); });
     } else {
@@ -160,6 +162,7 @@ window.KESP_BUSCA = (function () {
     if (m.id === 'usuarios' && window.KESP_USUARIOS) return window.KESP_USUARIOS.abrir(sb, eu);
     if (m.id === 'kolping' && window.KESP_KOLPING) return window.KESP_KOLPING.abrir(sb, eu);
     if (m.id === 'sistema' && window.KESP_SISTEMA) return window.KESP_SISTEMA.abrir(sb, eu);
+    if (m.id === 'kai' && window.KESP_KAI) return window.KESP_KAI.abrir(sb, eu);
     pagConstrucao(m);
     window.scrollTo(0, 0);
   }
@@ -475,10 +478,12 @@ window.KESP_BUSCA = (function () {
     document.getElementById('cont').innerHTML = `<div class="g4">
       <div class="cd" style="--c:${n7 ? '#E5484D' : '#22C984'}"><div class="hd"><span>ERROS · 7 DIAS</span></div><div class="big">${n7}</div><div class="sm">${n7 ? 'veja a lista abaixo' : 'tudo funcionando'}</div></div>
       <div class="cd" style="--c:#3B82F6"><div class="hd"><span>USUÁRIOS</span></div><div class="big">${at.count || 0}</div><div class="sm">ativos · ${ag.count || 0} aguardando</div></div>
-      <div class="cd" style="--c:#6E6A7C"><div class="hd"><span>KAI</span><span class="pl" style="background:rgba(255,255,255,.08);color:#A8A3B4">Em construção</span></div><div class="sm" style="margin-top:6px">Chega na próxima parte da etapa 1A</div></div>
+      ${(() => { const v = window.KESP_CONFIG.kaiChaveVence, d = v ? Math.ceil((new Date(v + 'T12:00') - Date.now()) / 864e5) : null, alerta = d !== null && d <= 15;
+        return `<div class="cd" style="--c:${alerta ? '#F5A524' : '#22C984'}"><div class="hd"><span>KAI</span><span class="pl" style="background:rgba(34,201,132,.15);color:#5FE0A8">Haiku 5.5</span></div><div class="big">${alerta ? 'Trocar chave' : 'Ativa'}</div><div class="sm">chave vence em ${v ? new Date(v + 'T12:00').toLocaleDateString('pt-BR') : '—'}${alerta ? ' · faltam ' + Math.max(0, d) + ' dias' : ''}</div></div>`; })()}
       <div class="cd" style="--c:${diasCopia === null || diasCopia > 7 ? '#F5A524' : '#22C984'}"><div class="hd"><span>ÚLTIMA CÓPIA</span></div><div class="big">${diasCopia === null ? '—' : diasCopia === 0 ? 'Hoje' : diasCopia + ' dia' + (diasCopia > 1 ? 's' : '')}</div><div class="sm">${diasCopia === null || diasCopia > 7 ? 'faça uma cópia na aba Cópia' : 'neste computador'}</div></div>
       <div class="cd s4" style="--c:#E5484D"><div class="hd"><span>ERROS REGISTRADOS</span><span>últimos 30</span></div>
-        ${(er.data || []).map(e => `<div class="lin"><b style="font-size:13px">${esc(e.mensagem)}</b><div class="sm">${esc(e.tela || '—')} · ${esc(nome(e.perfil_id))} · ${new Date(e.criado_em).toLocaleString('pt-BR')}</div>${e.detalhe ? `<div class="sm">${esc(e.detalhe)}</div>` : ''}</div>`).join('') || '<p class="sm" style="margin:0">Nenhum erro registrado.</p>'}</div></div>`;
+        ${(er.data || []).map(e => `<div class="lin"><b style="font-size:13px">${esc(e.mensagem)}</b><div class="sm">${esc(e.tela || '—')} · ${esc(nome(e.perfil_id))} · ${new Date(e.criado_em).toLocaleString('pt-BR')}</div>${e.detalhe ? `<div class="sm">${esc(e.detalhe)}</div>` : ''}<a class="lk" data-exp="${esc(e.mensagem + (e.detalhe ? ' — ' + e.detalhe : '') + ' (tela: ' + (e.tela || '—') + ')')}" style="font-size:12px">Explicar com a KAI ›</a></div>`).join('') || '<p class="sm" style="margin:0">Nenhum erro registrado.</p>'}</div></div>`;
+    document.querySelectorAll('[data-exp]').forEach(a => a.onclick = () => { try { sessionStorage.setItem('kesp.kai.pergunta', 'Explique este erro do KESP em palavras simples e o que devo fazer: ' + a.dataset.exp); } catch (_) {} location.hash = '#kai'; });
   }
 
   async function abaModulos() {
@@ -521,4 +526,65 @@ window.KESP_BUSCA = (function () {
   }
 
   window.KESP_SISTEMA = { abrir(cliente, perfil) { sb = cliente; eu = perfil; aba = 'saude'; render(); } };
+})();
+
+// ===================== KAI =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const OLHOS = {
+    acolhendo: '<path d="M45 50 Q50 44 55 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M65 50 Q70 44 75 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M54 55 Q60 59 66 55" stroke="#FFB070" stroke-width="2" fill="none" stroke-linecap="round"/>',
+    pensando: '<circle cx="51" cy="44" r="3" fill="#FFB070"/><circle cx="69" cy="44" r="3" fill="#FFB070"/><circle cx="51" cy="54" r="2.2" fill="#FFB070"><animate attributeName="opacity" values="1;.2;1" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="60" cy="54" r="2.2" fill="#FFB070"><animate attributeName="opacity" values=".2;1;.2" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="69" cy="54" r="2.2" fill="#FFB070"><animate attributeName="opacity" values="1;.2;1" dur="1.2s" begin=".4s" repeatCount="indefinite"/></circle>',
+    explicando: '<ellipse cx="51" cy="47" rx="3" ry="4.5" fill="#FFB070"/><ellipse cx="69" cy="47" rx="3" ry="4.5" fill="#FFB070"/><ellipse cx="60" cy="56" rx="4" ry="2.5" fill="#FFB070"/>',
+    pausa: '<path d="M46 49 L55 49" stroke="#8A8478" stroke-width="2.5" stroke-linecap="round"/><path d="M65 49 L74 49" stroke="#8A8478" stroke-width="2.5" stroke-linecap="round"/>'
+  };
+  const robo = (estado, s) => `<svg width="${s}" height="${s * 0.9}" viewBox="20 8 80 72" aria-hidden="true"><line x1="60" y1="14" x2="60" y2="24" stroke="#9A9088" stroke-width="2"/><circle cx="60" cy="12" r="5" fill="${estado === 'pausa' ? '#9A9088' : '#F07830'}"/><rect x="22" y="38" width="8" height="18" rx="3" fill="${estado === 'pausa' ? '#C9C2B6' : '#F07830'}"/><rect x="90" y="38" width="8" height="18" rx="3" fill="${estado === 'pausa' ? '#C9C2B6' : '#F07830'}"/><rect x="28" y="24" width="64" height="50" rx="18" fill="#F4F1EC"/><rect x="36" y="34" width="48" height="28" rx="12" fill="${estado === 'pausa' ? '#3A3F5C' : '#2C3045'}"/>${OLHOS[estado]}</svg>`;
+  const SUGESTOES = ['Como libero o acesso de alguém?', 'Como funcionam as permissões?', 'Como faço uma cópia de segurança?', 'O que vem nas próximas etapas?'];
+  let sb, eu, msgs = [], ocupado = false;
+  try { msgs = JSON.parse(sessionStorage.getItem('kesp.kai') || '[]'); } catch (_) { msgs = []; }
+  const guardar = () => { try { sessionStorage.setItem('kesp.kai', JSON.stringify(msgs.slice(-30))); } catch (_) {} };
+
+  function render(estado) {
+    const pg = document.getElementById('pg');
+    pg.innerHTML = `<div class="kai"><div class="kai-top"><span id="kRobo">${robo(estado || 'acolhendo', 54)}</span><div style="flex:1"><b style="font-size:17px">KAI</b><div class="sm">Assistente do KESP · ajuda no uso do sistema</div></div>${msgs.length ? '<a class="lk" id="kLimpar">Nova conversa</a>' : ''}</div>
+      <div class="kai-msgs" id="kMsgs">${msgs.length ? '' : `<div class="bal ka">Oi, ${esc((eu.nome || eu.email).split(' ')[0])}! Em que posso ajudar hoje?</div><div class="kai-sug">${SUGESTOES.map(s => `<a>${esc(s)}</a>`).join('')}</div>`}${msgs.map(m => `<div class="bal ${m.papel === 'kai' ? 'ka' : 'eu'}">${esc(m.texto)}</div>`).join('')}</div>
+      <div class="kai-in"><textarea id="kTxt" rows="1" placeholder="Pergunte à KAI…" maxlength="2000"></textarea><button id="kEnv" aria-label="Enviar">➤</button></div></div>`;
+    const txt = document.getElementById('kTxt'), env = document.getElementById('kEnv'), box = document.getElementById('kMsgs');
+    box.scrollTop = box.scrollHeight;
+    txt.oninput = () => { txt.style.height = 'auto'; txt.style.height = Math.min(120, txt.scrollHeight) + 'px'; };
+    txt.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(txt.value); } };
+    env.onclick = () => enviar(txt.value);
+    box.querySelectorAll('.kai-sug a').forEach(a => a.onclick = () => enviar(a.textContent));
+    const l = document.getElementById('kLimpar'); if (l) l.onclick = () => { msgs = []; guardar(); render(); };
+    txt.focus();
+  }
+
+  async function enviar(texto) {
+    texto = String(texto || '').trim(); if (!texto || ocupado) return;
+    ocupado = true; msgs.push({ papel: 'eu', texto }); guardar(); render('pensando');
+    const box = document.getElementById('kMsgs'); box.insertAdjacentHTML('beforeend', '<div class="bal ka" id="kPens">Só um instante, estou procurando…</div>'); box.scrollTop = box.scrollHeight;
+    document.getElementById('kEnv').disabled = true;
+    let estado = 'explicando', resp;
+    try {
+      const { data, error } = await sb.functions.invoke('kai', { body: { mensagens: msgs } });
+      if (error) {
+        let corpo = null; try { corpo = await error.context.json(); } catch (_) {}
+        resp = (corpo && corpo.erro) || 'Algo não saiu como esperado. Já registrei o problema para o administrador. Tente de novo em alguns instantes.';
+      } else if (data && data.pausa) {
+        estado = 'pausa';
+        resp = 'Estou em pausa no momento. O administrador já foi avisado, e eu volto assim que for possível.';
+      } else resp = (data && data.texto) || 'Não consegui responder agora.';
+    } catch (_) {
+      resp = navigator.onLine ? 'Algo não saiu como esperado. Tente de novo em alguns instantes.' : 'Parece que você está sem internet. Tente de novo quando a conexão voltar.';
+    }
+    msgs.push({ papel: 'kai', texto: resp }); guardar(); ocupado = false; render(estado);
+  }
+
+  window.KESP_KAI = {
+    abrir(cliente, perfil) {
+      sb = cliente; eu = perfil;
+      let pre = null; try { pre = sessionStorage.getItem('kesp.kai.pergunta'); sessionStorage.removeItem('kesp.kai.pergunta'); } catch (_) {}
+      render(); if (pre) enviar(pre);
+    }
+  };
 })();
