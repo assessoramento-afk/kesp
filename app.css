@@ -3,13 +3,17 @@ body.logado{background:#0F1622}
 body.logado #app{display:block;padding:0;min-height:100%}
 .sh{display:flex;min-height:100vh}
 .lat{width:250px;flex-shrink:0;background:#0C111A;border-right:1px solid rgba(255,255,255,.07);padding:14px 10px;position:sticky;top:0;height:100vh;overflow-y:auto}
-.lat .sec{font-size:10px;letter-spacing:.1em;color:#6E6A7C;margin:14px 10px 4px;text-transform:uppercase}
+.lat{scrollbar-width:thin;scrollbar-color:#2C3045 transparent}
+.lat::-webkit-scrollbar{width:6px}.lat::-webkit-scrollbar-thumb{background:#2C3045;border-radius:3px}.lat::-webkit-scrollbar-track{background:transparent}
+.lat .sec{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.1em;color:#8E899A;margin:12px 10px 4px;text-transform:uppercase;cursor:pointer;user-select:none}
+.lat .sec span{font-size:10px;letter-spacing:0;color:#6E6A7C;text-transform:none}
+.it b{font-weight:400;flex:1;min-width:0;line-height:1.25}
 .it{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;font-size:13px;color:#C9C4D2;cursor:pointer;text-decoration:none}
 .it:hover{background:rgba(255,255,255,.05)}
 .it.on{background:rgba(240,120,48,.15);color:#FFB070}
 .it .ti{font-size:18px}
-.it .eb{margin-left:auto;font-size:9px;padding:1px 6px;border-radius:7px;background:rgba(255,255,255,.07);color:#8E899A}
-.it .mn{margin-left:auto;font-size:9px;padding:1px 6px;border-radius:7px;background:rgba(245,165,36,.15);color:#F8C46A}
+.it .eb{flex-shrink:0;white-space:nowrap;margin-left:auto;font-size:9px;padding:1px 6px;border-radius:7px;background:rgba(255,255,255,.07);color:#8E899A}
+.it .mn{flex-shrink:0;white-space:nowrap;margin-left:auto;font-size:9px;padding:1px 6px;border-radius:7px;background:rgba(245,165,36,.15);color:#F8C46A}
 .cp{flex:1;min-width:0;display:flex;flex-direction:column}
 .topo{display:flex;align-items:center;gap:10px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));border-bottom:1px solid rgba(255,255,255,.08);background:rgba(15,22,34,.92);position:sticky;top:0;z-index:5;backdrop-filter:blur(8px)}
 .ik{width:32px;height:32px;border-radius:9px;background:linear-gradient(160deg,#fff,#F3EEE9);display:flex;align-items:center;justify-content:center;flex-shrink:0}

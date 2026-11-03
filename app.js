@@ -28,7 +28,10 @@
     const app = document.getElementById('app');
     document.body.classList.add('logado');
     const secoes = []; modulos.filter(visivel).forEach(m => { let s = secoes.find(x => x.n === m.secao); if (!s) secoes.push(s = { n: m.secao, i: [] }); s.i.push(m); });
-    const menu = secoes.map(s => `<div class="sec">${esc(s.n)}</div>` + s.i.map(m => `<a class="it" data-r="${m.id}"><i class="ti ti-${ICONES[m.id] || 'point'}"></i>${esc(m.nome)}${m.situacao === 'em_breve' ? '<span class="eb">Em breve</span>' : m.situacao === 'manutencao' ? '<span class="mn">Manutenção</span>' : ''}</a>`).join('')).join('');
+    let fechadas; try { fechadas = JSON.parse(localStorage.getItem('kesp.menu.fechadas')); } catch (_) {}
+    if (!Array.isArray(fechadas)) fechadas = secoes.filter(s => s.i.every(m => m.situacao === 'em_breve')).map(s => s.n);
+    const menu = secoes.map(s => { const eb = s.i.filter(m => m.situacao === 'em_breve').length, fe = fechadas.includes(s.n);
+      return `<div class="sec" data-sec="${esc(s.n)}">${esc(s.n)}<span>${fe ? (eb ? eb + ' em breve ' : '') + '▸' : '▾'}</span></div><div class="grp"${fe ? ' hidden' : ''}>` + s.i.map(m => `<a class="it" data-r="${m.id}"><i class="ti ti-${ICONES[m.id] || 'point'}"></i><b>${esc(m.nome)}</b>${m.situacao === 'em_breve' ? '<span class="eb">Em breve</span>' : m.situacao === 'manutencao' ? '<span class="mn">Manutenção</span>' : ''}</a>`).join('') + '</div>'; }).join('');
     const ini = (eu.nome || eu.email).split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase();
     app.innerHTML = `<div class="sh"><nav class="lat" id="lat"><div style="display:flex;align-items:center;gap:10px;padding:4px 10px 8px"><div class="ik">${K(16)}</div><b style="letter-spacing:3px">KESP</b></div>${menu}</nav>
       <div class="cp"><header class="topo"><div class="ik">${K(16)}</div>
@@ -41,6 +44,13 @@
       <div class="mn-fundo" id="fundo"><div class="mn-pop" id="pop"></div></div>`;
     app.querySelectorAll('[data-r]').forEach(a => a.onclick = () => { location.hash = '#' + a.dataset.r; document.getElementById('lat').classList.remove('ab'); document.getElementById('fundo').classList.remove('ab'); });
     const fundo = document.getElementById('fundo'), lat = document.getElementById('lat');
+    lat.querySelectorAll('[data-sec]').forEach(h => h.onclick = () => {
+      const n = h.dataset.sec, i = fechadas.indexOf(n); i >= 0 ? fechadas.splice(i, 1) : fechadas.push(n);
+      try { localStorage.setItem('kesp.menu.fechadas', JSON.stringify(fechadas)); } catch (_) {}
+      const g = h.nextElementSibling; g.hidden = !g.hidden;
+      const sec = secoes.find(x => x.n === n), eb = sec.i.filter(m => m.situacao === 'em_breve').length;
+      h.querySelector('span').textContent = g.hidden ? (eb ? eb + ' em breve ' : '') + '▸' : '▾';
+    });
     app.querySelector('[data-acao="menu"]').onclick = () => { lat.classList.add('ab'); fundo.classList.add('ab'); document.getElementById('pop').style.display = 'none'; };
     fundo.onclick = e => { if (e.target === fundo) { fundo.classList.remove('ab'); lat.classList.remove('ab'); } };
     app.querySelector('[data-acao="busca"]').onclick = () => toast('A busca geral chega na próxima parte da construção.');
@@ -104,6 +114,7 @@
   function rota() {
     const id = (location.hash || '#inicio').slice(1) || 'inicio';
     document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === id));
+    const atual = document.querySelector('.lat [data-r="' + id + '"]'); if (atual && atual.parentElement.hidden) atual.parentElement.previousElementSibling.click();
     const m = modulos.find(x => x.id === id) || modulos.find(x => x.id === 'inicio');
     if (!m) return pagInicio();
     if (!visivel(m)) return pagSemAcesso();
