@@ -27,15 +27,18 @@
   function moldura() {
     const app = document.getElementById('app');
     document.body.classList.add('logado');
-    const secoes = []; modulos.filter(visivel).forEach(m => { let s = secoes.find(x => x.n === m.secao); if (!s) secoes.push(s = { n: m.secao, i: [] }); s.i.push(m); });
-    let fechadas; try { fechadas = JSON.parse(localStorage.getItem('kesp.menu.fechadas')); } catch (_) {}
-    if (!Array.isArray(fechadas)) fechadas = secoes.filter(s => s.i.every(m => m.situacao === 'em_breve')).map(s => s.n);
-    const menu = secoes.map(s => { const eb = s.i.filter(m => m.situacao === 'em_breve').length, fe = fechadas.includes(s.n);
-      return `<div class="sec" data-sec="${esc(s.n)}">${esc(s.n)}<span>${fe ? (eb ? eb + ' em breve ' : '') + '▸' : '▾'}</span></div><div class="grp"${fe ? ' hidden' : ''}>` + s.i.map(m => `<a class="it" data-r="${m.id}"><i class="ti ti-${ICONES[m.id] || 'point'}"></i><b>${esc(m.nome)}</b>${m.situacao === 'em_breve' ? '<span class="eb">Em breve</span>' : m.situacao === 'manutencao' ? '<span class="mn">Manutenção</span>' : ''}</a>`).join('') + '</div>'; }).join('');
+    const vis = modulos.filter(visivel), prontos = vis.filter(m => m.situacao !== 'em_breve'), futuros = vis.filter(m => m.situacao === 'em_breve');
+    const item = (m, sub) => `<a class="it${sub ? ' sub' : ''}" data-r="${m.id}"><i class="ti ti-${ICONES[m.id] || 'point'}"></i><b>${esc(m.nome)}</b>${m.situacao === 'manutencao' ? '<span class="mn">Manutenção</span>' : ''}</a>`;
+    const agrupar = lista => { const g = []; lista.forEach(m => { let s = g.find(x => x.n === m.secao); if (!s) g.push(s = { n: m.secao, i: [] }); s.i.push(m); }); return g; };
+    const topo = prontos.filter(m => m.id === 'inicio' || m.id === 'kai');
+    let menu = topo.map(m => item(m)).join('') + agrupar(prontos.filter(m => m.id !== 'inicio' && m.id !== 'kai')).map(s => `<div class="sec">${esc(s.n)}</div>` + s.i.map(m => item(m)).join('')).join('');
+    let caminhoAberto = false; try { caminhoAberto = localStorage.getItem('kesp.menu.caminho') === '1'; } catch (_) {}
+    if (futuros.length) menu += `<div class="sec">Próximas etapas</div><a class="it fut" id="caminho"><i class="ti ti-hourglass"></i><b>A caminho</b><span class="eb">${futuros.length}</span><span class="cv">${caminhoAberto ? '⌄' : '›'}</span></a>
+      <div class="grp" id="grpCaminho"${caminhoAberto ? '' : ' hidden'}>` + agrupar(futuros).map(s => `<div class="sub-t">${esc(s.n)}</div>` + s.i.map(m => item(m, true)).join('')).join('') + '</div>';
     const ini = (eu.nome || eu.email).split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase();
     app.innerHTML = `<div class="sh"><nav class="lat" id="lat"><div style="display:flex;align-items:center;gap:10px;padding:4px 10px 8px"><div class="ik">${K(16)}</div><b style="letter-spacing:3px">KESP</b></div>${menu}</nav>
       <div class="cp"><header class="topo"><div class="ik">${K(16)}</div>
-        <div style="flex:1;min-width:0"><div style="font-weight:600;letter-spacing:2px">KESP</div><div class="sm" style="font-size:11px">${saudacao()}, ${esc(primeiro())}</div></div>
+        <div style="flex:1;min-width:0;font-size:15px;font-weight:600">${saudacao()}, ${esc(primeiro())}</div>
         <button class="bi" id="qr" aria-label="Ler código"><i class="ti ti-scan"></i></button>
         <button class="bi" id="sino" aria-label="Avisos"><i class="ti ti-bell"></i>${avisosN ? `<span class="ct">${avisosN}</span>` : ''}</button>
         <div class="av" id="perfil" role="button" aria-label="Perfil">${eu.foto_url ? `<img src="${esc(eu.foto_url)}" alt="">` : esc(ini)}</div></header>
@@ -44,13 +47,8 @@
       <div class="mn-fundo" id="fundo"><div class="mn-pop" id="pop"></div></div>`;
     app.querySelectorAll('[data-r]').forEach(a => a.onclick = () => { location.hash = '#' + a.dataset.r; document.getElementById('lat').classList.remove('ab'); document.getElementById('fundo').classList.remove('ab'); });
     const fundo = document.getElementById('fundo'), lat = document.getElementById('lat');
-    lat.querySelectorAll('[data-sec]').forEach(h => h.onclick = () => {
-      const n = h.dataset.sec, i = fechadas.indexOf(n); i >= 0 ? fechadas.splice(i, 1) : fechadas.push(n);
-      try { localStorage.setItem('kesp.menu.fechadas', JSON.stringify(fechadas)); } catch (_) {}
-      const g = h.nextElementSibling; g.hidden = !g.hidden;
-      const sec = secoes.find(x => x.n === n), eb = sec.i.filter(m => m.situacao === 'em_breve').length;
-      h.querySelector('span').textContent = g.hidden ? (eb ? eb + ' em breve ' : '') + '▸' : '▾';
-    });
+    const cam = document.getElementById('caminho');
+    if (cam) cam.onclick = () => { const g = document.getElementById('grpCaminho'); g.hidden = !g.hidden; cam.querySelector('.cv').textContent = g.hidden ? '›' : '⌄'; try { localStorage.setItem('kesp.menu.caminho', g.hidden ? '0' : '1'); } catch (_) {} };
     app.querySelector('[data-acao="menu"]').onclick = () => { lat.classList.add('ab'); fundo.classList.add('ab'); document.getElementById('pop').style.display = 'none'; };
     fundo.onclick = e => { if (e.target === fundo) { fundo.classList.remove('ab'); lat.classList.remove('ab'); } };
     app.querySelector('[data-acao="busca"]').onclick = () => toast('A busca geral chega na próxima parte da construção.');
@@ -77,7 +75,7 @@
     cards.push(`<div class="cd" style="--c:#3B82F6"><div class="hd"><span>NOVIDADES</span></div><div id="cNov" class="sm">…</div></div>`);
     const areas = [['ASSESSORAMENTO', 'Etapa 2'], ['UNIDADES E COMPRAS', 'Etapa 4'], ['FINANCEIRO', 'Etapa 6'], ['EDUCAÇÃO INFANTIL', 'Etapa 8']];
     areas.forEach(([n, e]) => cards.push(`<div class="cd ap"><div class="hd"><span>${n}</span><span class="pl" style="background:rgba(255,255,255,.08);color:#A8A3B4">Em breve</span></div><div class="sm">Chega na ${e.toLowerCase()} do KESP</div></div>`));
-    document.getElementById('pg').innerHTML = `<h1>Início</h1><p class="sub">${saudacao()}, ${esc(primeiro())}. ${em.length} módulos a caminho.</p><div class="gr">${cards.join('')}</div>`;
+    document.getElementById('pg').innerHTML = `<h1>Início</h1><p class="sub">${em.length} módulos a caminho.</p><div class="gr">${cards.join('')}</div>`;
     document.querySelectorAll('[data-ir]').forEach(c => c.onclick = () => (location.hash = '#' + c.dataset.ir));
     if (eu.admin) sb.from('perfis').select('id', { count: 'exact', head: true }).eq('situacao', 'aguardando').then(r => { const el = document.getElementById('cAg'); if (el) el.textContent = r.count || 0; });
     sb.from('novidades').select('*').order('publicado_em', { ascending: false }).limit(3).then(r => { const el = document.getElementById('cNov'); if (el) el.innerHTML = (r.data || []).map(n => `<div style="padding:3px 0"><b style="color:#F2EEEA">${esc(n.titulo)}</b><br>${esc(n.texto || '')}</div>`).join('') || 'Nenhuma novidade ainda.'; });
@@ -114,7 +112,7 @@
   function rota() {
     const id = (location.hash || '#inicio').slice(1) || 'inicio';
     document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === id));
-    const atual = document.querySelector('.lat [data-r="' + id + '"]'); if (atual && atual.parentElement.hidden) atual.parentElement.previousElementSibling.click();
+    const atual = document.querySelector('.lat [data-r="' + id + '"]'); if (atual && atual.parentElement.hidden) document.getElementById('caminho').click();
     const m = modulos.find(x => x.id === id) || modulos.find(x => x.id === 'inicio');
     if (!m) return pagInicio();
     if (!visivel(m)) return pagSemAcesso();

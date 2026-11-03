@@ -86,3 +86,10 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
 .conf{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px}
 .conf .cx{max-width:360px;width:100%;background:#1B2332;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:16px}
 @media (min-width:861px){.salvar{bottom:16px}}
+
+.lat .sec{cursor:default}
+.it .cv{margin-left:6px;font-size:13px;color:#6E6A7C}
+.it.fut{color:#A8A3B4}
+.it.sub{padding:6px 10px 6px 18px;font-size:12px;color:#A8A3B4}
+.it.sub .ti{font-size:16px}
+.sub-t{font-size:10px;letter-spacing:.08em;color:#6E6A7C;margin:8px 10px 2px 18px;text-transform:uppercase}
