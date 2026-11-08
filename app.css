@@ -130,3 +130,50 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
 .kai-in button{width:40px;height:40px;border-radius:12px;border:0;background:linear-gradient(90deg,#F07830,#FF9A4D);color:#fff;cursor:pointer;font-size:18px;flex-shrink:0}
 .kai-in button:disabled{opacity:.5}
 @media (max-width:860px){.kai{height:calc(100vh - 190px)}}
+/* Manual */
+.man details{background:linear-gradient(160deg,#1B2332,#141B27);border-radius:12px;margin-bottom:8px;border-left:3px solid var(--c,#3B82F6);box-shadow:0 4px 10px rgba(0,0,0,.3)}
+.man summary{cursor:pointer;padding:12px 14px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:8px}
+.man summary::-webkit-details-marker{display:none}
+.man summary:after{content:"›";color:#6E6A7C;transition:transform .2s}
+.man details[open] summary:after{transform:rotate(90deg)}
+.man .ct{padding:0 16px 14px;font-size:14px;line-height:1.6;color:#D8D3DE}
+.man ol,.man ul{margin:4px 0 4px 18px;padding:0}
+.man .gr-t{font-size:11px;letter-spacing:.08em;color:#A8A3B4;margin:16px 0 8px}
+/* Comunidades */
+.flt{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+.flt a{font-size:12px;padding:6px 11px;border-radius:14px;background:rgba(255,255,255,.06);color:#D8D3DE;cursor:pointer}
+.flt a.on{background:rgba(240,120,48,.2);color:#FFB070}
+.ckc{background:linear-gradient(160deg,#1B2332,#141B27);border-radius:12px;padding:11px 13px;border-left:3px solid var(--c);box-shadow:0 4px 10px rgba(0,0,0,.35);cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+.ckc:hover{background:linear-gradient(160deg,#202A3B,#172030)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.tg2{display:inline-block;font-size:10px;padding:2px 7px;border-radius:8px;margin:4px 4px 0 0}
+.meses{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.meses div{border-radius:9px;padding:6px 4px;text-align:center;font-size:11px;border:1px solid rgba(255,255,255,.06)}
+.meses b{display:block;font-size:12px;margin-top:2px}
+.acs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.acs a{display:flex;align-items:center;gap:6px;font-size:12px;padding:7px 11px;border-radius:10px;background:rgba(255,255,255,.06);color:#F2EEEA;cursor:pointer;text-decoration:none}
+.tl{border-left:2px solid rgba(255,255,255,.1);margin-left:6px;padding-left:12px}
+.tl div{position:relative;padding:5px 0;font-size:13px}
+.tl div:before{content:"";position:absolute;left:-17px;top:11px;width:8px;height:8px;border-radius:50%;background:var(--c,#6E6A7C)}
+@media (max-width:640px){.meses{grid-template-columns:repeat(4,1fr)}}
+/* Distritos e recibos */
+.dbar{display:flex;height:22px;border-radius:6px;overflow:hidden;font-size:11px;font-weight:600;color:#0F1622;margin:4px 0}
+.dbar i{display:flex;align-items:center;justify-content:center;font-style:normal}
+.dgr{margin-top:8px;border-radius:10px;padding:7px 10px;background:rgba(255,255,255,.03);border-left:3px solid var(--c)}
+.dgr h4{margin:0 0 3px;font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--t)}
+.dgr div{display:flex;justify-content:space-between;font-size:12px;padding:2px 0;cursor:pointer}
+.pal{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.pal a{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.pal a.on{border-color:#fff}
+.gmes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.gmes button{border-radius:10px;padding:7px 2px;font-size:11px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#A8A3B4;cursor:pointer;font-family:inherit}
+.gmes button b{display:block;font-size:12px;margin-top:2px}
+.gmes .pg{background:rgba(34,201,132,.12);color:#5FE0A8;cursor:default}
+.gmes .sel{background:rgba(240,120,48,.22);color:#FFB070;border-color:rgba(240,120,48,.6)}
+.gmes .par{background:rgba(245,165,36,.18);color:#F8C46A;border-color:rgba(245,165,36,.6)}
+.gmes .at{color:#FF9A9D}
+.prev{background:#FBF8F4;color:#1E1B19;border-radius:12px;padding:14px;font-size:13px;line-height:1.55}
+.prev table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}.prev td{padding:5px 0;border-bottom:1px solid #EDE8E0}.prev td:last-child{text-align:right}
+.alerta{border-radius:10px;padding:8px 10px;font-size:12px;margin-top:8px;background:rgba(245,165,36,.12);color:#F8C46A}
+.rec2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:900px){.rec2{grid-template-columns:1fr}}
