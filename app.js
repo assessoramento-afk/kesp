@@ -153,6 +153,7 @@ window.KESP_BUSCA = (function () {
 
   function rota() {
     const id = (location.hash || '#inicio').slice(1) || 'inicio';
+    document.querySelectorAll('.conf').forEach(d => d.remove());
     if (id.startsWith('ck/')) { document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === 'comunidades')); return window.KESP_CKS.abrir(sb, eu, id.slice(3)); }
     document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === id));
     const atual = document.querySelector('.lat [data-r="' + id + '"]'); if (atual && atual.parentElement.hidden) document.getElementById('caminho').click();
@@ -171,6 +172,9 @@ window.KESP_BUSCA = (function () {
     if (m.id === 'comunidades' && window.KESP_CKS) return window.KESP_CKS.abrir(sb, eu);
     if (m.id === 'distritos' && window.KESP_DISTRITOS) return window.KESP_DISTRITOS.abrir(sb, eu);
     if (m.id === 'recibos' && window.KESP_RECIBOS) return window.KESP_RECIBOS.abrir(sb, eu);
+    if (m.id === 'cobranca' && window.KESP_COBRANCA) return window.KESP_COBRANCA.abrir(sb, eu);
+    if (m.id === 'relatorios_ass' && window.KESP_RELATORIOS) return window.KESP_RELATORIOS.abrir(sb, eu);
+    if (m.id === 'recadastramento' && window.KESP_RECAD) return window.KESP_RECAD.abrir(sb, eu);
     pagConstrucao(m);
     window.scrollTo(0, 0);
   }
@@ -277,7 +281,7 @@ window.KESP_BUSCA = (function () {
     const pg = document.getElementById('pg');
     const ag = perfis.filter(p => p.situacao === 'aguardando').length;
     pg.innerHTML = `<h1>Usuários e permissões</h1><p class="sub">${perfis.filter(p => p.situacao === 'ativo').length} pessoas ativas${ag ? ` · <b style="color:#FFB070">${ag} aguardando liberação</b>` : ''}</p>
-      <div class="abas"><a data-a="pessoas" class="${aba === 'pessoas' ? 'on' : ''}">Pessoas</a><a data-a="permissoes" class="${aba === 'permissoes' ? 'on' : ''}">Permissões</a><a data-a="historico" class="${aba === 'historico' ? 'on' : ''}">Histórico</a></div><div id="cont"></div>`;
+      <div class="abas"><a data-a="pessoas" class="${aba === 'pessoas' ? 'on' : ''}">Pessoas</a><a data-a="permissoes" class="${aba === 'permissoes' ? 'on' : ''}">Permissões</a><a data-a="lote" class="${aba === 'lote' ? 'on' : ''}">Lote</a><a data-a="historico" class="${aba === 'historico' ? 'on' : ''}">Histórico</a></div><div id="cont"></div>`;
     pg.querySelectorAll('[data-a]').forEach(x => x.onclick = () => { aba = x.dataset.a; render(); });
     ({ pessoas: abaPessoas, permissoes: abaPermissoes, historico: abaHistorico })[aba]();
   }
@@ -693,8 +697,8 @@ window.KESP_BUSCA = (function () {
       const dev = venc.slice(0, 7) < ini ? 0 : Math.round(n * t.solidariedade * 100) / 100, pg = pago('solidariedade', i + 1);
       return { mes: i + 1, venc, devido: dev, pago: pg, sit: sit(dev, pg, venc) };
     });
-    const sdev = String(t.venc_societaria).slice(0, 7) < ini ? 0 : Math.round(n * t.societaria * 100) / 100, spg = pago('societaria', null);
-    const soc = { venc: t.venc_societaria, devido: sdev, pago: spg, sit: sit(sdev, spg, t.venc_societaria) };
+    const sVenc = ano + String(t.venc_societaria || '-03-31').slice(4), sdev = sVenc.slice(0, 7) < ini ? 0 : Math.round(n * t.societaria * 100) / 100, spg = pago('societaria', null);
+    const soc = { venc: sVenc, devido: sdev, pago: spg, sit: sit(sdev, spg, sVenc) };
     const todos = [...meses, soc];
     const aberto = todos.filter(m => m.sit === 'atraso' || (m.sit === 'parcial' && m.venc < hoje)).reduce((s, m) => s + (m.devido - m.pago), 0);
     const situacao = !ck.ativa ? 'inativa' : todos.some(m => m.sit === 'atraso') ? 'atraso' : todos.some(m => m.sit === 'parcial') ? 'parcial' : 'em_dia';
@@ -780,7 +784,7 @@ window.KESP_BUSCA = (function () {
       const dd = (r && r.dados) || {}, CG = [['presidente', 'Presidente', 'tel_presidente'], ['vice_presidente', 'Vice-presidente', 'tel_vice'], ['secretario_1', '1º secretário'], ['secretario_2', '2º secretário'], ['tesoureiro_1', '1º tesoureiro'], ['tesoureiro_2', '2º tesoureiro'], ['dir_juventude', 'Diretor(a) de juventude'], ['vice_dir_juventude', 'Vice de juventude'], ['membro_1', 'Membro'], ['membro_2', 'Membro'], ['membro_3', 'Membro'], ['coordenador', 'Coordenador(a) responsável']];
       c.innerHTML = r ? `<div class="cd" style="--c:#8B5CF6;max-width:640px"><div class="hd"><span>DIRETORIA · RECADASTRAMENTO ${r.ano}</span></div><div class="kv">${CG.filter(([k]) => dd[k]).map(([k, n, tk]) => `<span>${n}</span><span>${esc(dd[k])}${tk && dd[tk] ? ` · <a class="lk" href="https://wa.me/55${String(dd[tk]).replace(/\D/g, '')}" target="_blank" rel="noopener">${esc(dd[tk])}</a>` : ''}</span>`).join('')}<span>Mandato</span><span>${esc([dd.vigencia_ini, dd.vigencia_fim].filter(Boolean).map(v => new Date(v + 'T12:00').toLocaleDateString('pt-BR')).join(' a ') || '—')}</span><span>Última assembleia</span><span>${dd.data_ultima_assembleia ? new Date(dd.data_ultima_assembleia + 'T12:00').toLocaleDateString('pt-BR') : '—'}</span></div></div>` : '<p class="sm">Sem recadastramento.</p>';
     } else {
-      const dd = (r && r.dados) || {}, docs = dd.documentos || [];
+      const dd = (r && r.dados) || {}, docs = Array.isArray(dd.documentos) ? dd.documentos : Object.entries(dd.documentos || {}).map(([k, v]) => k + ' · ' + ({ tem: 'tem', andamento: 'em andamento', nao: 'não tem' }[v] || v));
       c.innerHTML = `<div class="cd" style="--c:#3B82F6;max-width:640px"><div class="hd"><span>DOCUMENTOS E SEDE</span></div><div class="kv"><span>Sede</span><span>${esc(dd.sede || '—')}</span></div>${docs.length ? `<div style="margin-top:10px">${docs.map(x => `<div class="lin" style="font-size:13px">✓ ${esc(x)}</div>`).join('')}</div>` : '<p class="sm">Nenhum documento informado no recadastramento.</p>'}</div>`;
     }
   }
@@ -1029,10 +1033,18 @@ window.KESP_BUSCA = (function () {
     let quem = null; if (r.emitido_por) { const p = await sb.from('perfis').select('nome,cargo,assinatura_url').eq('id', r.emitido_por).maybeSingle(); quem = p.data; }
     const html = documento(r, quem);
     const dlg = document.createElement('div'); dlg.className = 'conf';
-    dlg.innerHTML = `<div class="cx" style="max-width:720px;max-height:92vh;overflow-y:auto;padding:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn" data-imp>Imprimir / Salvar PDF</button>${r.situacao !== 'cancelado' && (eu.admin || window.KESP_PODE('recibos.cancelar')) ? '<button class="btn sec" data-can style="color:#FF9A9D">Cancelar recibo</button>' : ''}<button class="btn sec" data-x style="margin-left:auto">Fechar</button></div><div style="background:#E9E5DF;padding:10px;border-radius:10px">${html}</div></div>`;
+    dlg.innerHTML = `<div class="cx" style="max-width:720px;max-height:92vh;overflow-y:auto;padding:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn" data-imp>Imprimir / Salvar PDF</button>${r.comunidade_id && r.situacao !== 'cancelado' ? `<button class="btn sec" data-mail>${r.enviado_em ? 'Enviar de novo' : 'Enviar por e-mail'}</button>` : ''}${r.situacao !== 'cancelado' && (eu.admin || window.KESP_PODE('recibos.cancelar')) ? '<button class="btn sec" data-can style="color:#FF9A9D">Cancelar recibo</button>' : ''}<button class="btn sec" data-x style="margin-left:auto">Fechar</button></div><div style="background:#E9E5DF;padding:10px;border-radius:10px">${html}</div></div>`;
     document.body.appendChild(dlg);
     dlg.querySelector('[data-x]').onclick = () => { dlg.remove(); if (aba === 'historico') render(); };
     dlg.querySelector('[data-imp]').onclick = () => { const w = window.open('', '_blank'); w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Recibo ${r.numero}-${r.ano}</title><style>@page{size:A4;margin:12mm}body{margin:0;background:#fff}</style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`); w.document.close(); };
+    const ml = dlg.querySelector('[data-mail]');
+    if (ml) ml.onclick = async () => {
+      const ck = B.dados().cks.find(c => c.id === r.comunidade_id) || {};
+      dlg.querySelector('[data-imp]').click();
+      window.KESP_EMAIL(ck.email, `Recibo ${r.numero}/${r.ano} – Kolping Estadual de São Paulo`, `Prezada diretoria da ${ck.razao_social || ck.nome || r.pagador_nome},\n\nSegue em anexo o recibo nº ${r.numero}/${r.ano}, no valor de ${R(r.valor)}, referente ao pagamento de ${dataBR(r.data_pagamento)}.\n\nAgradecemos a contribuição da Comunidade.\n\nAtenciosamente,\n${eu.nome}\n${eu.cargo || ''} · Kolping Estadual de São Paulo\n(11) 4183-6018`);
+      await sb.from('recibos').update({ enviado_em: new Date().toISOString() }).eq('id', r.id);
+      window.KESP_TOAST('Salve o PDF na janela de impressão e anexe ao e-mail que abriu.');
+    };
     const cn = dlg.querySelector('[data-can]');
     if (cn) cn.onclick = async () => { const m = prompt('Motivo do cancelamento:'); if (m === null) return; if (!m.trim()) { alert('Informe o motivo.'); return; } const x = await sb.from('recibos').update({ situacao: 'cancelado', cancelado_motivo: m.trim() }).eq('id', r.id); if (x.error) { alert('Não foi possível cancelar: ' + x.error.message); return; } await B.carregar(sb, eu); dlg.remove(); abrirRecibo(r.id); };
   }
@@ -1077,12 +1089,46 @@ window.KESP_BUSCA = (function () {
     c.querySelector('#hb').oninput = e => { f = e.target.value; desenhar(); }; desenhar();
   }
 
+  function telaLote() {
+    const D = B.dados(), hoje = new Date().toISOString().slice(0, 10);
+    const linhas = D.cks.filter(c => c.ativa).map(ck => {
+      const ab = todasLinhas(ck).filter(l => l.ja < l.devido - 0.001).sort((a, b) => a.venc.localeCompare(b.venc))[0];
+      if (!ab) return null; const cred = Math.max(0, B.credito(ck.id)), val = r2(Math.max(0, ab.devido - ab.ja - cred));
+      return { ck, l: ab, val };
+    }).filter(Boolean).sort((a, b) => a.ck.nome.localeCompare(b.ck.nome, 'pt-BR'));
+    const c = document.getElementById('cont');
+    c.innerHTML = `<p class="sm">Para várias CKs que pagaram o valor exato do mês em aberto mais antigo (já descontado o crédito). Marque, confira o valor e emita.</p>
+      <div class="fm dois" style="max-width:420px"><div><label>Data do pagamento</label><input id="lData" type="date" value="${hoje}"></div><div><label>Forma</label><select id="lForma">${['PIX', 'Transferência', 'Depósito', 'Dinheiro', 'Boleto'].map(f => `<option>${f}</option>`).join('')}</select></div></div>
+      <div style="margin-top:10px">${linhas.map((x, i) => `<div class="pe" style="--c:${x.l.venc < hoje ? '#E5484D' : '#6E6A7C'}"><input type="checkbox" data-i="${i}" style="width:20px;height:20px"><div style="flex:1;min-width:0"><b>${esc(x.ck.nome)}</b><div class="sm">${x.l.tipo === 'societaria' ? 'Societária ' + x.l.ano : MESX[x.l.mes - 1] + '/' + x.l.ano}${x.l.venc < hoje ? ' · em atraso' : ''}</div></div><input class="in" data-v="${i}" value="${String(x.val.toFixed(2)).replace('.', ',')}" style="width:100px;text-align:right"></div>`).join('') || '<p class="sm">Nenhuma CK com mês em aberto.</p>'}</div>
+      ${linhas.length ? '<button class="btn" id="lEmit" style="margin-top:10px">Emitir selecionados</button><p class="sm" id="lSt"></p>' : ''}`;
+    const b = document.getElementById('lEmit'); if (!b) return;
+    b.onclick = async () => {
+      const sel = [...c.querySelectorAll('[data-i]:checked')].map(x => +x.dataset.i); if (!sel.length) { alert('Marque ao menos uma CK.'); return; }
+      const data = document.getElementById('lData').value, forma = document.getElementById('lForma').value;
+      if (!confirm(`Emitir ${sel.length} recibo(s) com data ${dataBR(data)}?`)) return;
+      b.disabled = true; let ok = 0, falhas = [];
+      for (const i of sel) {
+        const x = linhas[i], v = parseFloat(c.querySelector(`[data-v="${i}"]`).value.replace(/\./g, '').replace(',', '.')) || 0;
+        if (v <= 0) { falhas.push(x.ck.nome + ' (valor zero)'); continue; }
+        st = { ck: x.ck, valor: v, data, forma, modelo: 'padrao', obs: '', sel: new Set([x.l.k]), ano: 1 };
+        const cc = calcular();
+        const { error } = await sb.rpc('emitir_recibo', { p_ck: x.ck.id, p_data: data, p_forma: forma, p_valor: cc.V, p_itens: cc.itens.map(it => ({ tipo: it.tipo, ano: it.ano, mes: it.mes, devido: it.devido, pago: it.pago, credito: 0 })), p_credito_usado: cc.cu, p_credito_novo: cc.cn, p_referencia: texto(cc, x.ck, data), p_modelo: 'padrao', p_obs: null });
+        if (error) falhas.push(x.ck.nome); else ok++;
+        document.getElementById('lSt').textContent = `Emitidos ${ok} de ${sel.length}…`;
+      }
+      novoEstado(); await B.carregar(sb, eu);
+      alert(`${ok} recibo(s) emitido(s).` + (falhas.length ? '\nNão emitidos: ' + falhas.join(', ') : '') + '\nEles estão no Histórico para conferir e enviar.');
+      aba = 'historico'; render();
+    };
+  }
+
   function novoEstado() { st = { ck: null, valor: 0, data: new Date().toISOString().slice(0, 10), forma: 'PIX', modelo: 'padrao', obs: '', sel: new Set(), ano: 1 }; }
   function render() {
     const pg = document.getElementById('pg');
-    pg.innerHTML = `<h1>Recibos</h1><p class="sub">Assessoramento · série CK</p><div class="abas" style="grid-template-columns:repeat(2,1fr);max-width:360px"><a data-a="emitir" class="${aba === 'emitir' ? 'on' : ''}">Emitir</a><a data-a="historico" class="${aba === 'historico' ? 'on' : ''}">Histórico</a></div><div id="cont"></div>`;
+    pg.innerHTML = `<h1>Recibos</h1><p class="sub">Assessoramento · série CK</p><div class="abas" style="grid-template-columns:repeat(3,1fr);max-width:480px"><a data-a="emitir" class="${aba === 'emitir' ? 'on' : ''}">Emitir</a><a data-a="lote" class="${aba === 'lote' ? 'on' : ''}">Lote</a><a data-a="historico" class="${aba === 'historico' ? 'on' : ''}">Histórico</a></div><div id="cont"></div>`;
     pg.querySelectorAll('[data-a]').forEach(a => a.onclick = () => { aba = a.dataset.a; render(); });
-    if (aba === 'emitir') { if (!(eu.admin || window.KESP_PODE('recibos.emitir'))) { document.getElementById('cont').innerHTML = '<p class="sm">Você pode consultar o histórico, mas não emitir recibos.</p>'; return; } telaEmitir(); } else telaHistorico();
+    if (aba !== 'historico' && !(eu.admin || window.KESP_PODE('recibos.emitir'))) { document.getElementById('cont').innerHTML = '<p class="sm">Você pode consultar o histórico, mas não emitir recibos.</p>'; return; }
+    if (aba === 'emitir') telaEmitir(); else if (aba === 'lote') telaLote(); else telaHistorico();
   }
   window.KESP_RECIBOS = {
     async abrir(cliente, perfil) {
@@ -1093,4 +1139,165 @@ window.KESP_BUSCA = (function () {
       render();
     }
   };
+})();
+
+// ===================== Apoio: e-mail e impressão =====================
+window.KESP_EMAIL = function (para, assunto, corpo) {
+  const u = 'mailto:' + encodeURIComponent(para || '') + '?subject=' + encodeURIComponent(assunto) + '&body=' + encodeURIComponent(corpo);
+  const a = document.createElement('a'); a.href = u; document.body.appendChild(a); a.click(); a.remove();
+};
+window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
+  const w = window.open('', '_blank');
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo}</title><style>@page{size:A4 ${paisagem ? 'landscape' : 'portrait'};margin:12mm}body{margin:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#1E1B19}</style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+  w.document.close();
+};
+
+// ===================== Cobrança (inadimplência e cartas) =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const MESX = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  let sb, eu, B;
+  function pendencias(ck) {
+    const ANO = new Date().getFullYear(), hoje = new Date().toISOString().slice(0, 10), L = [];
+    [ANO - 1, ANO].forEach(a => { const e = B.extrato(ck, a);
+      e.meses.forEach(m => { if (m.venc < hoje && m.devido > 0 && m.pago < m.devido - 0.001) L.push({ ref: 'Solidariedade ' + MESX[m.mes - 1] + '/' + a, devido: m.devido, pago: m.pago, falta: Math.round((m.devido - m.pago) * 100) / 100, parcial: m.pago > 0 }); });
+      if (e.soc.venc < hoje && e.soc.devido > 0 && e.soc.pago < e.soc.devido - 0.001) L.push({ ref: 'Societária ' + a, devido: e.soc.devido, pago: e.soc.pago, falta: Math.round((e.soc.devido - e.soc.pago) * 100) / 100, parcial: e.soc.pago > 0 }); });
+    let cred = Math.max(0, B.credito(ck.id));
+    L.forEach(p => { const u = Math.min(cred, p.falta); p.falta = Math.round((p.falta - u) * 100) / 100; cred -= u; });
+    return L.filter(p => p.falta > 0.001);
+  }
+  function render() {
+    const D = B.dados(), R = B.R, grupos = { parcial: [], um: [], dois: [], quatro: [] };
+    D.cks.filter(c => c.ativa).forEach(ck => { const p = pendencias(ck); if (!p.length) return; const tot = p.reduce((s, x) => s + x.falta, 0), cheios = p.filter(x => !x.parcial).length, item = { ck, p, tot };
+      if (!cheios) grupos.parcial.push(item); else if (cheios === 1) grupos.um.push(item); else if (cheios <= 3) grupos.dois.push(item); else grupos.quatro.push(item); });
+    const total = Object.values(grupos).flat().reduce((s, x) => s + x.tot, 0);
+    const G = [['parcial', 'PENDÊNCIA PARCIAL', '#F5A524'], ['um', '1 MÊS EM ATRASO', '#F07830'], ['dois', '2 A 3 MESES', '#E5484D'], ['quatro', '4 MESES OU MAIS', '#B4232A']];
+    document.getElementById('pg').innerHTML = `<h1>Cobrança</h1><p class="sub">Inadimplência considerando o crédito de cada CK</p>
+      <div class="cd" style="--c:#E5484D;margin-bottom:12px"><div class="hd"><span>TOTAL EM ABERTO</span></div><div class="big" style="color:#FF9A9D">${R(total)}</div><div class="sm">${Object.values(grupos).flat().length} CKs com pendência</div></div>
+      ${G.map(([k, t, c]) => grupos[k].length ? `<p class="gr-t" style="font-size:11px;letter-spacing:.08em;color:${c};margin:14px 0 6px">${t}</p>${grupos[k].sort((a, b) => b.tot - a.tot).map(x => `<div class="pe" style="--c:${c}"><div style="flex:1;min-width:0"><b>${esc(x.ck.nome)}</b><div class="sm">${x.p.map(p => p.ref + (p.parcial ? ' (parcial)' : '')).join(', ')}</div></div><b style="color:${c}">${R(x.tot)}</b><div class="ac"><button class="mini" data-carta="${x.ck.id}">Carta</button></div></div>`).join('')}` : '').join('') || '<div class="cd" style="--c:#22C984"><b style="color:#5FE0A8">Nenhuma CK com pendência. 🎉</b></div>'}`;
+    document.querySelectorAll('[data-carta]').forEach(b => b.onclick = () => carta(D.cks.find(c => c.id === b.dataset.carta)));
+  }
+  async function carta(ck) {
+    const R = B.R, p = pendencias(ck), tot = p.reduce((s, x) => s + x.falta, 0);
+    const { data: kd } = await sb.from('kolping_dados_bancarios').select('*').eq('id', 1).maybeSingle();
+    const pag = kd && (kd.chave_pix || kd.conta) ? `Dados para pagamento: ${[kd.banco, kd.agencia && 'Ag. ' + kd.agencia, kd.conta && 'C/C ' + kd.conta, kd.chave_pix && 'PIX ' + kd.chave_pix].filter(Boolean).join(' · ')}` : '';
+    const texto = `Prezada diretoria da ${ck.razao_social || ck.nome},\n\nIdentificamos as seguintes contribuições em aberto com a Kolping Estadual de São Paulo:\n\n${p.map(x => `• ${x.ref}: ${R(x.falta)}`).join('\n')}\n\nTotal em aberto: ${R(tot)}.\n\n${pag ? pag + '\n\n' : ''}Se o pagamento já foi feito, por favor desconsidere esta mensagem e nos envie o comprovante. Ficamos à disposição para conversar.\n\nAtenciosamente,\n${eu.nome}\n${eu.cargo || ''} · Kolping Estadual de São Paulo\n(11) 4183-6018`;
+    const dlg = document.createElement('div'); dlg.className = 'conf';
+    dlg.innerHTML = `<div class="cx fm" style="max-width:620px;max-height:92vh;overflow-y:auto"><b>Carta de cobrança · ${esc(ck.nome)}</b><p class="sm" style="margin:4px 0 8px">Revise o texto antes de enviar. ${ck.email ? 'Vai para ' + esc(ck.email) : '<b style="color:#F8C46A">A CK não tem e-mail cadastrado.</b>'}</p>
+      <textarea id="ctx" rows="16" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-size:13px;font-family:inherit;line-height:1.5">${esc(texto)}</textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn sec" data-x>Cancelar</button><button class="btn sec" data-pdf>Imprimir / PDF</button><button class="btn" data-mail style="flex:1">Abrir no e-mail</button></div></div>`;
+    document.body.appendChild(dlg);
+    const salvar = async () => { await sb.from('cartas_cobranca').insert({ comunidade_id: ck.id, itens: p, total: tot, texto: dlg.querySelector('#ctx').value, situacao: 'enviada', criado_por: eu.id, enviada_em: new Date().toISOString() }); };
+    dlg.querySelector('[data-x]').onclick = () => dlg.remove();
+    dlg.querySelector('[data-pdf]').onclick = () => window.KESP_IMPRIMIR('Carta ' + ck.nome, `<div style="max-width:640px;margin:0 auto;font-size:13px;line-height:1.6"><img src="${location.href.split('#')[0].replace(/[^/]*$/, '')}logo-kolping.png" style="height:42px;margin-bottom:20px"><div style="white-space:pre-wrap">${esc(dlg.querySelector('#ctx').value)}</div></div>`);
+    dlg.querySelector('[data-mail]').onclick = async () => { window.KESP_EMAIL(ck.email, 'Contribuições em aberto – Kolping Estadual de São Paulo', dlg.querySelector('#ctx').value); await salvar(); dlg.remove(); window.KESP_TOAST('Carta registrada como enviada.'); };
+  }
+  window.KESP_COBRANCA = { async abrir(c, p) { sb = c; eu = p; B = window.KESP_CKS.base; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>'; await B.carregar(sb, eu); render(); } };
+})();
+
+// ===================== Relatório de taxas =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  let sb, eu, B, ano = new Date().getFullYear(), dist = '';
+  const COR = { pago: ['#DDF5E9', '#127A4A'], parcial: ['#FDF1D6', '#9A6A00'], atraso: ['#FBDADB', '#A3262C'], a_vencer: ['#F1EEEA', '#8A8078'], isento: ['#F1EEEA', '#B0A89F'] };
+  function dados() {
+    const D = B.dados(); const cks = D.cks.filter(c => c.ativa && (!dist || c.distrito_id === dist)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    return cks.map(ck => { const e = B.extrato(ck, ano); return { ck, e, total: e.meses.reduce((s, m) => s + m.pago, 0) }; });
+  }
+  function tabela(L, impresso) {
+    const R = B.R, totMes = MESES.map((_, i) => L.reduce((s, x) => s + x.e.meses[i].pago, 0)), tot = L.reduce((s, x) => s + x.total, 0);
+    const cel = m => { const [bg, fg] = COR[m.sit]; return `<td style="background:${bg};color:${fg};text-align:center;padding:5px 3px;border:2px solid #fff;font-size:${impresso ? 8.5 : 11}px;white-space:nowrap">${m.sit === 'a_vencer' || m.sit === 'isento' ? (m.devido ? R(m.devido) : '—') : R(m.pago)}</td>`; };
+    return `<table style="width:100%;border-collapse:collapse;font-size:${impresso ? 9 : 12}px;color:#1E1B19"><tr style="font-size:${impresso ? 8 : 10}px;color:#8A8078"><th style="text-align:left;padding:5px">Comunidade</th>${MESES.map(m => `<th style="padding:5px 2px">${impresso ? m.slice(0, 3) : m}</th>`).join('')}<th style="color:#C85E1C">Total</th></tr>
+      ${L.map(x => `<tr><td style="padding:5px;font-weight:600;white-space:nowrap">${esc(x.ck.nome)}</td>${x.e.meses.map(cel).join('')}<td style="text-align:right;font-weight:700;color:#C85E1C;padding:5px;white-space:nowrap">${R(x.total)}</td></tr>`).join('')}
+      <tr style="background:#F7F4F0;font-weight:700"><td style="padding:6px 5px">Total do mês</td>${totMes.map(v => `<td style="text-align:center;font-size:${impresso ? 8.5 : 11}px;white-space:nowrap">${v ? R(v) : '—'}</td>`).join('')}<td style="text-align:right;color:#C85E1C;padding:5px;white-space:nowrap">${R(tot)}</td></tr></table>`;
+  }
+  function render() {
+    const D = B.dados(), L = dados(), R = B.R;
+    document.getElementById('pg').innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div><h1>Relatório de taxas</h1><p class="sub">Solidariedade ${ano} · valor pago em cada mês</p></div><button class="btn" id="pdf">Imprimir / Salvar PDF</button></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px"><select class="in" id="ano">${[ano - 2, ano - 1, ano, ano + 1].map(a => `<option${a === ano ? ' selected' : ''}>${a}</option>`).join('')}</select><select class="in" id="dist"><option value="">Todos os distritos</option>${D.dist.map(d => `<option value="${d.id}"${dist === d.id ? ' selected' : ''}>${esc(d.nome)}</option>`).join('')}</select></div>
+      <div style="overflow-x:auto;background:#fff;border-radius:12px;padding:10px">${tabela(L)}</div>
+      <p class="sm" style="margin-top:8px">Verde: pago · Amarelo: parcial · Vermelho: em atraso · Cinza: a vencer (valor devido)</p>`;
+    document.getElementById('ano').onchange = e => { ano = +e.target.value; render(); };
+    document.getElementById('dist').onchange = e => { dist = e.target.value; render(); };
+    document.getElementById('pdf').onclick = () => {
+      const base = location.href.split('#')[0].replace(/[^/]*$/, ''), tot = L.reduce((s, x) => s + x.total, 0), dd = D.dist.find(d => d.id === dist);
+      const em = L.filter(x => x.e.situacao === 'em_dia').length, pa = L.filter(x => x.e.situacao === 'parcial').length, at = L.filter(x => x.e.situacao === 'atraso').length;
+      window.KESP_IMPRIMIR('Relatório de taxas ' + ano, `<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #F07830;padding-bottom:8px;margin-bottom:10px"><img src="${base}logo-kolping.png" style="height:36px"><div style="text-align:right"><div style="font-size:15px;font-weight:700">Relatório de Taxas · Solidariedade ${ano}</div><div style="font-size:10px;color:#8A8078">${dd ? 'Distrito ' + esc(dd.nome) : 'Todos os distritos'} · gerado em ${new Date().toLocaleDateString('pt-BR')} por ${esc(eu.nome)}</div></div></div>
+        <div style="display:flex;gap:10px;margin-bottom:10px;font-size:11px">${[['Total recebido no ano', R(tot)], ['CKs em dia', em], ['Com pendência parcial', pa], ['Em atraso', at]].map(([t, v]) => `<div style="flex:1;background:#FBF5EF;border-radius:6px;padding:6px 10px"><span style="color:#8A8078">${t}</span><br><b style="font-size:14px">${v}</b></div>`).join('')}</div>
+        ${tabela(L, true)}<p style="font-size:9px;color:#8A8078">Verde: pago · Amarelo: parcial · Vermelho: em atraso · Cinza: a vencer</p>
+        <div style="margin-top:18px;text-align:center"><div style="color:#5A4E46;font-size:11px">Carapicuíba, ${new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}.</div>${eu.assinatura_url ? `<img src="${esc(eu.assinatura_url)}" style="height:46px;display:block;margin:4px auto -4px">` : '<div style="height:40px"></div>'}<div style="border-top:1px solid #1E1B19;width:240px;margin:0 auto;padding-top:3px;font-weight:700;font-size:11px">${esc(eu.nome)}</div><div style="color:#8A8078;font-size:10px">${esc(eu.cargo || '')} · Kolping Estadual de São Paulo</div></div>
+        <div style="margin-top:10px;font-size:8px;color:#9A9088;text-align:center">Kolping Estadual de São Paulo · R. Rio Branco, 36 – Cohab II, Carapicuíba – SP, 06326-030 · (11) 4183-6018</div>`, true);
+    };
+  }
+  window.KESP_RELATORIOS = { async abrir(c, p) { sb = c; eu = p; B = window.KESP_CKS.base; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>'; await B.carregar(sb, eu); render(); } };
+})();
+
+// ===================== Recadastramento (campanha e conferência) =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let sb, eu, B, ano = new Date().getFullYear() + (new Date().getMonth() >= 9 ? 1 : 0), conv = [], recs = [];
+  const SIT = { nao: ['Não abriu', '#6E6A7C'], rascunho: ['Começou', '#F5A524'], enviado: ['A conferir', '#3B82F6'], aprovado: ['Aprovado', '#22C984'], devolvido: ['Devolvido', '#E5484D'] };
+  const link = t => location.href.split('#')[0].replace(/[^/]*$/, '') + 'recadastramento.html?t=' + t;
+  async function carregar() {
+    await B.carregar(sb, eu);
+    const [c, r] = await Promise.all([sb.from('recad_convites').select('*').eq('ano', ano), sb.from('recadastramentos').select('*').in('ano', [ano, ano - 1])]);
+    conv = c.data || []; recs = r.data || [];
+  }
+  function render() {
+    const D = B.dados(), cks = D.cks.filter(c => c.ativa).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const linhas = cks.map(ck => { const r = recs.find(x => x.comunidade_id === ck.id && x.ano === ano), cv = conv.find(x => x.comunidade_id === ck.id); return { ck, r, cv, s: r ? r.situacao : 'nao' }; });
+    const cont = s => linhas.filter(l => l.s === s).length;
+    document.getElementById('pg').innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div><h1>Recadastramento ${ano}</h1><p class="sub">Campanha e conferência</p></div><div style="display:flex;gap:8px"><select class="in" id="ano">${[ano - 1, ano, ano + 1].map(a => `<option${a === ano ? ' selected' : ''}>${a}</option>`).join('')}</select><button class="btn" id="gerar">Gerar links</button></div></div>
+      <div class="g4">${['enviado', 'aprovado', 'rascunho', 'nao'].map(s => `<div class="cd" style="--c:${SIT[s][1]}"><div class="hd"><span>${SIT[s][0].toUpperCase()}</span></div><div class="big">${cont(s)}</div></div>`).join('')}</div>
+      <div style="margin-top:12px">${linhas.sort((a, b) => ['enviado', 'devolvido', 'rascunho', 'nao', 'aprovado'].indexOf(a.s) - ['enviado', 'devolvido', 'rascunho', 'nao', 'aprovado'].indexOf(b.s)).map(l => `<div class="pe" style="--c:${SIT[l.s][1]}"><div style="flex:1;min-width:0"><b>${esc(l.ck.nome)}</b><div class="sm" style="color:${SIT[l.s][1]}">${SIT[l.s][0]}${l.cv && l.cv.enviado_em ? ' · link enviado em ' + new Date(l.cv.enviado_em).toLocaleDateString('pt-BR') : ''}</div></div><div class="ac">${l.s === 'enviado' ? `<button class="mini" data-conf="${l.ck.id}">Conferir</button>` : ''}${l.cv && l.s !== 'aprovado' ? `<button class="mini neu" data-copiar="${l.cv.token}">Copiar link</button><button class="mini neu" data-mail="${l.ck.id}">E-mail</button>` : ''}</div></div>`).join('')}</div>`;
+    document.getElementById('ano').onchange = async e => { ano = +e.target.value; await carregar(); render(); };
+    document.getElementById('gerar').onclick = async () => {
+      const faltam = cks.filter(ck => !conv.some(c => c.comunidade_id === ck.id));
+      if (!faltam.length) { window.KESP_TOAST('Todas as CKs ativas já têm link para ' + ano + '.'); return; }
+      const r = await sb.from('recad_convites').insert(faltam.map(ck => ({ comunidade_id: ck.id, ano })));
+      if (r.error) { alert('Não foi possível gerar os links.'); return; }
+      await carregar(); render(); window.KESP_TOAST(faltam.length + ' links gerados.');
+    };
+    document.querySelectorAll('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link(b.dataset.copiar)); window.KESP_TOAST('Link copiado.'); } catch (_) { prompt('Copie o link:', link(b.dataset.copiar)); } });
+    document.querySelectorAll('[data-mail]').forEach(b => b.onclick = async () => {
+      const ck = D.cks.find(c => c.id === b.dataset.mail), cv = conv.find(c => c.comunidade_id === ck.id);
+      window.KESP_EMAIL(ck.email, `Recadastramento ${ano} – ${ck.nome}`, `Prezada diretoria da ${ck.razao_social || ck.nome},\n\nEstá aberto o recadastramento ${ano} das Comunidades Kolping. Acesse o link abaixo, confirme o CNPJ da CK e preencha as informações:\n\n${link(cv.token)}\n\nO formulário salva a cada etapa, então é possível continuar depois. O link vale por 90 dias.\n\nAtenciosamente,\n${eu.nome}\nKolping Estadual de São Paulo · (11) 4183-6018`);
+      await sb.from('recad_convites').update({ enviado_em: new Date().toISOString() }).eq('token', cv.token); await carregar(); render();
+    });
+    document.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => conferir(D.cks.find(c => c.id === b.dataset.conf)));
+  }
+  function conferir(ck) {
+    const r = recs.find(x => x.comunidade_id === ck.id && x.ano === ano), a = recs.find(x => x.comunidade_id === ck.id && x.ano === ano - 1) || B.dados().recad.filter(x => x.comunidade_id === ck.id && x.ano < ano).sort((x, y) => y.ano - x.ano)[0];
+    const R = B.R, t = B.taxa(ano), d = r.dados || {}, da = (a && a.dados) || {};
+    const lin = (n, v, va) => { const mud = String(v ?? '') !== String(va ?? '') && a; return `<tr><td style="padding:5px 8px;color:#A8A3B4">${n}</td><td style="padding:5px 8px">${esc(va ?? '—')}</td><td style="padding:5px 8px;${mud ? 'color:#FFB070;font-weight:600' : ''}">${esc(v ?? '—')}</td></tr>`; };
+    const docs = d.documentos && !Array.isArray(d.documentos) ? Object.entries(d.documentos).map(([k, v]) => k + ': ' + ({ tem: 'tem', andamento: 'em andamento', nao: 'não tem' }[v] || v)).join(' · ') : (d.documentos || []).join(', ');
+    const n = r.efetivos + r.cooperadores;
+    const dlg = document.createElement('div'); dlg.className = 'conf';
+    dlg.innerHTML = `<div class="cx" style="max-width:760px;max-height:92vh;overflow-y:auto"><b>Conferência · ${esc(ck.nome)} · ${ano}</b><p class="sm" style="margin:4px 0 10px">Em laranja, o que mudou em relação a ${a ? a.ano : 'nenhum ano anterior'}.</p>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="font-size:11px;color:#8E899A"><td></td><td style="padding:5px 8px">${a ? a.ano : 'Anterior'}</td><td style="padding:5px 8px">${ano}</td></tr>
+      ${lin('Efetivos', r.efetivos, a && a.efetivos)}${lin('Cooperadores', r.cooperadores, a && a.cooperadores)}${lin('Honorários', r.honorarios, a && a.honorarios)}${lin('Voluntários', r.voluntarios, a && a.voluntarios)}${lin('Funcionários', r.funcionarios, a && a.funcionarios)}${lin('Prestadores', r.prestadores, a && a.prestadores)}
+      ${lin('Presidente', d.presidente, da.presidente)}${lin('Vice-presidente', d.vice_presidente, da.vice_presidente)}${lin('1º tesoureiro(a)', d.tesoureiro_1, da.tesoureiro_1)}${lin('1º secretário(a)', d.secretario_1, da.secretario_1)}${lin('Mandato', [d.vigencia_ini, d.vigencia_fim].filter(Boolean).join(' a '), [da.vigencia_ini, da.vigencia_fim].filter(Boolean).join(' a '))}${lin('Sede', d.sede, da.sede)}${lin('E-mail da CK', d.contato && d.contato.email, ck.email)}${lin('Telefone da CK', d.contato && d.contato.telefone, ck.telefone)}</table></div>
+      <p class="sm" style="margin:10px 0 0">Documentos: ${esc(docs || '—')}</p><p class="sm" style="margin:4px 0 0">Responsável: ${esc(d.resp_nome || '—')} ${esc(d.resp_telefone || '')} · LGPD: ${r.consentimento_lgpd_em ? '✓ ' + new Date(r.consentimento_lgpd_em).toLocaleString('pt-BR') : '—'} · Uso de imagem: ${r.uso_imagem === true ? 'autorizado' : r.uso_imagem === false ? 'não autorizado' : 'não respondeu'}</p>
+      <div class="cd" style="--c:#22C984;margin-top:10px"><div class="kv"><span>Taxa de solidariedade</span><span><b>${R(n * t.solidariedade)}</b> por mês (${n} associados)</span><span>Taxa societária</span><span><b>${R(n * t.societaria)}</b> no ano</span>${r.efetivos < t.minimo_efetivos ? `<span style="color:#FF9A9D">Atenção</span><span style="color:#FF9A9D">abaixo do mínimo de ${t.minimo_efetivos} efetivos</span>` : ''}</div></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn sec" data-x>Fechar</button><button class="btn sec" data-dev style="color:#FF9A9D">Devolver para correção</button><button class="btn" data-apr style="flex:1">Aprovar</button></div></div>`;
+    document.body.appendChild(dlg);
+    dlg.querySelector('[data-x]').onclick = () => dlg.remove();
+    dlg.querySelector('[data-dev]').onclick = async () => { const m = prompt('O que a CK precisa corrigir?'); if (!m || !m.trim()) return; await sb.from('recadastramentos').update({ situacao: 'devolvido', motivo_devolucao: m.trim() }).eq('id', r.id);
+      const cv = conv.find(c => c.comunidade_id === ck.id); if (cv) window.KESP_EMAIL(ck.email || (d.contato && d.contato.email), `Recadastramento ${ano} – correção necessária`, `Prezada diretoria da ${ck.razao_social || ck.nome},\n\nConferimos o recadastramento ${ano} e precisamos de um ajuste:\n\n${m.trim()}\n\nPor favor, acesse o mesmo link, corrija e envie novamente:\n${link(cv.token)}\n\nAtenciosamente,\n${eu.nome}\nKolping Estadual de São Paulo`);
+      dlg.remove(); await carregar(); render(); };
+    dlg.querySelector('[data-apr]').onclick = async () => {
+      const x = await sb.from('recadastramentos').update({ situacao: 'aprovado', aprovado_em: new Date().toISOString(), aprovado_por: eu.id }).eq('id', r.id);
+      if (x.error) { alert('Não foi possível aprovar.'); return; }
+      const c = d.contato || {}; const up = {}; ['logradouro', 'numero', 'bairro', 'cidade', 'uf', 'cep', 'email', 'telefone'].forEach(k => { if (c[k]) up[k] = c[k]; });
+      if (Object.keys(up).length) await sb.from('comunidades').update(up).eq('id', ck.id);
+      await sb.from('avisos').update({ resolvido_em: new Date().toISOString() }).is('destinatario', null).is('resolvido_em', null).eq('texto', ck.nome);
+      if (confirm('Aprovado! Abrir o e-mail de confirmação para a CK?')) window.KESP_EMAIL(ck.email || c.email, `Recadastramento ${ano} aprovado – ${ck.nome}`, `Prezada diretoria da ${ck.razao_social || ck.nome},\n\nO recadastramento ${ano} foi conferido e aprovado. Obrigado!\n\nA partir de agora, a taxa de solidariedade é de ${R(n * t.solidariedade)} por mês (${n} associados) e a taxa societária de ${ano} é de ${R(n * t.societaria)}.\n\nAtenciosamente,\n${eu.nome}\nKolping Estadual de São Paulo · (11) 4183-6018`);
+      dlg.remove(); await carregar(); render();
+    };
+  }
+  window.KESP_RECAD = { async abrir(c, p) { sb = c; eu = p; B = window.KESP_CKS.base; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>'; await carregar(); render(); } };
 })();

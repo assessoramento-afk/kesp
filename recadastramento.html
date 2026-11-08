@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1622"><title>Recadastramento · Kolping Estadual de São Paulo</title>
+<link rel="icon" href="favicon.ico"><link rel="stylesheet" href="kesp.css">
+<style>
+body{background:#0F1622}.wrap{max-width:620px;margin:0 auto;padding:20px 16px 60px}
+.cab{display:flex;align-items:center;gap:12px;margin-bottom:14px}.cab img{height:38px;background:#fff;border-radius:8px;padding:4px 8px}
+.pass{display:flex;gap:4px;margin:10px 0 16px}.pass i{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1)}.pass i.on{background:#F07830}
+.cx{background:linear-gradient(160deg,#1B2332,#141B27);border-radius:14px;padding:16px;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+h2{font-size:17px;margin:0 0 4px}.sub{font-size:12px;color:#A8A3B4;margin:0 0 12px}
+label{display:block;font-size:12px;color:#A8A3B4;margin:10px 0 4px}input,select{width:100%;margin:0}
+.d2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ant{font-size:11px;color:#8E899A;margin-top:3px}
+.doc{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,.07);font-size:13px}
+.doc select{width:auto}.ck{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;margin-top:12px}.ck input{width:20px;height:20px;flex-shrink:0;margin-top:2px}
+.bts{display:flex;gap:8px;margin-top:16px}.bts .botao{margin:0}.img{border:1px solid rgba(240,120,48,.35);border-radius:12px;padding:12px;margin-top:14px}
+.ok{text-align:center;padding:30px 10px}
+</style></head><body><div class="wrap">
+<div class="cab"><img src="logo-kolping.png" alt="Kolping Estadual de São Paulo"><div><b>Recadastramento</b><div class="sub" style="margin:0" id="anoT"></div></div></div>
+<div id="app"><p class="sub">Carregando…</p></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){'use strict';
+const C=window.KESP_CONFIG, sb=window.supabase.createClient(C.supabaseUrl,C.supabaseKey,{auth:{persistSession:false}});
+const app=document.getElementById('app'), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const token=new URLSearchParams(location.search).get('t'); let doc='', D=null, R={dados:{}}, passo=1;
+const CARGOS=[['presidente','Presidente'],['vice_presidente','Vice-presidente'],['secretario_1','1º secretário(a)'],['secretario_2','2º secretário(a)'],['tesoureiro_1','1º tesoureiro(a)'],['tesoureiro_2','2º tesoureiro(a)'],['dir_juventude','Diretor(a) de juventude'],['vice_dir_juventude','Vice-diretor(a) de juventude'],['membro_1','Membro do conselho'],['membro_2','Membro do conselho'],['membro_3','Membro do conselho']];
+const DOCS=['Estatuto registrado','Ata de eleição registrada','CNPJ ativo','Livro de atas','Alvará de funcionamento','AVCB ou CLCB (bombeiros)','Inscrição municipal'];
+const NUM=[['efetivos','Associados efetivos'],['cooperadores','Associados cooperadores'],['honorarios','Associados honorários'],['voluntarios','Voluntários'],['funcionarios','Funcionários'],['prestadores','Prestadores de serviço']];
+const so=v=>String(v||'').replace(/\D/g,'');
+function msg(t){app.insertAdjacentHTML('afterbegin',`<div class="msg erro">${esc(t)}</div>`);window.scrollTo(0,0);}
+if(!token){app.innerHTML='<div class="cx"><h2>Link inválido</h2><p class="sub">Use o link enviado pela Kolping Estadual de São Paulo.</p></div>';return;}
+
+function tela1(){app.innerHTML=`<div class="cx"><h2>Confirme sua Comunidade</h2><p class="sub">Para sua segurança, digite o CNPJ da CK (ou o código informado pela Kolping, se a CK não tiver CNPJ).</p>
+ <label>CNPJ ou código</label><input id="doc" inputmode="numeric" autocomplete="off"><div class="bts"><button class="botao" id="ir">Continuar</button></div></div>`;
+ document.getElementById('ir').onclick=async()=>{doc=document.getElementById('doc').value;const{data,error}=await sb.rpc('recad_abrir',{p_token:token,p_doc:doc});
+  if(error||!data){msg('Não foi possível abrir agora. Tente de novo em instantes.');return;}
+  if(data.erro==='link'){app.innerHTML='<div class="cx"><h2>Link expirado</h2><p class="sub">Peça um novo link à Kolping Estadual: (11) 4183-6018.</p></div>';return;}
+  if(data.erro==='doc'){msg('O CNPJ não confere com o desta Comunidade.');return;}
+  D=data; document.getElementById('anoT').textContent=D.ck.nome+' · '+D.ano;
+  if(D.atual&&D.atual.situacao==='aprovado'){app.innerHTML='<div class="cx ok"><h2>Recadastramento já aprovado ✓</h2><p class="sub">Obrigado! Não é preciso enviar de novo.</p></div>';return;}
+  if(D.atual){R={efetivos:D.atual.efetivos,cooperadores:D.atual.cooperadores,honorarios:D.atual.honorarios,voluntarios:D.atual.voluntarios,funcionarios:D.atual.funcionarios,prestadores:D.atual.prestadores,dados:D.atual.dados||{},uso_imagem:D.atual.uso_imagem};}
+  else R={dados:{contato:{...D.ck}}};
+  if(!R.dados.contato)R.dados.contato={...D.ck};
+  passo=2;tela();};}
+
+const ant=(k)=>D.anterior?`<div class="ant">Em ${D.anterior.ano}: ${esc(k==='dados'?'':D.anterior[k]??'—')}</div>`:'';
+const antD=(k)=>D.anterior&&D.anterior.dados&&D.anterior.dados[k]?`<div class="ant">Em ${D.anterior.ano}: ${esc(D.anterior.dados[k])}</div>`:'';
+function campo(id,label,val,tipo,extra){return`<label for="${id}">${label}</label><input id="${id}" value="${esc(val||'')}" ${tipo?`type="${tipo}"`:''} ${extra||''}>`;}
+function ler(){const g=id=>{const e=document.getElementById(id);return e?e.value.trim():undefined;};
+ if(passo===2){const c=R.dados.contato;['logradouro','numero','bairro','cidade','uf','cep','email','telefone'].forEach(k=>{const v=g('c_'+k);if(v!==undefined)c[k]=v;});}
+ if(passo===3){CARGOS.forEach(([k])=>{R.dados[k]=g('d_'+k)||null;});['tel_presidente','tel_vice','data_eleicao','vigencia_ini','vigencia_fim'].forEach(k=>{R.dados[k]=g('d_'+k)||null;});}
+ if(passo===4){NUM.forEach(([k])=>{R[k]=parseInt(g('n_'+k),10)||0;});}
+ if(passo===5){R.dados.sede=g('s_sede')||null;R.dados.data_ultima_assembleia=g('s_assembleia')||null;R.dados.coordenador=g('s_coord')||null;R.dados.documentos={};DOCS.forEach((d,i)=>{R.dados.documentos[d]=g('doc_'+i);});}
+ if(passo===6){R.dados.resp_nome=g('r_nome');R.dados.resp_telefone=g('r_tel');R.dados.resp_email=g('r_email');R.declaracao=document.getElementById('r_decl').checked;R.lgpd=document.getElementById('r_lgpd').checked;const im=document.querySelector('[name=img]:checked');if(im)R.uso_imagem=im.value==='1';}}
+function valida(){
+ if(passo===3&&!R.dados.presidente)return'Informe o nome do(a) presidente.';
+ if(passo===4&&!(R.efetivos>0))return'Informe o número de associados efetivos.';
+ if(passo===6){if(!R.dados.resp_nome)return'Informe o nome de quem preencheu.';if(!R.declaracao)return'Confirme a declaração para enviar.';if(!R.lgpd)return'O consentimento LGPD é necessário para enviar.';}
+ return'';}
+async function salvar(enviar){const{data,error}=await sb.rpc('recad_salvar',{p_token:token,p_doc:doc,p_rec:R,p_enviar:enviar});
+ if(error||!data||data.erro){msg(data&&data.erro==='lgpd'?'O consentimento LGPD é necessário.':'Não foi possível salvar agora. Seus dados continuam na tela; tente de novo.');return false;}return true;}
+function tela(){
+ const ps=`<div class="pass">${[1,2,3,4,5,6].map(i=>`<i class="${i<=passo?'on':''}"></i>`).join('')}</div>`;
+ let h='';const c=R.dados.contato||{};
+ if(passo===2)h=`<h2>Dados da Comunidade</h2><p class="sub">Confira e atualize o endereço e o contato.</p>${campo('c_cep','CEP',c.cep,'','inputmode="numeric"')}<div class="d2"><div>${campo('c_logradouro','Rua',c.logradouro)}</div><div>${campo('c_numero','Número',c.numero)}</div></div><div class="d2"><div>${campo('c_bairro','Bairro',c.bairro)}</div><div>${campo('c_cidade','Cidade',c.cidade)}</div></div>${campo('c_uf','UF',c.uf||'SP')}${campo('c_email','E-mail da CK',c.email,'email')}${campo('c_telefone','Telefone da CK',c.telefone,'tel')}`;
+ if(passo===3)h=`<h2>Diretoria</h2><p class="sub">Nomes completos. Deixe em branco os cargos que não existem.</p>${CARGOS.map(([k,n])=>campo('d_'+k,n,R.dados[k])+antD(k)).join('')}<div class="d2"><div>${campo('d_tel_presidente','Telefone do(a) presidente',R.dados.tel_presidente,'tel')}</div><div>${campo('d_tel_vice','Telefone do(a) vice',R.dados.tel_vice,'tel')}</div></div>${campo('d_data_eleicao','Data da eleição',R.dados.data_eleicao,'date')}<div class="d2"><div>${campo('d_vigencia_ini','Mandato: início',R.dados.vigencia_ini,'date')}</div><div>${campo('d_vigencia_fim','Mandato: fim',R.dados.vigencia_fim,'date')}</div></div>`;
+ if(passo===4)h=`<h2>Associados e equipe</h2><p class="sub">Números atuais da Comunidade.</p>${NUM.map(([k,n])=>campo('n_'+k,n,R[k]??'','number','min="0" inputmode="numeric"')+ant(k)).join('')}`;
+ if(passo===5){const dc=R.dados.documentos&&!Array.isArray(R.dados.documentos)?R.dados.documentos:{};h=`<h2>Sede e documentos</h2><label>Sede</label><select id="s_sede">${['','Própria','Cedida','Alugada','Não possui'].map(o=>`<option${R.dados.sede===o?' selected':''}>${o}</option>`).join('')}</select>${campo('s_assembleia','Data da última assembleia',R.dados.data_ultima_assembleia,'date')}${campo('s_coord','Coordenador(a) responsável',R.dados.coordenador)}<label>Documentos</label>${DOCS.map((d,i)=>`<div class="doc"><span>${d}</span><select id="doc_${i}">${[['tem','Tem'],['andamento','Em andamento'],['nao','Não tem']].map(([v,t])=>`<option value="${v}"${(dc[d]||'nao')===v?' selected':''}>${t}</option>`).join('')}</select></div>`).join('')}`;}
+ if(passo===6)h=`<h2>Responsável e envio</h2>${campo('r_nome','Nome de quem preencheu',R.dados.resp_nome)}<div class="d2"><div>${campo('r_tel','Telefone',R.dados.resp_telefone,'tel')}</div><div>${campo('r_email','E-mail',R.dados.resp_email,'email')}</div></div>
+  <div class="ck"><input type="checkbox" id="r_decl"${R.declaracao?' checked':''}><label for="r_decl" style="margin:0;color:#D8D3DE">Declaro que as informações são verdadeiras e foram aprovadas pela diretoria da Comunidade.</label></div>
+  <div class="ck"><input type="checkbox" id="r_lgpd"${R.lgpd?' checked':''}><label for="r_lgpd" style="margin:0;color:#D8D3DE">Autorizo a Kolping Estadual de São Paulo a tratar os dados pessoais deste formulário para a gestão do movimento Kolping, conforme a LGPD e o <a href="https://claude.ai/artifact/PuGmRehX8ZPqiTgGkGAry8" target="_blank" rel="noopener" style="color:#FFB070">aviso de privacidade</a>.</label></div>
+  <div class="img"><b>Autorização de uso de imagem (opcional)</b><p class="sub" style="margin:6px 0 8px;line-height:1.5">Autorizo a Kolping Estadual de São Paulo a usar fotos e vídeos das atividades da nossa Comunidade Kolping, em que eu ou a diretoria aparecemos, para registro institucional, prestação de contas e divulgação em seus canais (site, redes sociais e materiais impressos), sem fins comerciais. Sei que posso retirar esta autorização a qualquer momento pelo e-mail assessoramento@kolpingsp.org, sem prejuízo do que já foi publicado.</p>
+  <label style="display:flex;gap:8px;align-items:center;color:#D8D3DE"><input type="radio" name="img" value="1" style="width:auto"${R.uso_imagem===true?' checked':''}> Autorizo</label><label style="display:flex;gap:8px;align-items:center;color:#D8D3DE"><input type="radio" name="img" value="0" style="width:auto"${R.uso_imagem===false?' checked':''}> Não autorizo</label></div>`;
+ app.innerHTML=`${ps}<div class="cx">${h}<div class="bts">${passo>2?'<button class="botao sec" id="vol">Voltar</button>':''}<button class="botao" id="av">${passo===6?'Enviar recadastramento':'Salvar e continuar'}</button></div></div><p class="sub" style="text-align:center;margin-top:10px">Etapa ${passo-1} de 5 · salvo automaticamente a cada etapa</p>`;
+ if(passo===2){const cp=document.getElementById('c_cep');cp.onblur=async()=>{const d=so(cp.value);if(d.length!==8)return;try{const j=await(await fetch('https://viacep.com.br/ws/'+d+'/json/')).json();if(!j.erro){[['c_logradouro',j.logradouro],['c_bairro',j.bairro],['c_cidade',j.localidade],['c_uf',j.uf]].forEach(([i,v])=>{const e=document.getElementById(i);if(e&&!e.value)e.value=v||'';});}}catch(_){}};}
+ const v=document.getElementById('vol');if(v)v.onclick=()=>{ler();passo--;tela();window.scrollTo(0,0);};
+ document.getElementById('av').onclick=async()=>{ler();const e=valida();if(e){msg(e);return;}const b=document.getElementById('av');b.disabled=true;b.textContent='Salvando…';
+  const ok=await salvar(passo===6);b.disabled=false;if(!ok){b.textContent=passo===6?'Enviar recadastramento':'Salvar e continuar';return;}
+  if(passo===6){app.innerHTML='<div class="cx ok"><h2>Recadastramento enviado ✓</h2><p class="sub">Obrigado! A Kolping Estadual vai conferir as informações e avisar quando aprovar.</p></div>';return;}
+  passo++;tela();window.scrollTo(0,0);};}
+tela1();})();
+</script></body></html>
