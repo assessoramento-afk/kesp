@@ -4,5 +4,7 @@ window.KESP_CONFIG = {
   supabaseKey: 'sb_publishable_hG6OhBdBP3-GBy8duqeK6g_MT2QDcfU',
   dominios: ['kolpingsp.org', 'kolping-sp.org.br'],
   admins: 'Henrique ou Jaqueline',
-  kaiChaveVence: '2028-11-10'
+  kaiChaveVence: '2028-11-10',
+  versao: '2.1',
+  versaoData: '08/11/2026'
 };

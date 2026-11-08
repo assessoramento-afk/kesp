@@ -59,7 +59,7 @@ window.KESP_BUSCA = (function () {
     if (futuros.length) menu += `<div class="sec">Próximas etapas</div><a class="it fut" id="caminho"><i class="ti ti-hourglass"></i><b>A caminho</b><span class="eb">${futuros.length}</span><span class="cv">${caminhoAberto ? '⌄' : '›'}</span></a>
       <div class="grp" id="grpCaminho"${caminhoAberto ? '' : ' hidden'}>` + agrupar(futuros).map(s => `<div class="sub-t">${esc(s.n)}</div>` + s.i.map(m => item(m, true)).join('')).join('') + '</div>';
     const ini = (eu.nome || eu.email).split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase();
-    app.innerHTML = `<div class="sh"><nav class="lat" id="lat"><div style="display:flex;align-items:center;gap:10px;padding:4px 10px 8px"><div class="ik">${K(16)}</div><b style="letter-spacing:3px">KESP</b></div>${menu}</nav>
+    app.innerHTML = `<div class="sh"><nav class="lat" id="lat"><div style="display:flex;align-items:center;gap:10px;padding:4px 10px 8px"><div class="ik">${K(16)}</div><b style="letter-spacing:3px">KESP</b></div>${menu}<div class="versao">KESP versão ${esc(window.KESP_CONFIG.versao || '')} · ${esc(window.KESP_CONFIG.versaoData || '')}</div></nav>
       <div class="cp"><header class="topo"><div class="ik">${K(16)}</div>
         <div style="flex:1;min-width:0;font-size:15px;font-weight:600">${saudacao()}, ${esc(primeiro())}</div>
         <button class="bi" id="qr" aria-label="Ler código"><i class="ti ti-scan"></i></button>
@@ -80,7 +80,7 @@ window.KESP_BUSCA = (function () {
     document.getElementById('qr').onclick = () => toast('O leitor de QR Code chega na etapa 1B.');
     document.getElementById('perfil').onclick = () => {
       const pop = document.getElementById('pop'); pop.style.display = 'block'; lat.classList.remove('ab');
-      pop.innerHTML = `<div style="padding:8px 10px"><b>${esc(eu.nome || eu.email)}</b><div class="sm">${esc(eu.cargo || '')}${eu.admin ? ' · Administrador' : ''}</div></div>
+      pop.innerHTML = `<div style="padding:8px 10px"><b>${esc(eu.nome || eu.email)}</b><div class="sm">${esc(eu.cargo || '')}${eu.admin ? ' · Administrador' : ''}</div><div class="sm" style="margin-top:4px;font-size:11px">KESP versão ${esc(window.KESP_CONFIG.versao || '')}</div></div>
         <a class="it" id="pAss"><i class="ti ti-signature"></i>${eu.assinatura_url ? 'Trocar' : 'Cadastrar'} minha assinatura</a><a class="it" id="pBv"><i class="ti ti-sparkles"></i>Rever boas-vindas</a><a class="it" id="pSair"><i class="ti ti-logout"></i>Sair</a>`;
       fundo.classList.add('ab');
       document.getElementById('pSair').onclick = async () => { fundo.classList.remove('ab'); await sb.auth.signOut(); };
@@ -179,6 +179,18 @@ window.KESP_BUSCA = (function () {
     window.scrollTo(0, 0);
   }
 
+  // ---------- Nova versão ----------
+  function verificarVersao() {
+    const atual = window.KESP_CONFIG.versao;
+    const checar = async () => {
+      try { const t = await (await fetch('config.js?v=' + Date.now(), { cache: 'no-store' })).text(); const m = t.match(/versao:\s*'([^']+)'/);
+        if (m && m[1] !== atual && !document.getElementById('novaVersao')) document.body.insertAdjacentHTML('beforeend', `<div id="novaVersao" class="nova-versao">Nova versão do KESP disponível (${m[1]}) <button class="mini" onclick="location.reload()">Atualizar</button></div>`);
+      } catch (_) {}
+    };
+    setInterval(checar, 10 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checar(); });
+  }
+
   // ---------- Assinatura ----------
   function assinatura() {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/png,image/jpeg';
@@ -232,6 +244,7 @@ window.KESP_BUSCA = (function () {
       try { await carregar(); } catch (e) { try { await sb.from('erros_sistema').insert({ tela: 'inicio', mensagem: String(e && e.message || e) }); } catch (_) {} }
       moldura();
       window.onhashchange = rota; rota();
+      verificarVersao();
       if (!eu.boas_vindas_vistas) boasVindas(false);
     }
   };
@@ -676,7 +689,7 @@ window.KESP_BUSCA = (function () {
       sb.from('comunidades').select('*').order('nome'),
       sb.from('distritos').select('*').order('ordem'),
       sb.from('recadastramentos').select('*').order('ano'),
-      sb.from('quitacoes').select('comunidade_id,tipo,ano,mes,valor_pago,origem'),
+      sb.from('quitacoes').select('comunidade_id,tipo,ano,mes,valor_pago,origem,quita_mes'),
       sb.from('taxas_ano').select('*'),
       sb.from('creditos').select('comunidade_id,valor'),
       sb.from('comunidades_favoritas').select('comunidade_id').eq('perfil_id', eu.id)
@@ -688,16 +701,25 @@ window.KESP_BUSCA = (function () {
 
   // Extrato do ano calculado no aparelho (mesma regra da função extrato_ck do banco)
   function extrato(ck, ano) {
-    const t = taxa(ano), r = recadAno(ck.id, ano), n = r ? r.efetivos + r.cooperadores : 0, hoje = new Date().toISOString().slice(0, 10);
+    const t = taxa(ano), r = recadAno(ck.id, ano), hoje = new Date().toISOString().slice(0, 10);
     const ini = (ck.inicio_cobranca || ano + '-01-01').slice(0, 7);
-    const pago = (tipo, mes) => D.quit.filter(q => q.comunidade_id === ck.id && q.ano === ano && q.tipo === tipo && (q.mes ?? null) === mes).reduce((s, q) => s + Number(q.valor_pago), 0);
+    // associados que pagam no mês: o recadastramento aprovado vale a partir do mês da aprovação (vigente_desde)
+    const aprov = D.recad.filter(x => x.comunidade_id === ck.id && x.situacao === 'aprovado').map(x => ({ x, d: (x.vigente_desde || x.ano + '-01-01').slice(0, 7) })).sort((a, b) => b.d.localeCompare(a.d));
+    const nMes = ym => { const v = aprov.find(a => a.d <= ym) || aprov[aprov.length - 1]; return v ? v.x.efetivos + v.x.cooperadores : 0; };
+    const n = nMes(hoje.slice(0, 7) < ano + '-01' ? ano + '-01' : hoje.slice(0, 4) > String(ano) ? ano + '-12' : hoje.slice(0, 7));
+    const qs = (tipo, mes) => D.quit.filter(q => q.comunidade_id === ck.id && q.ano === ano && q.tipo === tipo && (q.mes ?? null) === mes);
+    const pago = (tipo, mes) => qs(tipo, mes).reduce((s, q) => s + Number(q.valor_pago), 0);
+    const quitado = (tipo, mes) => qs(tipo, mes).some(q => q.quita_mes);
     const sit = (dev, pg, venc) => dev === 0 ? 'isento' : pg >= dev - 0.001 ? 'pago' : pg > 0 ? 'parcial' : venc < hoje ? 'atraso' : 'a_vencer';
     const meses = MES.map((_, i) => {
-      const venc = `${ano}-${String(i + 1).padStart(2, '0')}-${String(Math.min(t.dia_vencimento, 28)).padStart(2, '0')}`;
-      const dev = venc.slice(0, 7) < ini ? 0 : Math.round(n * t.solidariedade * 100) / 100, pg = pago('solidariedade', i + 1);
+      const ym = `${ano}-${String(i + 1).padStart(2, '0')}`, venc = `${ym}-${String(Math.min(t.dia_vencimento, 28)).padStart(2, '0')}`, pg = pago('solidariedade', i + 1);
+      let dev = ym < ini ? 0 : Math.round(nMes(ym) * t.solidariedade * 100) / 100;
+      if (quitado('solidariedade', i + 1)) dev = pg; // marcado como pago no sistema anterior: vale o valor pago na época
       return { mes: i + 1, venc, devido: dev, pago: pg, sit: sit(dev, pg, venc) };
     });
-    const sVenc = ano + String(t.venc_societaria || '-03-31').slice(4), sdev = sVenc.slice(0, 7) < ini ? 0 : Math.round(n * t.societaria * 100) / 100, spg = pago('societaria', null);
+    const sVenc = ano + String(t.venc_societaria || '-03-31').slice(4), spg = pago('societaria', null);
+    let sdev = sVenc.slice(0, 7) < ini ? 0 : Math.round(nMes(sVenc.slice(0, 7)) * t.societaria * 100) / 100;
+    if (quitado('societaria', null)) sdev = spg;
     const soc = { venc: sVenc, devido: sdev, pago: spg, sit: sit(sdev, spg, sVenc) };
     const todos = [...meses, soc];
     const aberto = todos.filter(m => m.sit === 'atraso' || (m.sit === 'parcial' && m.venc < hoje)).reduce((s, m) => s + (m.devido - m.pago), 0);
@@ -1041,7 +1063,7 @@ window.KESP_BUSCA = (function () {
     if (ml) ml.onclick = async () => {
       const ck = B.dados().cks.find(c => c.id === r.comunidade_id) || {};
       dlg.querySelector('[data-imp]').click();
-      window.KESP_EMAIL(ck.email, `Recibo ${r.numero}/${r.ano} – Kolping Estadual de São Paulo`, `Prezada diretoria da ${ck.razao_social || ck.nome || r.pagador_nome},\n\nSegue em anexo o recibo nº ${r.numero}/${r.ano}, no valor de ${R(r.valor)}, referente ao pagamento de ${dataBR(r.data_pagamento)}.\n\nAgradecemos a contribuição da Comunidade.\n\nAtenciosamente,\n${eu.nome}\n${eu.cargo || ''} · Kolping Estadual de São Paulo\n(11) 4183-6018`);
+      window.KESP_EMAIL(ck.email, `Recibo ${r.numero}/${r.ano} – Kolping Estadual de São Paulo`, `Prezada ${ck.razao_social || ck.nome || r.pagador_nome},\n\nSegue em anexo o recibo nº ${r.numero}/${r.ano}, no valor de ${R(r.valor)}, referente ao pagamento de ${dataBR(r.data_pagamento)}.\n\nAgradecemos a contribuição da Comunidade.\n\nAtenciosamente,`);
       await sb.from('recibos').update({ enviado_em: new Date().toISOString() }).eq('id', r.id);
       window.KESP_TOAST('Salve o PDF na janela de impressão e anexe ao e-mail que abriu.');
     };
@@ -1182,7 +1204,7 @@ window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
     const R = B.R, p = pendencias(ck), tot = p.reduce((s, x) => s + x.falta, 0);
     const { data: kd } = await sb.from('kolping_dados_bancarios').select('*').eq('id', 1).maybeSingle();
     const pag = kd && (kd.chave_pix || kd.conta) ? `Dados para pagamento: ${[kd.banco, kd.agencia && 'Ag. ' + kd.agencia, kd.conta && 'C/C ' + kd.conta, kd.chave_pix && 'PIX ' + kd.chave_pix].filter(Boolean).join(' · ')}` : '';
-    const texto = `Prezada diretoria da ${ck.razao_social || ck.nome},\n\nIdentificamos as seguintes contribuições em aberto com a Kolping Estadual de São Paulo:\n\n${p.map(x => `• ${x.ref}: ${R(x.falta)}`).join('\n')}\n\nTotal em aberto: ${R(tot)}.\n\n${pag ? pag + '\n\n' : ''}Se o pagamento já foi feito, por favor desconsidere esta mensagem e nos envie o comprovante. Ficamos à disposição para conversar.\n\nAtenciosamente,\n${eu.nome}\n${eu.cargo || ''} · Kolping Estadual de São Paulo\n(11) 4183-6018`;
+    const texto = `Prezada ${ck.razao_social || ck.nome},\n\nIdentificamos as seguintes contribuições em aberto com a Kolping Estadual de São Paulo:\n\n${p.map(x => `• ${x.ref}: ${R(x.falta)}`).join('\n')}\n\nTotal em aberto: ${R(tot)}.\n\n${pag ? pag + '\n\n' : ''}Se o pagamento já foi feito, por favor desconsidere esta mensagem e nos envie o comprovante. Ficamos à disposição para conversar.\n\nAtenciosamente,`;
     const dlg = document.createElement('div'); dlg.className = 'conf';
     dlg.innerHTML = `<div class="cx fm" style="max-width:620px;max-height:92vh;overflow-y:auto"><b>Carta de cobrança · ${esc(ck.nome)}</b><p class="sm" style="margin:4px 0 8px">Revise o texto antes de enviar. ${ck.email ? 'Vai para ' + esc(ck.email) : '<b style="color:#F8C46A">A CK não tem e-mail cadastrado.</b>'}</p>
       <textarea id="ctx" rows="16" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-size:13px;font-family:inherit;line-height:1.5">${esc(texto)}</textarea>
@@ -1265,7 +1287,7 @@ window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
     document.querySelectorAll('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link(b.dataset.copiar)); window.KESP_TOAST('Link copiado.'); } catch (_) { prompt('Copie o link:', link(b.dataset.copiar)); } });
     document.querySelectorAll('[data-mail]').forEach(b => b.onclick = async () => {
       const ck = D.cks.find(c => c.id === b.dataset.mail), cv = conv.find(c => c.comunidade_id === ck.id);
-      window.KESP_EMAIL(ck.email, `Recadastramento ${ano} – ${ck.nome}`, `Prezada diretoria da ${ck.razao_social || ck.nome},\n\nEstá aberto o recadastramento ${ano} das Comunidades Kolping. Acesse o link abaixo, confirme o CNPJ da CK e preencha as informações:\n\n${link(cv.token)}\n\nO formulário salva a cada etapa, então é possível continuar depois. O link vale por 90 dias.\n\nAtenciosamente,\n${eu.nome}\nKolping Estadual de São Paulo · (11) 4183-6018`);
+      window.KESP_EMAIL(ck.email, `Recadastramento ${ano} – ${ck.nome}`, `Prezada ${ck.razao_social || ck.nome},\n\nEstá aberto o recadastramento ${ano} das Comunidades Kolping. Acesse o link abaixo, confirme o CNPJ da CK e preencha as informações:\n\n${link(cv.token)}\n\nO formulário salva a cada etapa, então é possível continuar depois. O link vale por 90 dias.\n\nAtenciosamente,`);
       await sb.from('recad_convites').update({ enviado_em: new Date().toISOString() }).eq('token', cv.token); await carregar(); render();
     });
     document.querySelectorAll('[data-conf]').forEach(b => b.onclick = () => conferir(D.cks.find(c => c.id === b.dataset.conf)));
@@ -1287,15 +1309,15 @@ window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
     document.body.appendChild(dlg);
     dlg.querySelector('[data-x]').onclick = () => dlg.remove();
     dlg.querySelector('[data-dev]').onclick = async () => { const m = prompt('O que a CK precisa corrigir?'); if (!m || !m.trim()) return; await sb.from('recadastramentos').update({ situacao: 'devolvido', motivo_devolucao: m.trim() }).eq('id', r.id);
-      const cv = conv.find(c => c.comunidade_id === ck.id); if (cv) window.KESP_EMAIL(ck.email || (d.contato && d.contato.email), `Recadastramento ${ano} – correção necessária`, `Prezada diretoria da ${ck.razao_social || ck.nome},\n\nConferimos o recadastramento ${ano} e precisamos de um ajuste:\n\n${m.trim()}\n\nPor favor, acesse o mesmo link, corrija e envie novamente:\n${link(cv.token)}\n\nAtenciosamente,\n${eu.nome}\nKolping Estadual de São Paulo`);
+      const cv = conv.find(c => c.comunidade_id === ck.id); if (cv) window.KESP_EMAIL(ck.email || (d.contato && d.contato.email), `Recadastramento ${ano} – correção necessária`, `Prezada ${ck.razao_social || ck.nome},\n\nConferimos o recadastramento ${ano} e precisamos de um ajuste:\n\n${m.trim()}\n\nPor favor, acesse o mesmo link, corrija e envie novamente:\n${link(cv.token)}\n\nAtenciosamente,`);
       dlg.remove(); await carregar(); render(); };
     dlg.querySelector('[data-apr]').onclick = async () => {
-      const x = await sb.from('recadastramentos').update({ situacao: 'aprovado', aprovado_em: new Date().toISOString(), aprovado_por: eu.id }).eq('id', r.id);
+      const x = await sb.from('recadastramentos').update({ situacao: 'aprovado', aprovado_em: new Date().toISOString(), aprovado_por: eu.id, vigente_desde: new Date().toISOString().slice(0, 8) + '01' }).eq('id', r.id);
       if (x.error) { alert('Não foi possível aprovar.'); return; }
       const c = d.contato || {}; const up = {}; ['logradouro', 'numero', 'bairro', 'cidade', 'uf', 'cep', 'email', 'telefone'].forEach(k => { if (c[k]) up[k] = c[k]; });
       if (Object.keys(up).length) await sb.from('comunidades').update(up).eq('id', ck.id);
       await sb.from('avisos').update({ resolvido_em: new Date().toISOString() }).is('destinatario', null).is('resolvido_em', null).eq('texto', ck.nome);
-      if (confirm('Aprovado! Abrir o e-mail de confirmação para a CK?')) window.KESP_EMAIL(ck.email || c.email, `Recadastramento ${ano} aprovado – ${ck.nome}`, `Prezada diretoria da ${ck.razao_social || ck.nome},\n\nO recadastramento ${ano} foi conferido e aprovado. Obrigado!\n\nA partir de agora, a taxa de solidariedade é de ${R(n * t.solidariedade)} por mês (${n} associados) e a taxa societária de ${ano} é de ${R(n * t.societaria)}.\n\nAtenciosamente,\n${eu.nome}\nKolping Estadual de São Paulo · (11) 4183-6018`);
+      if (confirm('Aprovado! Abrir o e-mail de confirmação para a CK?')) window.KESP_EMAIL(ck.email || c.email, `Recadastramento ${ano} aprovado – ${ck.nome}`, `Prezada ${ck.razao_social || ck.nome},\n\nO recadastramento ${ano} foi conferido e aprovado. Obrigado!\n\nA partir de agora, a taxa de solidariedade é de ${R(n * t.solidariedade)} por mês (${n} associados) e a taxa societária de ${ano} é de ${R(n * t.societaria)}.\n\nAtenciosamente,`);
       dlg.remove(); await carregar(); render();
     };
   }

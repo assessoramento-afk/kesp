@@ -177,3 +177,11 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
 .alerta{border-radius:10px;padding:8px 10px;font-size:12px;margin-top:8px;background:rgba(245,165,36,.12);color:#F8C46A}
 .rec2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
 @media (max-width:900px){.rec2{grid-template-columns:1fr}}
+
+/* v2.0: barra de baixo opaca, versão e aviso de nova versão */
+.versao{font-size:10px;color:#6E6A7C;padding:16px 10px 6px;border-top:1px solid rgba(255,255,255,.06);margin-top:14px}
+.nova-versao{position:fixed;top:calc(64px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:45;background:#1B2332;border:1px solid rgba(240,120,48,.5);color:#F2EEEA;border-radius:12px;padding:8px 10px 8px 14px;font-size:13px;display:flex;gap:10px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+@media (max-width:860px){
+  .nv{background:#0C111A;box-shadow:0 -6px 18px rgba(0,0,0,.45);padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+  .pg{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+}
