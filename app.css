@@ -185,3 +185,19 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
   .nv{background:#0C111A;box-shadow:0 -6px 18px rgba(0,0,0,.45);padding-bottom:calc(10px + env(safe-area-inset-bottom))}
   .pg{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
 }
+/* 2.2: gráfico de evolução (linha neon) */
+.evo{position:relative;border-radius:16px;background:radial-gradient(120% 140% at 100% 0%,rgba(59,130,246,.12),transparent 55%),radial-gradient(90% 120% at 0% 100%,rgba(240,120,48,.10),transparent 60%),linear-gradient(160deg,#121926,#0B1019);padding:14px 16px;border:1px solid rgba(255,255,255,.07);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 6px 18px rgba(0,0,0,.35)}
+.evo .ek{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 4px}
+.evo .ek div{border-radius:12px;padding:8px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+.evo .ek b{display:block;font-size:20px;font-weight:700;line-height:1.2}.evo .ek span{font-size:10px;letter-spacing:.08em;color:#A8A3B4}
+.evo .ek .e{border-color:rgba(240,120,48,.35)}.evo .ek .e b{color:#FFB070;text-shadow:0 0 14px rgba(240,120,48,.5)}
+.evo .ek .c{border-color:rgba(59,130,246,.35)}.evo .ek .c b{color:#7FB0FF;text-shadow:0 0 14px rgba(59,130,246,.5)}
+.evo .ln{stroke-dasharray:1400;stroke-dashoffset:1400;animation:evoDr 1.6s ease forwards}.evo .ln2{animation-delay:.35s}
+.evo .fd{opacity:0;animation:evoFd .6s 1s forwards}
+@keyframes evoDr{to{stroke-dashoffset:0}}@keyframes evoFd{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.evo .ln{animation:none;stroke-dashoffset:0}.evo .fd{animation:none;opacity:1}}
+.evo .tip{font-size:11px;color:#A8A3B4;min-height:15px;margin-top:4px}
+.var{font-size:10px;letter-spacing:0}.var.up{color:#5FE0A8}.var.dn{color:#FF9A9D}
+/* 2.2: distritos */
+.dgr div span:first-child{flex:1;min-width:0;padding-right:8px}.dgr div span:last-child{white-space:nowrap;flex-shrink:0}
+.spark{display:flex;align-items:center;gap:6px;margin-top:5px}

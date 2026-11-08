@@ -672,6 +672,40 @@ window.KESP_BUSCA = (function () {
   };
 })();
 
+// ===================== Gráfico de evolução (linha neon) =====================
+window.KESP_EVOL = (function () {
+  let n = 0;
+  const v = (a, b) => { if (b == null) return ''; const d = a - b; return `<span class="var ${d > 0 ? 'up' : d < 0 ? 'dn' : ''}">${d > 0 ? '▲ +' : d < 0 ? '▼ ' : ''}${d === 0 ? 'igual' : d}${b ? '' : ''} vs ano anterior</span>`; };
+  // serie: [{ano, ef, co}] em ordem crescente
+  function card(serie, titulo) {
+    if (!serie.length) return '<p class="sm">Sem dados de associados.</p>';
+    const id = 'evo' + (++n), u = serie[serie.length - 1], p = serie.length > 1 ? serie[serie.length - 2] : null;
+    const kp = `<div class="ek"><div><span>TOTAL ${u.ano}</span><b>${u.ef + u.co}</b>${v(u.ef + u.co, p && p.ef + p.co)}</div><div class="e"><span>EFETIVOS</span><b>${u.ef}</b>${v(u.ef, p && p.ef)}</div><div class="c"><span>COOPERADORES</span><b>${u.co}</b>${v(u.co, p && p.co)}</div></div>`;
+    if (serie.length === 1) return `<div class="evo"><div class="hd"><span>${titulo || 'EVOLUÇÃO DE ASSOCIADOS'}</span><span>${u.ano}</span></div>${kp}<p class="sm" style="margin:6px 0 0">O histórico aparece aqui conforme os anos forem registrados.</p></div>`;
+    const W = Math.max(560, serie.length * 70), mx = Math.max(...serie.map(s => Math.max(s.ef, s.co))) * 1.18 || 1;
+    const x = i => 45 + i * ((W - 70) / (serie.length - 1)), y = val => 160 - val / mx * 140;
+    const path = k => serie.map((s, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(s[k]).toFixed(1)).join('');
+    let g = serie.map((s, i) => `<line x1="${x(i)}" x2="${x(i)}" y1="16" y2="160" stroke="rgba(255,255,255,.05)"/>`).join('');
+    g += `<path d="${path('ef')}L${x(serie.length - 1)} 160L${x(0)} 160Z" fill="url(#${id}e)" class="fd"/><path d="${path('co')}L${x(serie.length - 1)} 160L${x(0)} 160Z" fill="url(#${id}c)" class="fd"/>`;
+    g += `<path d="${path('ef')}" class="ln" fill="none" stroke="#FFB070" stroke-width="3" filter="url(#${id}g)" stroke-linecap="round" stroke-linejoin="round"/><path d="${path('co')}" class="ln ln2" fill="none" stroke="#7FB0FF" stroke-width="3" filter="url(#${id}g)" stroke-linecap="round" stroke-linejoin="round"/>`;
+    serie.forEach((s, i) => { const ul = i === serie.length - 1, r = ul ? 5.5 : 3.5, f = ul ? 12 : 10;
+      g += `<g class="fd"><circle cx="${x(i)}" cy="${y(s.ef)}" r="${r}" fill="#0B1019" stroke="#FFB070" stroke-width="2"/><text x="${x(i)}" y="${y(s.ef) - 10}" text-anchor="middle" font-size="${f}" font-weight="700" fill="#FFB070">${s.ef}</text><circle cx="${x(i)}" cy="${y(s.co)}" r="${r}" fill="#0B1019" stroke="#7FB0FF" stroke-width="2"/><text x="${x(i)}" y="${y(s.co) + (Math.abs(y(s.co) - y(s.ef)) < 16 ? 18 : -10)}" text-anchor="middle" font-size="${f}" font-weight="700" fill="#7FB0FF">${s.co}</text></g>
+        <text x="${x(i)}" y="178" text-anchor="middle" font-size="10" fill="${ul ? '#F2EEEA' : '#8E899A'}" font-weight="${ul ? 700 : 400}">${s.ano}</text><rect x="${x(i) - 25}" y="10" width="50" height="175" fill="transparent" style="cursor:pointer" data-evo="${id}" data-a="${s.ano}" data-e="${s.ef}" data-c="${s.co}"/>`; });
+    return `<div class="evo"><div class="hd"><span>${titulo || 'EVOLUÇÃO DE ASSOCIADOS'}</span><span>${serie[0].ano} → ${u.ano}</span></div>${kp}
+      <div style="overflow-x:auto"><svg viewBox="0 0 ${W} 190" style="width:100%;min-width:${Math.min(W, 560)}px"><defs><linearGradient id="${id}e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F07830" stop-opacity=".32"/><stop offset="1" stop-color="#F07830" stop-opacity="0"/></linearGradient><linearGradient id="${id}c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3B82F6" stop-opacity=".32"/><stop offset="1" stop-color="#3B82F6" stop-opacity="0"/></linearGradient><filter id="${id}g"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>${g}</svg></div>
+      <div style="display:flex;gap:16px;font-size:11px;color:#D8D3DE;flex-wrap:wrap"><span><span style="display:inline-block;width:16px;height:3px;border-radius:2px;background:#FFB070;box-shadow:0 0 8px #F07830;margin-right:6px;vertical-align:middle"></span>Efetivos</span><span><span style="display:inline-block;width:16px;height:3px;border-radius:2px;background:#7FB0FF;box-shadow:0 0 8px #3B82F6;margin-right:6px;vertical-align:middle"></span>Cooperadores</span><span class="sm" style="margin-left:auto">Toque num ano para ver os detalhes</span></div><div class="tip" id="${id}t"></div></div>`;
+  }
+  function ligar(raiz) { (raiz || document).querySelectorAll('.evo > div[style*="overflow-x"]').forEach(d => (d.scrollLeft = d.scrollWidth)); (raiz || document).querySelectorAll('[data-evo]').forEach(r => r.onclick = () => { const t = document.getElementById(r.dataset.evo + 't'); if (t) t.innerHTML = `<b style="color:#F2EEEA">${r.dataset.a}</b> · total ${+r.dataset.e + +r.dataset.c} · <span style="color:#FFB070">${r.dataset.e} efetivos</span> · <span style="color:#7FB0FF">${r.dataset.c} cooperadores</span>`; }); }
+  function spark(serie) {
+    if (serie.length < 2) return '';
+    const w = 90, h = 22, mx = Math.max(...serie.map(s => s.ef + s.co)) || 1, mn = Math.min(...serie.map(s => s.ef + s.co));
+    const pts = serie.map((s, i) => `${(i / (serie.length - 1) * w).toFixed(1)},${(h - 2 - ((s.ef + s.co - mn) / ((mx - mn) || 1)) * (h - 4)).toFixed(1)}`).join(' ');
+    const d = (serie[serie.length - 1].ef + serie[serie.length - 1].co) - (serie[serie.length - 2].ef + serie[serie.length - 2].co);
+    return `<div class="spark"><svg width="${w}" height="${h}"><polyline points="${pts}" fill="none" stroke="#FFB070" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" style="filter:drop-shadow(0 0 3px rgba(240,120,48,.7))"/></svg><span class="var ${d > 0 ? 'up' : d < 0 ? 'dn' : ''}" style="font-size:11px">${d > 0 ? '▲ +' + d : d < 0 ? '▼ ' + d : 'igual'} desde ${serie[serie.length - 2].ano}</span></div>`;
+  }
+  return { card, ligar, spark };
+})();
+
 // ===================== Comunidades (lista e perfil) =====================
 (function () {
   'use strict';
@@ -685,16 +719,17 @@ window.KESP_BUSCA = (function () {
   let sb, eu, D = null, filtro = 'todas', busca = '', distrito = '';
 
   async function carregar() {
-    const [c, d, r, q, t, cr, f] = await Promise.all([
+    const [c, d, r, q, t, cr, f, h] = await Promise.all([
       sb.from('comunidades').select('*').order('nome'),
       sb.from('distritos').select('*').order('ordem'),
       sb.from('recadastramentos').select('*').order('ano'),
       sb.from('quitacoes').select('comunidade_id,tipo,ano,mes,valor_pago,origem,quita_mes'),
       sb.from('taxas_ano').select('*'),
       sb.from('creditos').select('comunidade_id,valor'),
-      sb.from('comunidades_favoritas').select('comunidade_id').eq('perfil_id', eu.id)
+      sb.from('comunidades_favoritas').select('comunidade_id').eq('perfil_id', eu.id),
+      sb.from('associados_historico').select('comunidade_id,ano,efetivos,cooperadores')
     ]);
-    D = { cks: c.data || [], dist: d.data || [], recad: r.data || [], quit: q.data || [], taxas: t.data || [], cred: cr.data || [], fav: new Set((f.data || []).map(x => x.comunidade_id)) };
+    D = { cks: c.data || [], dist: d.data || [], recad: r.data || [], quit: q.data || [], taxas: t.data || [], cred: cr.data || [], fav: new Set((f.data || []).map(x => x.comunidade_id)), hist: (h && !h.error && h.data) || [] };
   }
   const taxa = ano => D.taxas.find(t => t.ano === ano) || D.taxas[D.taxas.length - 1] || { societaria: 0, solidariedade: 0, dia_vencimento: 15, venc_societaria: ano + '-03-31', minimo_efetivos: 12 };
   const recadAno = (ck, ano) => D.recad.filter(r => r.comunidade_id === ck && r.ano <= ano && r.situacao === 'aprovado').sort((a, b) => b.ano - a.ano)[0];
@@ -727,6 +762,10 @@ window.KESP_BUSCA = (function () {
     return { meses, soc, n, r, situacao, aberto, atrasados: todos.filter(m => m.sit === 'atraso').length };
   }
   const credito = id => D.cred.filter(c => c.comunidade_id === id).reduce((s, c) => s + Number(c.valor), 0);
+  // série anual de associados: recadastramento aprovado de cada ano (o mais recente do ano) + histórico importado
+  const serieCk = id => { const m = {}; (D.hist || []).filter(h => h.comunidade_id === id).forEach(h => (m[h.ano] = { ano: h.ano, ef: h.efetivos, co: h.cooperadores }));
+    D.recad.filter(r => r.comunidade_id === id && r.situacao === 'aprovado').forEach(r => (m[r.ano] = { ano: r.ano, ef: r.efetivos, co: r.cooperadores }));
+    return Object.values(m).sort((a, b) => a.ano - b.ano); };
   const dist = id => D.dist.find(d => d.id === id);
 
   // ---------- Lista ----------
@@ -758,7 +797,7 @@ window.KESP_BUSCA = (function () {
       <div class="g4" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">${vis.map(({ ck, e }) => { const d = dist(ck.distrito_id);
         return `<div class="ckc" style="--c:${COR[e.situacao]}" data-ck="${ck.id}"><div style="flex:1;min-width:0"><b>${esc(ck.nome)}</b>${D.fav.has(ck.id) ? ' <span style="color:#F5C842">★</span>' : ''}
           <div class="sm">${d ? `<span class="dot" style="background:${esc(d.cor)}"></span>${esc(d.nome)} · ` : ''}${esc(ck.cidade || '—')}</div>
-          <div class="sm">${e.r ? `${e.r.efetivos} efetivos · ${e.r.cooperadores} cooperadores` : 'Sem recadastramento'}</div>
+          <div class="sm">${e.r ? `${e.r.efetivos} efetivos · ${e.r.cooperadores} cooperadores` : 'Sem recadastramento'}</div>${window.KESP_EVOL.spark(serieCk(ck.id))}
           <div>${e.situacao !== 'em_dia' ? `<span class="tg2" style="background:${COR[e.situacao]}22;color:${COR[e.situacao]}">${NOME[e.situacao]}${e.aberto ? ' · ' + R(e.aberto) : ''}</span>` : ''}${e.r && e.r.efetivos < min && ck.ativa ? `<span class="tg2" style="background:rgba(229,72,77,.15);color:#FF9A9D">Abaixo do mínimo</span>` : ''}${!e.r && ck.ativa ? '<span class="tg2" style="background:rgba(245,165,36,.15);color:#F8C46A">Sem recadastramento</span>' : ''}</div></div>
           <span style="color:#6E6A7C">›</span></div>`; }).join('') || '<p class="sm">Nenhuma CK encontrada.</p>'}</div>`;
     const b = document.getElementById('ckBus'); b.oninput = () => { busca = b.value; lista(); const n = document.getElementById('ckBus'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
@@ -771,7 +810,8 @@ window.KESP_BUSCA = (function () {
   let aba = 'resumo';
   async function perfil(id) {
     const ck = D.cks.find(c => c.id === id); const pg = document.getElementById('pg');
-    if (!ck) { pg.innerHTML = '<p class="sm">CK não encontrada.</p>'; return; }
+    if (!ck) { if (!perfil._re) { perfil._re = true; await carregar(); perfil._re = false; if (D.cks.find(c => c.id === id)) return perfil(id); }
+      pg.innerHTML = `<div class="vazio"><h1>CK não encontrada</h1><p class="sub">Essa CK não existe mais ou o link é antigo (de antes da virada).</p><button class="btn" onclick="location.hash='#comunidades'">Voltar para Comunidades</button></div>`; return; }
     const e = extrato(ck, ANO), d = dist(ck.distrito_id), t = taxa(ANO), cred = credito(id), r = e.r;
     const tel = String(ck.telefone || (r && r.dados.tel_presidente) || '').replace(/\D/g, '');
     const end = [ck.logradouro, ck.numero, ck.bairro, ck.cidade, ck.uf].filter(Boolean).join(', ');
@@ -795,10 +835,10 @@ window.KESP_BUSCA = (function () {
         <div class="cd s4" style="--c:${COR[e.situacao]}"><div class="hd"><span>SOLIDARIEDADE ${ANO}</span><span>${R(t.solidariedade)} por associado/mês · ${e.n} associados</span></div>
           <div class="meses">${e.meses.map(m => { const [bg, fg] = SIT_MES[m.sit]; return `<div style="background:${bg};color:${fg}">${MES[m.mes - 1]}<b>${m.pago ? R(m.pago) : m.sit === 'isento' ? '—' : 'R$ 0,00'}</b>${m.sit === 'parcial' ? `<span style="font-size:10px">falta ${R(m.devido - m.pago)}</span>` : ''}</div>`; }).join('')}</div>
           <div class="sm" style="margin-top:8px">Societária ${ANO}: <b style="color:${SIT_MES[e.soc.sit][1]}">${e.soc.sit === 'pago' ? 'paga' : e.soc.sit === 'parcial' ? 'parcial, falta ' + R(e.soc.devido - e.soc.pago) : e.soc.sit === 'atraso' ? 'em atraso, ' + R(e.soc.devido) : e.soc.sit === 'isento' ? 'isenta' : 'a vencer, ' + R(e.soc.devido)}</b>${cred ? ` · Crédito: <b style="color:#5FE0A8">${R(cred)}</b>` : ''}</div></div>
-        <div class="cd s2" style="--c:#F07830"><div class="hd"><span>EVOLUÇÃO DE ASSOCIADOS</span><span>mín. ${t.minimo_efetivos} efetivos</span></div>${grafico(id, anos, t.minimo_efetivos)}</div>
+        <div class="s2">${window.KESP_EVOL.card(serieCk(id))}</div>
         <div class="cd s2" style="--c:${apta ? '#22C984' : '#6E6A7C'}"><div class="hd"><span>ASSEMBLEIA E CADASTRO NACIONAL</span></div><div class="kv"><span>Apta para a Assembleia</span><span><b style="color:${apta ? '#5FE0A8' : '#FF9A9D'}">${apta ? 'Sim' : 'Não'}</b>${apta ? '' : ' <span class="sm">(pagamentos em dia e recadastramento do ano)</span>'}</span><span>Delegados</span><span>${delegados}</span><span>Cadastro Nacional (KB)</span><span>${ck.cn_efetivos != null ? ck.cn_efetivos + ' efetivos' + (r && ck.cn_efetivos !== r.efetivos ? ' <b style="color:#F8C46A">· diferente do recadastramento</b>' : ' ✓') : '<span class="sm">não conferido</span>'}</span><span>Recadastramento</span><span>${r ? r.ano + (r.ano === ANO ? ' ✓' : ' <b style="color:#F8C46A">· desatualizado</b>') : '<b style="color:#FF9A9D">nenhum</b>'}</span></div></div>
         <div class="cd s4" style="--c:#3B82F6"><div class="hd"><span>LINHA DO TEMPO</span></div><div class="tl" id="ckTl"><span class="sm">Carregando…</span></div></div></div>`;
-      linhaTempo(id);
+      linhaTempo(id); window.KESP_EVOL.ligar(c);
     } else if (aba === 'pag') {
       const { data } = await sb.from('recibos').select('serie,ano,numero,data_pagamento,valor,situacao,referencia,legado').eq('comunidade_id', id).order('data_pagamento', { ascending: false });
       c.innerHTML = (data || []).map(x => `<div class="pe" style="--c:${x.situacao === 'cancelado' ? '#6E6A7C' : '#22C984'}"><div style="flex:1;min-width:0"><b>Recibo ${x.numero}/${x.ano}</b>${x.situacao === 'cancelado' ? ' <span class="tg2" style="background:rgba(255,255,255,.08);color:#A8A3B4">Cancelado</span>' : ''}<div class="sm">${new Date(x.data_pagamento + 'T12:00').toLocaleDateString('pt-BR')} · ${esc(x.referencia || '')}</div></div><b>${R(x.valor)}</b></div>`).join('') || '<p class="sm">Nenhum recibo.</p>';
@@ -869,7 +909,7 @@ window.KESP_BUSCA = (function () {
   window.KESP_CKS = {
     base: {
       async carregar(cliente, perfilEu) { sb = cliente; eu = perfilEu; await carregar(); return D; },
-      dados: () => D, extrato, taxa, credito, dist, COR, NOME, R, MES
+      dados: () => D, extrato, taxa, credito, dist, serieCk, COR, NOME, R, MES
     },
     async abrir(cliente, perfilEu, alvo) {
       sb = cliente; eu = perfilEu; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>';
@@ -908,7 +948,7 @@ window.KESP_BUSCA = (function () {
     };
     const semDist = D.cks.some(c => c.ativa && !c.distrito_id);
     document.getElementById('pg').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><h1>Distritos</h1><p class="sub">Toque no nome da CK para abrir o perfil</p></div>${podeEd ? '<button class="btn" id="novoD">Novo distrito</button>' : ''}</div>
-      <div class="g4" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">${D.dist.map(card).join('')}${semDist ? card(null) : ''}</div>`;
+      <div class="g4" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr));align-items:start">${D.dist.map(card).join('')}${semDist ? card(null) : ''}</div>`;
     document.querySelectorAll('[data-ck]').forEach(x => x.onclick = () => (location.hash = '#ck/' + x.dataset.ck));
     document.querySelectorAll('[data-ed]').forEach(x => x.onclick = () => editar(D.dist.find(d => d.id === x.dataset.ed)));
     const nv = document.getElementById('novoD'); if (nv) nv.onclick = () => editar(null);
@@ -1236,14 +1276,41 @@ window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
       ${L.map(x => `<tr><td style="padding:5px;font-weight:600;white-space:nowrap">${esc(x.ck.nome)}</td>${x.e.meses.map(cel).join('')}<td style="text-align:right;font-weight:700;color:#C85E1C;padding:5px;white-space:nowrap">${R(x.total)}</td></tr>`).join('')}
       <tr style="background:#F7F4F0;font-weight:700"><td style="padding:6px 5px">Total do mês</td>${totMes.map(v => `<td style="text-align:center;font-size:${impresso ? 8.5 : 11}px;white-space:nowrap">${v ? R(v) : '—'}</td>`).join('')}<td style="text-align:right;color:#C85E1C;padding:5px;white-space:nowrap">${R(tot)}</td></tr></table>`;
   }
+  let abaRel = 'taxas';
+  function associados() {
+    const D = B.dados(), min = B.taxa(new Date().getFullYear()).minimo_efetivos, R = B.R;
+    const cks = D.cks.filter(c => c.ativa && (!dist || c.distrito_id === dist)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const linhas = cks.map(ck => ({ ck, s: B.serieCk(ck.id) })), anos = [...new Set(linhas.flatMap(l => l.s.map(x => x.ano)))].sort();
+    const tot = anos.map(a => { const r = { ano: a, ef: 0, co: 0 }; linhas.forEach(l => { const x = l.s.find(y => y.ano === a); if (x) { r.ef += x.ef; r.co += x.co; } }); return r; });
+    const cel = (l, a) => { const x = l.s.find(y => y.ano === a); return x ? `<td title="${x.ef} efetivos · ${x.co} cooperadores" style="text-align:right;padding:6px;${x.ef < min ? 'color:#FF9A9D;' : ''}">${x.ef + x.co}</td>` : '<td style="text-align:right;padding:6px;color:#6E6A7C">—</td>'; };
+    const varia = l => { const n = l.s.length; if (n < 2) return '<td style="text-align:right;padding:6px">—</td>'; const d = (l.s[n - 1].ef + l.s[n - 1].co) - (l.s[n - 2].ef + l.s[n - 2].co); return `<td class="var ${d > 0 ? 'up' : d < 0 ? 'dn' : ''}" style="font-size:12px;text-align:right;padding:6px">${d > 0 ? '+' + d : d}</td>`; };
+    const tabela = `<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:#A8A3B4;font-size:11px"><td style="padding:6px">Comunidade</td>${anos.map(a => `<td style="text-align:right;padding:6px">${a}</td>`).join('')}<td style="text-align:right;padding:6px">Variação</td></tr>
+      ${linhas.map(l => `<tr style="border-top:1px solid rgba(255,255,255,.06)"><td style="padding:6px"><a class="lk" href="#ck/${l.ck.id}" style="color:#F2EEEA">${esc(l.ck.nome)}</a></td>${anos.map(a => cel(l, a)).join('')}${varia(l)}</tr>`).join('')}
+      <tr style="border-top:1px solid rgba(255,255,255,.15);font-weight:700"><td style="padding:6px">Total</td>${tot.map(t => `<td style="text-align:right;padding:6px">${t.ef + t.co}</td>`).join('')}<td></td></tr></table>`;
+    document.getElementById('relCont').innerHTML = `${window.KESP_EVOL.card(tot, 'TOTAL DE TODAS AS CKs')}
+      <div class="cd" style="--c:#3B82F6;margin-top:12px;overflow-x:auto"><div class="hd"><span>POR COMUNIDADE · EFETIVOS + COOPERADORES</span><span>em vermelho: abaixo de ${min} efetivos</span></div>${anos.length ? tabela : '<p class="sm">Sem dados.</p>'}</div>`;
+    window.KESP_EVOL.ligar(document.getElementById('relCont'));
+    document.getElementById('pdf').onclick = () => {
+      const base = location.href.split('#')[0].replace(/[^/]*$/, ''), dd = D.dist.find(d => d.id === dist);
+      const th = `<tr style="font-size:9px;color:#8A8078"><th style="text-align:left;padding:4px">Comunidade</th>${anos.map(a => `<th style="text-align:right;padding:4px">${a}</th>`).join('')}</tr>`;
+      const tr = linhas.map(l => `<tr><td style="padding:4px;border-bottom:1px solid #EFE9E2">${esc(l.ck.nome)}</td>${anos.map(a => { const x = l.s.find(y => y.ano === a); return `<td style="text-align:right;padding:4px;border-bottom:1px solid #EFE9E2;${x && x.ef < min ? 'color:#A3262C;' : ''}">${x ? `${x.ef + x.co} <span style="color:#8A8078;font-size:8px">(${x.ef}/${x.co})</span>` : '—'}</td>`; }).join('')}</tr>`).join('');
+      const tt = `<tr style="font-weight:700;background:#F7F4F0"><td style="padding:5px 4px">Total</td>${tot.map(t => `<td style="text-align:right;padding:5px 4px">${t.ef + t.co} <span style="color:#8A8078;font-size:8px">(${t.ef}/${t.co})</span></td>`).join('')}</tr>`;
+      window.KESP_IMPRIMIR('Relatório de associados', `<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #F07830;padding-bottom:8px;margin-bottom:10px"><img src="${base}logo-kolping.png" style="height:36px"><div style="text-align:right"><div style="font-size:15px;font-weight:700">Relatório de Associados</div><div style="font-size:10px;color:#8A8078">${dd ? 'Distrito ' + esc(dd.nome) : 'Todos os distritos'} · gerado em ${new Date().toLocaleDateString('pt-BR')} por ${esc(eu.nome)}</div></div></div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px">${th}${tr}${tt}</table><p style="font-size:9px;color:#8A8078">Total (efetivos/cooperadores). Em vermelho: abaixo do mínimo de ${min} efetivos.</p>
+        <div style="margin-top:18px;text-align:center"><div style="color:#5A4E46;font-size:11px">Carapicuíba, ${new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}.</div>${eu.assinatura_url ? `<img src="${esc(eu.assinatura_url)}" style="height:46px;display:block;margin:4px auto -4px">` : '<div style="height:40px"></div>'}<div style="border-top:1px solid #1E1B19;width:240px;margin:0 auto;padding-top:3px;font-weight:700;font-size:11px">${esc(eu.nome)}</div><div style="color:#8A8078;font-size:10px">${esc(eu.cargo || '')} · Kolping Estadual de São Paulo</div></div>`, anos.length > 6);
+    };
+  }
   function render() {
     const D = B.dados(), L = dados(), R = B.R;
-    document.getElementById('pg').innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div><h1>Relatório de taxas</h1><p class="sub">Solidariedade ${ano} · valor pago em cada mês</p></div><button class="btn" id="pdf">Imprimir / Salvar PDF</button></div>
-      <div style="display:flex;gap:8px;margin-bottom:12px"><select class="in" id="ano">${[ano - 2, ano - 1, ano, ano + 1].map(a => `<option${a === ano ? ' selected' : ''}>${a}</option>`).join('')}</select><select class="in" id="dist"><option value="">Todos os distritos</option>${D.dist.map(d => `<option value="${d.id}"${dist === d.id ? ' selected' : ''}>${esc(d.nome)}</option>`).join('')}</select></div>
-      <div style="overflow-x:auto;background:#fff;border-radius:12px;padding:10px">${tabela(L)}</div>
-      <p class="sm" style="margin-top:8px">Verde: pago · Amarelo: parcial · Vermelho: em atraso · Cinza: a vencer (valor devido)</p>`;
+    document.getElementById('pg').innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div><h1>Relatórios</h1><p class="sub">${abaRel === 'taxas' ? 'Solidariedade ' + ano + ' · valor pago em cada mês' : 'Evolução de associados de todos os anos com dados'}</p></div><button class="btn" id="pdf">Imprimir / Salvar PDF</button></div>
+      <div class="abas" style="grid-template-columns:repeat(2,1fr);max-width:360px"><a data-ra="taxas" class="${abaRel === 'taxas' ? 'on' : ''}">Taxas</a><a data-ra="associados" class="${abaRel === 'associados' ? 'on' : ''}">Associados</a></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px"><select class="in" id="ano"${abaRel === 'associados' ? ' style="display:none"' : ''}>${[ano - 2, ano - 1, ano, ano + 1].map(a => `<option${a === ano ? ' selected' : ''}>${a}</option>`).join('')}</select><select class="in" id="dist"><option value="">Todos os distritos</option>${D.dist.map(d => `<option value="${d.id}"${dist === d.id ? ' selected' : ''}>${esc(d.nome)}</option>`).join('')}</select></div>
+      <div id="relCont">${abaRel === 'taxas' ? `<div style="overflow-x:auto;background:#fff;border-radius:12px;padding:10px">${tabela(L)}</div>
+      <p class="sm" style="margin-top:8px">Verde: pago · Amarelo: parcial · Vermelho: em atraso · Cinza: a vencer (valor devido)</p>` : ''}</div>`;
+    document.querySelectorAll('[data-ra]').forEach(a => a.onclick = () => { abaRel = a.dataset.ra; render(); });
     document.getElementById('ano').onchange = e => { ano = +e.target.value; render(); };
     document.getElementById('dist').onchange = e => { dist = e.target.value; render(); };
+    if (abaRel === 'associados') return associados();
     document.getElementById('pdf').onclick = () => {
       const base = location.href.split('#')[0].replace(/[^/]*$/, ''), tot = L.reduce((s, x) => s + x.total, 0), dd = D.dist.find(d => d.id === dist);
       const em = L.filter(x => x.e.situacao === 'em_dia').length, pa = L.filter(x => x.e.situacao === 'parcial').length, at = L.filter(x => x.e.situacao === 'atraso').length;
