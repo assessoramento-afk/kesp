@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1622"><title>Questionário · Kolping Estadual de São Paulo</title>
+<link rel="icon" href="favicon.ico"><link rel="stylesheet" href="kesp.css">
+<style>
+body{background:#0F1622}.wrap{max-width:620px;margin:0 auto;padding:20px 16px 60px}
+.cab{display:flex;align-items:center;gap:12px;margin-bottom:14px}.cab img{height:38px;background:#fff;border-radius:8px;padding:4px 8px}
+.pass{display:flex;gap:4px;margin:10px 0 16px}.pass i{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1)}.pass i.on{background:#F07830}
+.cx{background:linear-gradient(160deg,#1B2332,#141B27);border-radius:14px;padding:16px;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+h2{font-size:17px;margin:0 0 4px}.sub{font-size:12px;color:#A8A3B4;margin:0 0 12px}
+label{display:block;font-size:12px;color:#A8A3B4;margin:10px 0 4px}input,select{width:100%;margin:0}
+.d2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ant{font-size:11px;color:#8E899A;margin-top:3px}
+.doc{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,.07);font-size:13px}
+.doc select{width:auto}.ck{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;margin-top:12px}.ck input{width:20px;height:20px;flex-shrink:0;margin-top:2px}
+.bts{display:flex;gap:8px;margin-top:16px}.bts .botao{margin:0}.img{border:1px solid rgba(240,120,48,.35);border-radius:12px;padding:12px;margin-top:14px}
+.ok{text-align:center;padding:30px 10px}
+</style></head><body><div class="wrap">
+<div class="cab"><img src="logo-kolping.png" alt="Kolping Estadual de São Paulo"><div><b id="tit">Questionário</b><div class="sub" style="margin:0" id="anoT"></div></div></div>
+<div id="app"><p class="sub">Carregando…</p></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){'use strict';
+const C=window.KESP_CONFIG,sb=window.supabase.createClient(C.supabaseUrl,C.supabaseKey,{auth:{persistSession:false}});
+const app=document.getElementById('app'),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const token=new URLSearchParams(location.search).get('t');let doc='',D=null,R={};
+const msg=t=>{document.querySelector('.msg')?.remove();app.insertAdjacentHTML('afterbegin',`<div class="msg erro">${esc(t)}</div>`);window.scrollTo(0,0);};
+if(!token){app.innerHTML='<div class="cx"><h2>Link inválido</h2><p class="sub">Use o link enviado pela Kolping Estadual de São Paulo.</p></div>';return;}
+app.innerHTML=`<div class="cx"><h2>Confirme sua Comunidade</h2><p class="sub">Digite o CNPJ da CK (ou o código informado pela Kolping, se a CK não tiver CNPJ).</p><label>CNPJ ou código</label><input id="doc" inputmode="numeric"><div class="bts"><button class="botao" id="ir">Continuar</button></div></div>`;
+document.getElementById('ir').onclick=async()=>{doc=document.getElementById('doc').value;const{data,error}=await sb.rpc('quest_abrir',{p_token:token,p_doc:doc});
+ if(error||!data){msg('Não foi possível abrir agora. Tente de novo.');return;}
+ if(data.erro==='link'){app.innerHTML='<div class="cx"><h2>Link inválido</h2></div>';return;}
+ if(data.erro==='fechado'){app.innerHTML='<div class="cx"><h2>Questionário encerrado</h2><p class="sub">Obrigado! O prazo de respostas terminou.</p></div>';return;}
+ if(data.erro==='doc'){msg('O CNPJ não confere com o desta Comunidade.');return;}
+ D=data;R={...data.respostas};document.getElementById('tit').textContent=D.titulo;
+ D.perguntas.forEach(p=>{if(p.pre&&(R[p.id]===undefined||R[p.id]==='')&&D.pre[p.pre]!=null)R[p.id]=D.pre[p.pre];});
+ if(D.situacao==='enviado'){app.innerHTML='<div class="cx ok"><h2>Respostas já enviadas ✓</h2><p class="sub">Obrigado pela participação!</p></div>';return;}
+ tela();};
+function campo(p){const v=R[p.id]??'',t=esc(p.titulo.replace(/\{ano\}/g,D.ano_ref));
+ if(p.tipo==='simnao')return`<label>${t}</label><select data-id="${p.id}"><option value=""></option>${['Sim','Não'].map(o=>`<option${v===o?' selected':''}>${o}</option>`).join('')}</select>`;
+ const tp={numero:'number',valor:'text',data:'date',texto:'text'}[p.tipo]||'text';
+ return`<label>${t}${p.pre?' <span style="color:#5FE0A8;font-size:11px">· pré-preenchido, confira</span>':''}</label><input data-id="${p.id}" type="${tp}" ${p.tipo==='numero'?'min="0" inputmode="numeric"':''}${p.tipo==='valor'?'inputmode="decimal" placeholder="R$ 0,00"':''} value="${esc(v)}">`;}
+function visivel(p){return!p.se||R[p.se]==='Sim';}
+function ler(){app.querySelectorAll('[data-id]').forEach(e=>{R[e.dataset.id]=e.type==='number'?(e.value===''?'':+e.value):e.value.trim();});}
+function tela(){app.innerHTML=`<div class="cx"><h2>${esc(D.titulo)}</h2><p class="sub">Informações de ${D.ano_ref}${D.prazo?' · prazo '+new Date(D.prazo+'T12:00').toLocaleDateString('pt-BR'):''}. Você pode salvar e continuar depois.</p>${D.perguntas.filter(visivel).map(campo).join('')}
+ <div class="bts"><button class="botao sec" id="sv">Salvar e continuar depois</button><button class="botao" id="en">Enviar respostas</button></div></div>`;
+ app.querySelectorAll('select[data-id]').forEach(s=>s.onchange=()=>{ler();tela();});
+ const salvar=async e=>{ler();const b=document.getElementById(e?'en':'sv');b.disabled=true;const{data,error}=await sb.rpc('quest_salvar',{p_token:token,p_doc:doc,p_resp:R,p_enviar:e});b.disabled=false;
+  if(error||!data||data.erro){msg('Não foi possível salvar agora. Suas respostas continuam na tela; tente de novo.');return;}
+  if(e)app.innerHTML='<div class="cx ok"><h2>Respostas enviadas ✓</h2><p class="sub">Obrigado! A Kolping Estadual de São Paulo recebeu o questionário.</p></div>';else msg('Respostas salvas. Você pode voltar pelo mesmo link.');};
+ document.getElementById('sv').onclick=()=>salvar(false);
+ document.getElementById('en').onclick=()=>{ler();const falta=D.perguntas.filter(visivel).filter(p=>R[p.id]===undefined||R[p.id]==='');if(falta.length&&!confirm(falta.length+' pergunta(s) sem resposta. Enviar mesmo assim?'))return;salvar(true);};}
+})();
+</script></body></html>
