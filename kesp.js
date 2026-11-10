@@ -153,7 +153,9 @@
 
   sb.auth.onAuthStateChange((evento, session) => {
     if (evento === 'PASSWORD_RECOVERY') return telaNovaSenha();
-    if (evento === 'SIGNED_IN' || evento === 'SIGNED_OUT' || evento === 'INITIAL_SESSION') setTimeout(() => decidir(session), 0);
+    const uid = session && session.user ? session.user.id : null;
+    if (evento === 'SIGNED_IN' && uid && uid === window.__kespUid) return; // renovação ao voltar para a janela: não recarrega
+    if (evento === 'SIGNED_IN' || evento === 'SIGNED_OUT' || evento === 'INITIAL_SESSION') { window.__kespUid = uid; setTimeout(() => decidir(session), 0); }
   });
 
   // ---------- Colmeia em movimento ----------
