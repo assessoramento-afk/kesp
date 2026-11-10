@@ -92,10 +92,10 @@ window.KESP_BUSCA = (function () {
   // ---------- Páginas ----------
   function pagInicio() {
     const em = modulos.filter(m => m.situacao === 'em_breve' && visivel(m));
-    const geral = progressoGeral(), p1a = progressoEtapa('1A');
+    const geral = progressoGeral(), inc = ETAPAS.map(([e, n]) => [e, n, progressoEtapa(e)]).filter(x => x[2] < 100), etA = inc.filter(x => x[2] > 0).sort((a, b) => b[2] - a[2])[0] || inc[0] || ETAPAS[0].concat(100);
     const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     const at = eu.admin
-      ? [['usuarios', 'user-check', 'Liberar acessos'], ['usuarios', 'lock', 'Permissões'], ['kolping', 'building', 'Cadastro da Kolping'], ['kai', 'message-chatbot', 'Conversar com a KAI']]
+      ? [['recibos', 'receipt', 'Emitir recibo'], ['cobranca', 'mail', 'Cobrança'], ['mapa', 'map-pin', 'Mapa das CKs'], ['compras', 'shopping-cart', 'Pedidos de material']]
       : [['kai', 'message-chatbot', 'Conversar com a KAI'], ['andamento', 'progress', 'Andamento do KESP'], ['manual', 'book', 'Manual'], ['#bv', 'sparkles', 'Rever boas-vindas']];
     const grupos = []; em.forEach(m => { let g = grupos.find(x => x.n === m.secao); if (!g) grupos.push(g = { n: m.secao, e: m.etapa }); });
     const etapas = ETAPAS.slice(0, 4).map(([e]) => { const p = progressoEtapa(e); return `<div class="et"><b${p ? '' : ' class="sm"'}>${e}</b><div class="br"><i style="width:${p}%"></i></div><span class="sm">${p}%</span></div>`; }).join('');
@@ -104,7 +104,7 @@ window.KESP_BUSCA = (function () {
       : `<div class="cd" style="--c:#F07830"><div class="hd"><span>SEUS PRIMEIROS PASSOS</span></div><div class="big" id="cTr">…</div><div class="sm">de 4 concluídos</div></div>`;
     document.getElementById('pg').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><h1>Início</h1><span class="sm">${esc(hoje.charAt(0).toUpperCase() + hoje.slice(1))}</span></div><p class="sub">${em.length} módulos a caminho.</p>
       <div class="g4">${c1}
-        <div class="cd" style="--c:#22C984;cursor:pointer" data-ir="andamento"><div class="hd"><span>ANDAMENTO</span><span class="pl" style="background:rgba(34,201,132,.15);color:#5FE0A8">Etapa 1A</span></div><div class="big">${geral}%</div><div class="br" style="--c:#22C984"><i style="width:${geral}%"></i></div><div class="sm" style="margin-top:6px">Etapa 1A em ${p1a}%</div></div>
+        <div class="cd" style="--c:#22C984;cursor:pointer" data-ir="andamento"><div class="hd"><span>ANDAMENTO</span><span class="pl" style="background:rgba(34,201,132,.15);color:#5FE0A8">Etapa ${etA[0]}</span></div><div class="big">${geral}%</div><div class="br" style="--c:#22C984"><i style="width:${geral}%"></i></div><div class="sm" style="margin-top:6px">Etapa ${etA[0]} · ${esc(etA[1])} em ${etA[2]}%</div></div>
         <div class="cd s2" style="--c:#3B82F6"><div class="hd"><span>ATALHOS</span></div><div class="atl">${at.map(([r, i, t]) => `<a data-${r === '#bv' ? 'bv' : 'ir'}="${r}"><i class="ti ti-${i}"></i>${t}</a>`).join('')}</div></div>
         <div class="cd s2" style="--c:#F07830"><div class="hd"><span>ETAPAS DO KESP</span><a class="lk" data-ir="andamento">ver tudo ›</a></div>${etapas}</div>
         <div class="cd s2" style="--c:#6E6A7C"><div class="hd"><span>A CAMINHO</span><span>${em.length} módulos</span></div><div class="acm">${grupos.map(g => `<div><span>${esc(g.n)}</span><span class="sm">etapa ${esc(g.e)}</span></div>`).join('') || '<span class="sm">Tudo pronto!</span>'}</div></div>
@@ -197,6 +197,36 @@ window.KESP_BUSCA = (function () {
 
   // ---------- Assinatura ----------
   function assinatura() {
+    const d = document.createElement('div'); d.className = 'conf';
+    d.innerHTML = `<div class="cx" style="max-width:640px;width:100%"><b>Minha assinatura</b><p class="sm" style="margin:4px 0 10px">Assine na área branca com o dedo, a caneta ou o mouse.</p>
+      <canvas id="asCv" style="width:100%;height:200px;background:#fff;border-radius:12px;touch-action:none;display:block;cursor:crosshair"></canvas>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn sec" data-l>Limpar</button><button class="btn sec" data-img>Enviar imagem</button><span style="flex:1"></span><button class="btn sec" data-x>Cancelar</button><button class="btn" data-ok>Salvar</button></div></div>`;
+    document.body.appendChild(d);
+    const cv = d.querySelector('#asCv'), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    cv.width = r.width * dpr; cv.height = r.height * dpr; const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+    ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1B2A6B';
+    let des = false, usou = false, ult = null;
+    const pos = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+    cv.addEventListener('pointerdown', e => { des = true; usou = true; ult = pos(e); cv.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(ult[0], ult[1], 1.1, 0, 7); ctx.fillStyle = '#1B2A6B'; ctx.fill(); });
+    cv.addEventListener('pointermove', e => { if (!des) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(ult[0], ult[1]); ctx.quadraticCurveTo(ult[0], ult[1], p[0], p[1]); ctx.stroke(); ult = p; e.preventDefault(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => cv.addEventListener(t, () => (des = false)));
+    d.querySelector('[data-l]').onclick = () => { ctx.clearRect(0, 0, cv.width, cv.height); usou = false; };
+    d.querySelector('[data-x]').onclick = () => d.remove();
+    d.querySelector('[data-img]').onclick = () => { d.remove(); assinaturaImagem(); };
+    d.querySelector('[data-ok]').onclick = async () => {
+      if (!usou) { toast('Assine na área branca antes de salvar.'); return; }
+      // recorta as bordas vazias e mantém o fundo transparente
+      const im = ctx.getImageData(0, 0, cv.width, cv.height), w = cv.width, h = cv.height; let x0 = w, y0 = h, x1 = 0, y1 = 0;
+      for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) if (im.data[(y * w + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+      const m = 8 * dpr, cw = Math.max(10, x1 - x0 + 2 * m), ch = Math.max(10, y1 - y0 + 2 * m), out = document.createElement('canvas'), esc2 = Math.min(1, 600 / cw, 200 / ch);
+      out.width = cw * esc2; out.height = ch * esc2; out.getContext('2d').drawImage(cv, x0 - m, y0 - m, cw, ch, 0, 0, out.width, out.height);
+      const url = out.toDataURL('image/png'), rr = await sb.from('perfis').update({ assinatura_url: url }).eq('id', eu.id);
+      if (rr.error) { toast('Não foi possível salvar a assinatura.'); return; }
+      eu.assinatura_url = url; try { await sb.from('trilha_concluida').insert({ perfil_id: eu.id, passo: 'assinatura' }); } catch (_) {}
+      d.remove(); toast('Assinatura salva. Ela aparece nos documentos que você emitir.');
+    };
+  }
+  function assinaturaImagem() {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/png,image/jpeg';
     inp.onchange = () => {
       const f = inp.files[0]; if (!f) return;
@@ -1872,26 +1902,33 @@ window.KESP_VISITAS = (function () {
       <div class="mapa-box" id="mBox"><div id="mapa"></div>
         <div class="mtopo"><div class="mvidro" style="display:flex;padding:3px;overflow-x:auto;max-width:100%"><span class="mch ${!filtroD ? 'on' : ''}" data-d="">Todos</span>${D.dist.map(d => `<span class="mch ${filtroD === d.id ? 'on' : ''}" data-d="${d.id}"><span style="color:${esc(d.cor)}">●</span> ${esc(d.nome)}</span>`).join('')}</div>
           <div class="mvidro" style="display:flex;padding:3px">${[['', 'Todas'], ['atraso', 'Em atraso'], ['parcial', 'Parcial'], ['semvisita', 'Sem visita 180+']].map(([k, n]) => `<span class="mch ${filtroS === k ? 'on' : ''}" data-s="${k}">${n}</span>`).join('')}</div></div>
+        <div class="mvidro mfechar" id="mX" style="position:absolute;z-index:700;top:10px;right:10px;padding:8px 12px;cursor:pointer">✕ Fechar</div>
         <div class="mlista mvidro" id="mL"></div>
         <div class="mctl"><a class="mvidro" id="mZi">+</a><a class="mvidro" id="mZo">−</a><a class="mvidro" id="mTd" title="Ver todas">⤢</a><a class="mvidro" id="mEu" title="Minha localização">◎</a><a class="mvidro" id="mCa" title="Camadas">▤</a><a class="mvidro" id="mFs" title="Tela cheia">⛶</a></div>
         <div class="mcard mvidro" id="mC" style="display:none"></div></div>`;
     map = L.map('mapa', { zoomControl: false, minZoom: 6, maxBoundsViscosity: .8, attributionControl: true });
-    const escuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap · © CARTO', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
+    const escuro = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19, className: 'osm-escuro' }).addTo(map);
     const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 });
-    const geo = await (await fetch('sp-contorno.json')).json();
-    const contorno = L.geoJSON(geo, { style: { color: '#F07830', weight: 2.5, fill: false } }).addTo(map);
-    const mundo = [[-90, -180], [-90, 180], [90, 180], [90, -180]], buracos = geo.coordinates.map(p => p[0].map(c => [c[1], c[0]]));
-    L.polygon([mundo, ...buracos], { stroke: false, fillColor: '#05080E', fillOpacity: .78, interactive: false }).addTo(map);
-    const lim = contorno.getBounds(); map.fitBounds(lim, { padding: [20, 20] }); map.setMaxBounds(lim.pad(.25));
-    cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45, iconCreateFunction: c => L.divIcon({ className: 'kclu', html: `<div>${c.getChildCount()}</div>`, iconSize: [40, 40] }) }).addTo(map);
+    let lim = L.latLngBounds([[-25.4, -53.2], [-19.7, -44.1]]);
+    cluster = L.markerClusterGroup ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45, iconCreateFunction: c => L.divIcon({ className: 'kclu', html: `<div>${c.getChildCount()}</div>`, iconSize: [40, 40] }) }) : L.layerGroup();
+    cluster.addTo(map); map.fitBounds(lim, { padding: [20, 20] });
+    try {
+      const geo = await (await fetch('sp-contorno.json', { cache: 'no-store' })).json();
+      const contorno = L.geoJSON(geo, { style: { color: '#F07830', weight: 2.5, fill: false } }).addTo(map);
+      const mundo = [[-90, -180], [-90, 180], [90, 180], [90, -180]], buracos = geo.coordinates.map(p => p[0].map(c => [c[1], c[0]]));
+      L.polygon([mundo, ...buracos], { stroke: false, fillColor: '#05080E', fillOpacity: .78, interactive: false }).addTo(map);
+      lim = contorno.getBounds(); map.fitBounds(lim, { padding: [20, 20] });
+    } catch (e) { window.KESP_TOAST('Contorno do estado não encontrado (arquivo sp-contorno.json). O mapa funciona sem ele.'); try { await sb.from('erros_sistema').insert({ tela: 'mapa', mensagem: 'Contorno do estado não carregou', detalhe: String(e) }); } catch (_) {} }
+    map.setMaxBounds(lim.pad(.25));
     document.querySelectorAll('[data-d]').forEach(x => x.onclick = () => { filtroD = x.dataset.d; document.querySelectorAll('[data-d]').forEach(y => y.classList.toggle('on', y === x)); desenhar(); });
     document.querySelectorAll('[data-s]').forEach(x => x.onclick = () => { filtroS = x.dataset.s; document.querySelectorAll('[data-s]').forEach(y => y.classList.toggle('on', y === x)); desenhar(); });
+    document.getElementById('mX').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); location.hash = '#inicio'; };
     document.getElementById('mZi').onclick = () => map.zoomIn(); document.getElementById('mZo').onclick = () => map.zoomOut();
     document.getElementById('mTd').onclick = () => { const b = cluster.getBounds(); b.isValid() ? map.fitBounds(b, { padding: [40, 40] }) : map.fitBounds(lim); };
     document.getElementById('mEu').onclick = () => navigator.geolocation && navigator.geolocation.getCurrentPosition(p => { L.circleMarker([p.coords.latitude, p.coords.longitude], { radius: 8, color: '#3B82F6', fillColor: '#3B82F6', fillOpacity: .8 }).addTo(map); map.setView([p.coords.latitude, p.coords.longitude], 13); }, () => window.KESP_TOAST('Não foi possível obter sua localização.'));
     let satOn = false; document.getElementById('mCa').onclick = () => { satOn = !satOn; if (satOn) { map.removeLayer(escuro); sat.addTo(map); } else { map.removeLayer(sat); escuro.addTo(map); } };
     document.getElementById('mFs').onclick = () => { const b = document.getElementById('mBox'); document.fullscreenElement ? document.exitFullscreen() : b.requestFullscreen && b.requestFullscreen(); setTimeout(() => map.invalidateSize(), 300); };
-    desenhar();
+    try { desenhar(); } catch (e) { window.KESP_TOAST('Não foi possível desenhar as CKs no mapa.'); try { await sb.from('erros_sistema').insert({ tela: 'mapa', mensagem: 'Falha ao desenhar o mapa', detalhe: String(e && e.stack || e).slice(0, 500) }); } catch (_) {} }
     // localiza pelo endereço o que estiver faltando ou desatualizado
     const pend = D.cks.filter(ck => ck.cidade && !(ck.lat && ck.geo_endereco === endCk(ck))).length + U.filter(u => u.cidade && !u.lat).length;
     if (pend && (eu.admin || window.KESP_PODE('comunidades.editar'))) { window.KESP_TOAST(`Localizando ${pend} endereço(s)… isso leva cerca de ${Math.ceil(pend * 1.2)} segundos.`);

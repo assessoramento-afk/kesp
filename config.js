@@ -5,6 +5,6 @@ window.KESP_CONFIG = {
   dominios: ['kolpingsp.org', 'kolping-sp.org.br'],
   admins: 'Henrique ou Jaqueline',
   kaiChaveVence: '2028-11-10',
-  versao: '2.7',
+  versao: '2.7.2',
   versaoData: '08/11/2026'
 };

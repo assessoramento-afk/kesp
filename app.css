@@ -219,3 +219,15 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
 .kclu{background:none;border:0}.kclu div{width:40px;height:40px;border-radius:50%;background:#fff;border:3px solid #F07830;display:flex;align-items:center;justify-content:center;font-weight:800;color:#1E1B19;box-shadow:0 0 14px rgba(240,120,48,.6)}
 .leaflet-container{font-family:inherit}.leaflet-control-attribution{background:rgba(15,22,34,.7)!important;color:#8E899A!important}.leaflet-control-attribution a{color:#A8A3B4!important}
 @media (max-width:860px){.mlista{top:auto;left:10px;right:10px;width:auto;height:34%;bottom:10px}.mcard{left:10px;right:10px;width:auto;bottom:calc(34% + 18px)}.mapa-box{height:calc(100vh - 210px)}}
+.osm-escuro{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.9) saturate(.6)}
+/* 2.7.2 */
+.mapa-box{isolation:isolate;z-index:0}
+.mtopo{right:110px}
+.mctl{top:110px}
+.nv{z-index:1000}.lat.ab{z-index:1100}.mn-fundo{z-index:1050}.conf{z-index:2000}.toast{z-index:2100}.nova-versao{z-index:2100}
+@media (max-width:860px){
+  .nv a{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-width:0}
+  .nv a .ti{display:block;margin:0 0 2px}
+  .nv .ct{right:calc(50% - 20px)}
+  .mtopo{right:10px;top:56px}.mctl{top:112px}
+}
