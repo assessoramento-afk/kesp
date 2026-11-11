@@ -25,13 +25,13 @@ window.KESP_BUSCA = (function () {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const K = s => `<svg width="${s}" height="${s}" viewBox="0 0 100 100" aria-hidden="true"><rect width="35" height="100" fill="#1E1B19"/><rect x="35" width="65" height="100" fill="#F07830"/><path d="M100 0 L100 100 L35 50Z" fill="#1E1B19"/></svg>`;
   const KAI = (s, olhos) => `<svg width="${s}" height="${s * 0.9}" viewBox="20 8 80 72" aria-hidden="true"><line x1="60" y1="14" x2="60" y2="24" stroke="#9A9088" stroke-width="2"/><circle cx="60" cy="12" r="5" fill="#F07830"/><rect x="22" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="90" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="28" y="24" width="64" height="50" rx="18" fill="#F4F1EC"/><rect x="36" y="34" width="48" height="28" rx="12" fill="#2C3045"/>${olhos || '<path d="M45 50 Q50 44 55 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M65 50 Q70 44 75 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M54 55 Q60 59 66 55" stroke="#FFB070" stroke-width="2" fill="none" stroke-linecap="round"/>'}</svg>`;
-  const ICONES = { mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
+  const ICONES = { lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
   const ETAPAS = [['1A', 'Base essencial'], ['1B', 'Base complementar'], ['2', 'Assessoramento'], ['3', 'Kolping Estadual'], ['4', 'Controles'], ['5', 'Conciliação bancária'], ['6', 'Financeiro'], ['7', 'RH'], ['8', 'Educação Infantil'], ['9', 'Prestação de contas']];
-  const FUNCAO_MODULO = { mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
+  const FUNCAO_MODULO = { lembretes: '*', sugestoes: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
 
   let sb, eu, sair, modulos = [], perms = new Set(), avisosN = 0;
   const pode = f => eu.admin || perms.has(f);
-  const visivel = m => m.situacao === 'em_breve' ? true : (FUNCAO_MODULO[m.id] ? pode(FUNCAO_MODULO[m.id]) : eu.admin);
+  const visivel = m => m.situacao === 'em_breve' ? true : FUNCAO_MODULO[m.id] === '*' ? true : (FUNCAO_MODULO[m.id] ? pode(FUNCAO_MODULO[m.id]) : eu.admin);
   const primeiro = () => (eu.nome || eu.email).split(' ')[0];
   function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
   window.KESP_TOAST = t => toast(t);
@@ -42,9 +42,11 @@ window.KESP_BUSCA = (function () {
     const [m, p, a] = await Promise.all([
       sb.from('modulos').select('*').order('ordem'),
       sb.from('permissoes').select('funcao_id').eq('perfil_id', eu.id),
-      sb.from('avisos').select('id', { count: 'exact', head: true }).is('resolvido_em', null)
+      sb.from('avisos').select('id,tipo,adiado_ate').is('resolvido_em', null)
     ]);
-    modulos = m.data || []; perms = new Set((p.data || []).map(x => x.funcao_id)); avisosN = a.count || 0;
+    modulos = m.data || []; perms = new Set((p.data || []).map(x => x.funcao_id));
+    avisosN = (a.data || []).filter(x => x.tipo !== 'informativo' && (!x.adiado_ate || new Date(x.adiado_ate) <= new Date())).length;
+    try { const l = await sb.from('lembretes').select('id', { count: 'exact', head: true }).eq('para', eu.id).is('concluido_em', null).lte('quando', new Date().toISOString()); avisosN += l.count || 0; } catch (_) {}
   }
 
   function moldura() {
@@ -75,7 +77,7 @@ window.KESP_BUSCA = (function () {
     app.querySelector('[data-acao="menu"]').onclick = () => { lat.classList.add('ab'); fundo.classList.add('ab'); document.getElementById('pop').style.display = 'none'; };
     fundo.onclick = e => { if (e.target === fundo) { fundo.classList.remove('ab'); lat.classList.remove('ab'); } };
     app.querySelector('[data-acao="busca"]').onclick = () => toast('A busca geral chega na próxima parte da construção.');
-    const avisos = () => toast(avisosN ? `Você tem ${avisosN} aviso(s). O sino completo chega na etapa 1B.` : 'Nenhum aviso pendente.');
+    const avisos = () => window.KESP_SINO.abrir(sb, eu);
     app.querySelector('[data-acao="avisos"]').onclick = avisos; document.getElementById('sino').onclick = avisos;
     document.getElementById('qr').onclick = () => toast('O leitor de QR Code chega na etapa 1B.');
     document.getElementById('perfil').onclick = () => {
@@ -153,7 +155,7 @@ window.KESP_BUSCA = (function () {
 
   function rota() {
     const id = (location.hash || '#inicio').slice(1) || 'inicio';
-    document.querySelectorAll('.conf').forEach(d => d.remove());
+    document.querySelectorAll('.conf,#sinoP').forEach(d => d.remove());
     if (id.startsWith('ck/')) { document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === 'comunidades')); return window.KESP_CKS.abrir(sb, eu, id.slice(3)); }
     document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === id));
     const atual = document.querySelector('.lat [data-r="' + id + '"]'); if (atual && atual.parentElement.hidden) document.getElementById('caminho').click();
@@ -178,6 +180,8 @@ window.KESP_BUSCA = (function () {
     if (m.id === 'questionarios' && window.KESP_QUEST) return window.KESP_QUEST.abrir(sb, eu);
     if (m.id === 'pedidos' && window.KESP_PEDIDOS) return window.KESP_PEDIDOS.abrir(sb, eu);
     if (m.id === 'mapa' && window.KESP_MAPA) return window.KESP_MAPA.abrir(sb, eu);
+    if (m.id === 'lembretes') return window.KESP_SINO.telaLembretes(sb, eu);
+    if (m.id === 'sugestoes') return window.KESP_SINO.telaSugestoes(sb, eu);
     if (m.id === 'compras' && window.KESP_COMPRAS) return window.KESP_COMPRAS.abrir(sb, eu);
     pagConstrucao(m);
     window.scrollTo(0, 0);
@@ -1588,7 +1592,10 @@ window.KESP_VISITAS = (function () {
       dlg.querySelector('[data-ok]').onclick = async () => { guardar(); if (!st.data) { alert('Informe a data.'); return; }
         const reg = { comunidade_id: ck.id, data: st.data, tipo: st.tipo, participantes: [...st.participantes], objetivo: st.objetivo || null, anotacoes: st.anotacoes || null, relatorio: st.relatorio ? { texto: st.relatorio } : null, encaminhamentos: st.enc, fotos: st.fotos };
         const r = v ? await sb.from('visitas').update(reg).eq('id', v.id) : await sb.from('visitas').insert({ ...reg, criado_por: eu.id });
-        if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; } dlg.remove(); fim(); };
+        if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; }
+        const novos = st.enc.filter(e => e.prazo && !(v && v.encaminhamentos.some(o => o.acao === e.acao && o.prazo === e.prazo)));
+        if (novos.length) await sb.from('lembretes').insert(novos.map(e => ({ criado_por: eu.id, para: eu.id, titulo: e.acao + ' · ' + ck.nome, texto: e.responsavel ? 'Responsável: ' + e.responsavel : null, quando: e.prazo + 'T09:00:00', link: '#ck/' + ck.id })));
+        dlg.remove(); fim(); };
     };
     const rest = () => { ['data', 'tipo', 'objetivo', 'anotacoes', 'relatorio'].forEach(k => { const m = { data: 'vD', tipo: 'vT', objetivo: 'vO', anotacoes: 'vA', relatorio: 'vR' }[k], el = dlg.querySelector('#' + m); if (el && st[k] !== undefined) el.value = st[k]; }); };
     document.body.appendChild(dlg); desenhar();
@@ -1998,4 +2005,101 @@ window.KESP_VISITAS = (function () {
       const n = await geocodificar(D.cks, 'comunidades') + await geocodificar(U, 'unidades'); if (n) { desenhar(); window.KESP_TOAST(n + ' localização(ões) atualizada(s).'); } }
   }
   window.KESP_MAPA = { abrir };
+})();
+
+
+// ===================== Sino, lembretes e sugestões =====================
+window.KESP_SINO = (function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const PRI = { urgente: '#E5484D', importante: '#F07830', atencao: '#F5A524', lembrete: '#3B82F6', novidade: '#22C984' };
+  const quando = d => { const x = new Date(d), h = (Date.now() - x) / 36e5; return h < 1 ? 'agora' : h < 24 ? 'há ' + Math.floor(h) + ' h' : x.toLocaleDateString('pt-BR'); };
+  let sb, eu, aba = 'fazer';
+  async function abrir(cli, perfil) {
+    sb = cli; eu = perfil; let p = document.getElementById('sinoP');
+    if (p) { p.remove(); return; }
+    p = document.createElement('div'); p.id = 'sinoP'; p.className = 'sino-p'; document.body.appendChild(p);
+    setTimeout(() => document.addEventListener('click', fora, { once: false }), 0);
+    render();
+  }
+  function fora(e) { const p = document.getElementById('sinoP'); if (!p) { document.removeEventListener('click', fora); return; } if (!p.contains(e.target) && !e.target.closest('#sino') && !e.target.closest('[data-acao="avisos"]') && !e.target.closest('.conf')) { p.remove(); document.removeEventListener('click', fora); } }
+  async function render() {
+    const p = document.getElementById('sinoP'); if (!p) return; const agora = new Date().toISOString();
+    const [a, l, n] = await Promise.all([
+      sb.from('avisos').select('*').is('resolvido_em', null).order('criado_em', { ascending: false }).limit(60),
+      sb.from('lembretes').select('*').eq('para', eu.id).is('concluido_em', null).order('quando'),
+      sb.from('novidades').select('*').order('publicado_em', { ascending: false }).limit(5)
+    ]);
+    const av = (a.data || []).filter(x => !x.adiado_ate || x.adiado_ate <= agora), lem = l.data || [];
+    const fazer = [...lem.filter(x => x.quando <= agora).map(x => ({ ...x, _l: 1 })), ...av.filter(x => x.tipo === 'fazer')];
+    const alertas = av.filter(x => x.tipo === 'alerta'), info = av.filter(x => x.tipo === 'informativo');
+    const proximos = lem.filter(x => x.quando > agora);
+    const L = { fazer, alertas, info }[aba];
+    p.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px 0"><b>Avisos</b><a class="lk" id="snLem">+ Lembrete</a></div>
+      <div class="abas">${[['fazer', 'Para você fazer', fazer.length], ['alertas', 'Alertas', alertas.length], ['info', 'Informativos', info.length]].map(([k, t, c]) => `<a data-sa="${k}" class="${aba === k ? 'on' : ''}">${t}${c ? ' · ' + c : ''}</a>`).join('')}</div>
+      <div class="sino-l">${L.map(x => x._l ? `<div class="sv" style="--c:#3B82F6"><div class="sm">Lembrete · ${new Date(x.quando).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</div><b>${esc(x.titulo)}</b>${x.texto ? `<div class="sm">${esc(x.texto)}</div>` : ''}<div class="ac2"><a data-lc="${x.id}">✓ Concluir</a><a data-la="${x.id}:1">Adiar 1 dia</a><a data-la="${x.id}:7">Adiar 1 semana</a>${x.link ? `<a data-go="${esc(x.link)}">Abrir</a>` : ''}</div></div>`
+        : `<div class="sv" style="--c:${PRI[x.prioridade] || '#6E6A7C'}"><div class="sm">${quando(x.criado_em)}</div><b>${esc(x.titulo)}</b>${x.texto ? `<div class="sm">${esc(x.texto)}</div>` : ''}<div class="ac2">${x.link ? `<a data-go="${esc(x.link)}">Abrir</a>` : ''}${x.tipo !== 'informativo' || x.dispensavel ? `<a data-ac="${x.id}">${x.tipo === 'informativo' ? 'Dispensar' : '✓ Concluir'}</a>` : ''}${x.tipo !== 'informativo' ? `<a data-aa="${x.id}">Adiar 1 dia</a>` : ''}</div></div>`).join('')
+        || `<p class="sm" style="text-align:center;padding:20px 0">Nada por aqui. ✓</p>`}
+        ${aba === 'fazer' && proximos.length ? `<p class="sm" style="margin:10px 0 4px;letter-spacing:.06em">PRÓXIMOS LEMBRETES</p>${proximos.slice(0, 5).map(x => `<div class="sm" style="padding:4px 0">${new Date(x.quando).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(x.titulo)}</div>`).join('')}` : ''}
+        ${aba === 'info' ? (n.data || []).map(x => `<div class="sv" style="--c:#22C984"><div class="sm">Novidade ${esc(x.versao || '')}</div><b>${esc(x.titulo)}</b><div class="sm">${esc(x.texto || '')}</div></div>`).join('') : ''}</div>`;
+    p.querySelectorAll('[data-sa]').forEach(x => x.onclick = () => { aba = x.dataset.sa; render(); });
+    p.querySelector('#snLem').onclick = () => novoLembrete(sb, eu, render);
+    p.querySelectorAll('[data-go]').forEach(x => x.onclick = () => { location.hash = x.dataset.go; p.remove(); });
+    p.querySelectorAll('[data-ac]').forEach(x => x.onclick = async () => { await sb.from('avisos').update({ resolvido_em: new Date().toISOString() }).eq('id', x.dataset.ac); render(); });
+    p.querySelectorAll('[data-aa]').forEach(x => x.onclick = async () => { await sb.from('avisos').update({ adiado_ate: new Date(Date.now() + 864e5).toISOString() }).eq('id', x.dataset.aa); render(); });
+    p.querySelectorAll('[data-lc]').forEach(x => x.onclick = async () => { await concluir(lem.find(y => y.id === x.dataset.lc)); render(); });
+    p.querySelectorAll('[data-la]').forEach(x => x.onclick = async () => { const [id, d] = x.dataset.la.split(':'); await sb.from('lembretes').update({ quando: new Date(Date.now() + d * 864e5).toISOString() }).eq('id', id); render(); });
+  }
+  async function concluir(l) {
+    if (!l) return;
+    if (l.repetir) { const d = new Date(l.quando); const prox = l.repetir === 'diario' ? d.setDate(d.getDate() + 1) : l.repetir === 'semanal' ? d.setDate(d.getDate() + 7) : d.setMonth(d.getMonth() + 1); await sb.from('lembretes').update({ quando: new Date(prox).toISOString() }).eq('id', l.id); }
+    else await sb.from('lembretes').update({ concluido_em: new Date().toISOString() }).eq('id', l.id);
+  }
+  async function novoLembrete(cli, perfil, fim, pre) {
+    sb = cli; eu = perfil; const { data: ps } = await sb.from('perfis').select('id,nome').eq('situacao', 'ativo').order('nome');
+    const amanha = new Date(Date.now() + 864e5); amanha.setHours(9, 0, 0, 0);
+    const loc = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+    const d = document.createElement('div'); d.className = 'conf';
+    d.innerHTML = `<div class="cx fm"><b>Novo lembrete</b><label>O que lembrar</label><input id="lT" value="${esc((pre && pre.titulo) || '')}"><label>Detalhes (opcional)</label><input id="lX" value="${esc((pre && pre.texto) || '')}">
+      <div class="dois"><div><label>Quando</label><input id="lQ" type="datetime-local" value="${loc(pre && pre.quando ? new Date(pre.quando) : amanha)}"></div><div><label>Repetir</label><select id="lR"><option value="">Não repetir</option><option value="diario">Todo dia</option><option value="semanal">Toda semana</option><option value="mensal">Todo mês</option></select></div></div>
+      <label>Para quem</label><select id="lP">${(ps || []).map(x => `<option value="${x.id}"${x.id === eu.id ? ' selected' : ''}>${x.id === eu.id ? 'Para mim' : esc(x.nome)}</option>`).join('')}</select>
+      <div style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok>Salvar</button></div></div>`;
+    document.body.appendChild(d);
+    d.querySelector('[data-x]').onclick = () => d.remove();
+    d.querySelector('[data-ok]').onclick = async () => { const t = d.querySelector('#lT').value.trim(), q = d.querySelector('#lQ').value; if (!t || !q) { alert('Informe o que lembrar e quando.'); return; }
+      const r = await sb.from('lembretes').insert({ criado_por: eu.id, para: d.querySelector('#lP').value, titulo: t, texto: d.querySelector('#lX').value.trim() || null, quando: new Date(q).toISOString(), repetir: d.querySelector('#lR').value, link: (pre && pre.link) || (location.hash.length > 1 ? location.hash : null) });
+      if (r.error) { alert('Não foi possível salvar.'); return; } d.remove(); window.KESP_TOAST('Lembrete salvo.'); if (fim) fim(); };
+  }
+  async function telaLembretes(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg');
+    const [a, b] = await Promise.all([sb.from('lembretes').select('*').eq('para', eu.id).is('concluido_em', null).order('quando'), sb.from('lembretes').select('*').eq('criado_por', eu.id).neq('para', eu.id).is('concluido_em', null).order('quando')]);
+    const { data: ps } = await sb.from('perfis').select('id,nome'); const nome = id => ((ps || []).find(x => x.id === id) || {}).nome || '';
+    const card = (x, outro) => `<div class="pe" style="--c:${new Date(x.quando) <= new Date() ? '#F07830' : '#3B82F6'}"><div style="flex:1;min-width:0"><b>${esc(x.titulo)}</b><div class="sm">${new Date(x.quando).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${x.repetir ? ' · repete ' + { diario: 'todo dia', semanal: 'toda semana', mensal: 'todo mês' }[x.repetir] : ''}${outro ? ' · para ' + esc(nome(x.para)) : ''}</div>${x.texto ? `<div class="sm">${esc(x.texto)}</div>` : ''}</div><div class="ac">${x.link ? `<button class="mini neu" data-go="${esc(x.link)}">Abrir</button>` : ''}${outro ? `<button class="mini ver" data-del="${x.id}">Apagar</button>` : `<button class="mini" data-ok="${x.id}">Concluir</button>`}</div></div>`;
+    pg.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px"><div><h1>Lembretes</h1><p class="sub">Aparecem no sino na data marcada</p></div><button class="btn" id="lNovo">Novo lembrete</button></div>
+      <p class="gr-t" style="font-size:11px;letter-spacing:.08em;color:#A8A3B4;margin:8px 0 6px">MEUS LEMBRETES</p>${(a.data || []).map(x => card(x)).join('') || '<p class="sm">Nenhum.</p>'}
+      <p class="gr-t" style="font-size:11px;letter-spacing:.08em;color:#A8A3B4;margin:16px 0 6px">QUE EU CRIEI PARA COLEGAS</p>${(b.data || []).map(x => card(x, 1)).join('') || '<p class="sm">Nenhum.</p>'}`;
+    pg.querySelector('#lNovo').onclick = () => novoLembrete(sb, eu, () => telaLembretes(sb, eu), { link: null });
+    pg.querySelectorAll('[data-go]').forEach(x => x.onclick = () => (location.hash = x.dataset.go));
+    pg.querySelectorAll('[data-ok]').forEach(x => x.onclick = async () => { await concluir((a.data || []).find(y => y.id === x.dataset.ok)); telaLembretes(sb, eu); });
+    pg.querySelectorAll('[data-del]').forEach(x => x.onclick = async () => { if (confirm('Apagar este lembrete?')) { await sb.from('lembretes').delete().eq('id', x.dataset.del); telaLembretes(sb, eu); } });
+  }
+  async function telaSugestoes(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg');
+    const { data } = await sb.from('sugestoes').select('*').order('criado_em', { ascending: false });
+    const { data: ps } = eu.admin ? await sb.from('perfis').select('id,nome') : { data: [] }; const nome = id => ((ps || []).find(x => x.id === id) || {}).nome || '';
+    const SIT = { recebida: ['Recebida', '#3B82F6'], analise: ['Em análise', '#F5A524'], aprovada: ['Aprovada', '#22C984'], nao_aprovada: ['Não aprovada', '#E5484D'], feita: ['Feita ✓', '#22C984'] };
+    pg.innerHTML = `<h1>Sugestões</h1><p class="sub">Ideias para melhorar o KESP${eu.admin ? ' · você vê as de toda a equipe' : ''}</p>
+      <div class="cd fm" style="--c:#F07830;max-width:640px;margin-bottom:14px"><label>Sua ideia</label><input id="sT" placeholder="Ex.: mostrar o telefone da CK no recibo"><label>Explique (opcional)</label><textarea id="sX" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-family:inherit"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><label style="margin:0;cursor:pointer" class="mini neu">📷 Foto ou print<input type="file" accept="image/*" id="sF" style="display:none"></label><span class="sm" id="sFn"></span><span style="flex:1"></span><button class="btn" id="sEnv">Enviar</button></div></div>
+      ${(data || []).map(x => `<div class="pe" style="--c:${SIT[x.situacao][1]};align-items:flex-start"><div style="flex:1;min-width:0"><b>${esc(x.titulo)}</b><div class="sm">${new Date(x.criado_em).toLocaleDateString('pt-BR')}${eu.admin ? ' · ' + esc(nome(x.autor)) : ''} · <span style="color:${SIT[x.situacao][1]}">${SIT[x.situacao][0]}${x.etapa ? ' · etapa ' + esc(x.etapa) : ''}</span></div>${x.texto ? `<div class="sm" style="margin-top:3px">${esc(x.texto)}</div>` : ''}${x.resposta ? `<div class="sm" style="margin-top:4px;color:#D8D3DE">Resposta: ${esc(x.resposta)}</div>` : ''}${x.foto ? `<img src="${x.foto}" style="max-width:160px;border-radius:8px;margin-top:6px">` : ''}</div>${eu.admin ? `<button class="mini" data-r="${x.id}">Responder</button>` : ''}</div>`).join('') || '<p class="sm">Nenhuma sugestão ainda.</p>'}`;
+    let foto = null; const f = pg.querySelector('#sF');
+    f.onchange = () => { const a = f.files[0]; if (!a) return; const im = new Image(); im.onload = () => { const e = Math.min(1, 900 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = im.width * e; c.height = im.height * e; c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); foto = c.toDataURL('image/jpeg', .7); pg.querySelector('#sFn').textContent = a.name; }; im.src = URL.createObjectURL(a); };
+    pg.querySelector('#sEnv').onclick = async () => { const t = pg.querySelector('#sT').value.trim(); if (!t) { alert('Escreva sua ideia.'); return; } const r = await sb.from('sugestoes').insert({ autor: eu.id, titulo: t, texto: pg.querySelector('#sX').value.trim() || null, foto }); if (r.error) { alert('Não foi possível enviar.'); return; } window.KESP_TOAST('Sugestão enviada. Obrigado!'); telaSugestoes(sb, eu); };
+    pg.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => { const x = data.find(y => y.id === b.dataset.r);
+      const r0 = await new Promise(res => { const d = document.createElement('div'); d.className = 'conf'; d.innerHTML = `<div class="cx fm"><b>${esc(x.titulo)}</b><label>Situação</label><select id="rS">${Object.entries(SIT).map(([k, v]) => `<option value="${k}"${x.situacao === k ? ' selected' : ''}>${v[0]}</option>`).join('')}</select><label>Etapa (se aprovada)</label><input id="rE" value="${esc(x.etapa || '')}"><label>Resposta para quem enviou</label><input id="rR" value="${esc(x.resposta || '')}"><div style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok>Salvar</button></div></div>`; document.body.appendChild(d); d.querySelector('[data-x]').onclick = () => { d.remove(); res(null); }; d.querySelector('[data-ok]').onclick = () => { const v = { situacao: d.querySelector('#rS').value, etapa: d.querySelector('#rE').value.trim() || null, resposta: d.querySelector('#rR').value.trim() || null }; d.remove(); res(v); }; });
+      if (!r0) return; await sb.from('sugestoes').update({ ...r0, atualizado_em: new Date().toISOString() }).eq('id', x.id);
+      await sb.from('avisos').insert({ destinatario: x.autor, tipo: 'informativo', prioridade: 'novidade', titulo: 'Sua sugestão foi atualizada: ' + SIT[r0.situacao][0], texto: x.titulo, link: '#sugestoes', dispensavel: true, criado_por: eu.id });
+      telaSugestoes(sb, eu); });
+  }
+  return { abrir, novoLembrete, telaLembretes, telaSugestoes };
 })();
