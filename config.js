@@ -6,6 +6,6 @@ window.KESP_CONFIG = {
   admins: 'Henrique ou Jaqueline',
   kaiChaveVence: '2028-11-10',
   assinanteAnterior: 'coordenacao@kolping-sp.org.br',
-  versao: '3.4',
+  versao: '3.5',
   versaoData: '08/11/2026'
 };

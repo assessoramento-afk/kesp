@@ -1263,9 +1263,9 @@ window.KESP_EVOL = (function () {
             return `<button data-k="${l.k}" class="${st.sel.has(l.k) ? (it && it.falta > 0 ? 'par' : 'sel') : l.sit === 'atraso' ? 'at' : ''}">${nm}<b>${R(l.devido - l.ja)}</b></button>`; }).join('')}</div>` : ''}
         ${c && c.ac ? `<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="rAc" style="width:auto"${st.usarAcordo !== false ? ' checked' : ''}> Parcela do acordo (${c.ac.nPagas + 1} de ${c.ac.nTot}) · <b>${R(c.acEsp)}</b>${c.acEsp > Number(c.ac.a.parcela) + 0.009 ? ' <span class="sm">(inclui o que faltou)</span>' : ''}</label>` : ''}
         ${exHtml}
-        <div class="dois" style="grid-template-columns:2fr 64px 1fr auto;gap:6px;align-items:end;margin-top:8px"><select id="xI"><option value="">+ Item (camisetas, inscrições…)</option>${ITENS.filter(i => i.ativo && (tipo === 'CK' || i.tipo === (tipo === 'EV' ? 'evento' : 'livre'))).map(i => `<option value="${i.id}">${esc(i.nome)} · ${R(i.valor)}</option>`).join('')}${abertosAR.map(a => `<option value="ar:${a.id}">Complemento: ${esc(a.descricao)} · ${R(a.valor)}</option>`).join('')}<option value="outro">Outro (digitar)</option></select><input id="xQ" type="number" min="1" value="1"><input id="xV" data-moeda placeholder="R$ 0,00"><button class="btn" id="xAdd" style="padding:9px 12px;white-space:nowrap">+ Adicionar</button></div></div>
+        <div class="dois linha-item" style="grid-template-columns:2fr 64px 1fr auto;gap:6px;align-items:center;margin-top:8px"><select id="xI"><option value="">+ Item (camisetas, inscrições…)</option>${ITENS.filter(i => i.ativo && (tipo === 'CK' || i.tipo === (tipo === 'EV' ? 'evento' : 'livre'))).map(i => `<option value="${i.id}">${esc(i.nome)} · ${R(i.valor)}</option>`).join('')}${abertosAR.map(a => `<option value="ar:${a.id}">Complemento: ${esc(a.descricao)} · ${R(a.valor)}</option>`).join('')}<option value="outro">Outro (digitar)</option></select><input id="xQ" type="number" min="1" value="1"><input id="xV" data-moeda placeholder="R$ 0,00"><button class="btn" id="xAdd" style="padding:9px 12px;white-space:nowrap">+ Adicionar</button></div></div>
       <div class="cd pas" style="--c:#6E6A7C">${passo(4, '#6E6A7C', 'Detalhes', 'opcional')}
-        <div class="dois"><div><label>Modelo</label><select id="rMod"><option value="padrao"${st.modelo === 'padrao' ? ' selected' : ''}>Padrão</option><option value="timbrado"${st.modelo === 'timbrado' ? ' selected' : ''}>Papel timbrado</option></select></div><div><label>Observação (aparece no recibo)</label><input id="rObs" value="${esc(st.obs)}"></div></div></div>
+        <div class="dois"><div><label>Modelo</label><select id="rMod"><option value="padrao"${st.modelo === 'padrao' ? ' selected' : ''}>Padrão</option><option value="timbrado"${st.modelo === 'timbrado' ? ' selected' : ''}>Papel timbrado</option></select></div><div><label>Observação no recibo</label><input id="rObs" value="${esc(st.obs)}"></div></div></div>
       </div><div class="prev3">
       ${temPrev ? `<div class="cd" style="--c:${c.parcial || c.faltaEx.length ? '#F5A524' : '#22C984'};margin-bottom:10px"><div class="kv"><span>Recebido</span><span>${R(c.V)}</span>${c.cu ? `<span>Crédito usado</span><span>${R(c.cu)}</span>` : ''}${c.ex.length ? `<span>Itens</span><span>${R(c.ex.reduce((x, e) => x + e.pago, 0))}</span>` : ''}${c.itens.length ? `<span>Taxa (${c.itens.length} ${c.itens.length > 1 ? 'meses' : 'mês'})</span><span>${R(c.T)}</span>` : ''}${c.acVal ? `<span style="color:#93B8FF">Acordo</span><span style="color:#93B8FF">${R(c.acVal)}</span>` : ''}${c.cn + c.sb > 0 ? `<span style="color:#5FE0A8">Sobra</span><span style="color:#5FE0A8">${R(c.cn + c.sb)}${ck ? ' → crédito' : ''}</span>` : ''}</div>
           ${c.ac && c.V > 0 && (c.V - c.T + c.cu - c.ex.reduce((x, e) => x + e.pago, 0)) > c.acEsp + 0.009 ? `<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px"><input type="checkbox" id="rSa" style="width:auto"${st.sobraAcordo !== false ? ' checked' : ''}> Valor a mais abate o acordo (desmarque para virar crédito)</label>` : ''}
@@ -1288,7 +1288,10 @@ window.KESP_EVOL = (function () {
         sug.innerHTML = L.map(x => { const ex2 = B.extrato(x, ANO); return `<a data-ck="${x.id}"><span style="width:8px;height:8px;border-radius:50%;background:${B.COR[ex2.situacao]};flex-shrink:0"></span><span style="flex:1">${esc(x.nome)}<span class="sm"> · ${esc(x.cidade || '')}</span></span></a>`; }).join('') || '<div class="sm" style="padding:8px">Nenhuma CK encontrada.</div>'; sug.style.display = 'block';
         sug.querySelectorAll('[data-ck]').forEach(o => o.onmousedown = ev => { ev.preventDefault(); st.ck = D.cks.find(x => x.id === o.dataset.ck); st.valor = 0; st.valorAuto = true; st.sel = new Set(); st.extras = []; const ac0 = B.acordoDe(st.ck.id); if (ac0) { st.usarAcordo = true; } const hoje = new Date().toISOString().slice(0, 7); todasLinhas(st.ck).filter(l => l.ja < l.devido - 0.001 && l.venc.slice(0, 7) <= hoje).forEach(l => st.sel.add(l.k)); st.valor = valorSugerido(); re(); }); };
       bus.onfocus = () => { bus.select(); mostrar(); }; bus.oninput = mostrar; bus.onblur = () => setTimeout(() => (sug.style.display = 'none'), 150); }
-    if (g('aN')) { g('aN').onchange = ev => { st.avulso.nome = ev.target.value.trim(); re(); }; g('aD').onchange = ev => { st.avulso.doc = ev.target.value.trim(); }; window.KESP_BUSCA.ligar(document.getElementById('cont')); }
+    const reconhecer = () => { const so = v => String(v || '').replace(/\D/g, ''), nr = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+      const m = D.cks.find(x => (so(st.avulso.doc).length >= 14 && so(x.cnpj) === so(st.avulso.doc)) || (st.avulso.nome && [x.nome, x.razao_social].some(n => n && nr(n) === nr(st.avulso.nome))));
+      if (m) { st.pagador = 'ck'; st.ck = m; window.KESP_TOAST('Pagador reconhecido: ' + m.nome + '. O recibo fica ligado à CK (com crédito, se houver sobra).'); return true; } return false; };
+    if (g('aN')) { g('aN').onchange = ev => { st.avulso.nome = ev.target.value.trim(); reconhecer(); re(); }; g('aD').onchange = ev => { st.avulso.doc = ev.target.value.trim(); if (reconhecer()) re(); }; window.KESP_BUSCA.ligar(document.getElementById('cont')); }
     g('rVal').onchange = ev => { st.valor = window.KESP_MOEDA.ler(ev.target); st.valorAuto = false; autoSelecionar(); re(); };
     const us = g('rUsar'); if (us) us.onclick = () => { st.valorAuto = true; st.valor = valorSugerido(); re(); };
     g('rData').onchange = ev => { st.data = ev.target.value; re(); };
@@ -1390,7 +1393,7 @@ window.KESP_EVOL = (function () {
       if (!confirm(`Corrigir o recibo ${r.serie} ${r.numero}/${r.ano}?\n\nEle será cancelado (desfazendo meses, crédito e acordo) e a emissão abre preenchida para você ajustar e emitir o novo recibo, que indicará a substituição.`)) return;
       const x = await sb.from('recibos').update({ situacao: 'cancelado', cancelado_motivo: 'Substituído por recibo corrigido' }).eq('id', r.id); if (x.error) { alert('Não foi possível cancelar: ' + x.error.message); return; }
       await B.carregar(sb, eu); await extras(); dlg.remove();
-      const ck = r.comunidade_id ? B.dados().cks.find(c => c.id === r.comunidade_id) : null; novoEstado();
+      const soD = v => String(v || '').replace(/\D/g, ''); const ck = r.comunidade_id ? B.dados().cks.find(c => c.id === r.comunidade_id) : B.dados().cks.find(c => c.cnpj && soD(c.cnpj) === soD(r.pagador_doc)) || null; novoEstado();
       st.tipo = r.serie; st.pagador = ck ? 'ck' : 'avulso'; st.ck = ck; st.avulso = ck ? {} : { nome: r.pagador_nome, doc: r.pagador_doc }; st.valor = Number(r.valor); st.valorAuto = false;
       st.data = r.data_pagamento; st.forma = r.forma_pagamento; st.modelo = r.modelo || 'padrao'; st.obs = r.observacao || '';
       st.sel = new Set((r.itens || []).filter(i => i.tipo === 'solidariedade' || i.tipo === 'societaria').map(i => chave(i.tipo, i.ano, i.tipo === 'societaria' ? 0 : i.mes)));
@@ -1411,6 +1414,7 @@ window.KESP_EVOL = (function () {
     const ref = partes.length > 1 ? partes.slice(0, -1).join(', ') + ' e ' + partes[partes.length - 1] : partes[0] || 'Recebimento';
     return window.KESP_ARQ.montar(['Recibo ' + r.serie + ' ' + r.numero + '-' + r.ano, window.KESP_ARQ.titulo(ck || r.pagador_nome), ref]);
   }
+  const FORMA = f => ({ pix: 'PIX', transferencia: 'Transferência', 'transferência': 'Transferência', ted: 'Transferência', deposito: 'Depósito', 'depósito': 'Depósito', dinheiro: 'Dinheiro', boleto: 'Boleto' }[String(f || '').toLowerCase().trim()] || f || '—');
   function documento(r, quem) {
     const base = location.href.split('#')[0].replace(/[^/]*$/, '');
     const logo = base + 'logo-kolping.png';
@@ -1432,7 +1436,7 @@ window.KESP_EVOL = (function () {
         ${itens ? `<table style="width:100%;border-collapse:collapse;margin-top:14px;font-size:12px"><tr style="color:#8A8078;font-size:10px;letter-spacing:.08em"><td style="padding:6px 0">REFERÊNCIA</td><td style="text-align:right">DEVIDO</td><td style="text-align:right">PAGO</td></tr>${itens}</table>` : ''}
         ${acIt ? `<div style="margin-top:14px;background:#FDF1D6;border-left:4px solid #F5A524;border-radius:8px;padding:9px 14px;color:#7A5300;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact">Saldo devedor do acordo após este pagamento: ${R(acIt.saldo)} (parcela ${acIt.n} de ${acIt.de})</div>` : ''}
         ${saldoIt ? `<div style="margin-top:14px;background:#DDF5E9;border-left:4px solid #22C984;border-radius:8px;padding:9px 14px;color:#0E5C37;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact">Saldo de crédito da Comunidade após este pagamento: ${R(saldoIt.saldo)}</div>` : ''}
-        <div style="display:flex;gap:40px;background:#F7F4F0;border-radius:8px;padding:10px 16px;margin-top:14px"><div><div style="font-size:10px;letter-spacing:.1em;color:#8A8078">FORMA DE PAGAMENTO</div><b>${esc(r.forma_pagamento || '—')}</b></div><div><div style="font-size:10px;letter-spacing:.1em;color:#8A8078">DATA DO PAGAMENTO</div><b>${dataBR(r.data_pagamento)}</b></div></div>
+        <div style="display:flex;gap:40px;background:#F7F4F0;border-radius:8px;padding:10px 16px;margin-top:14px"><div><div style="font-size:10px;letter-spacing:.1em;color:#8A8078">FORMA DE PAGAMENTO</div><b>${esc(FORMA(r.forma_pagamento))}</b></div><div><div style="font-size:10px;letter-spacing:.1em;color:#8A8078">DATA DO PAGAMENTO</div><b>${dataBR(r.data_pagamento)}</b></div></div>
         ${r.observacao ? `<p style="font-size:12px;color:#5A4E46;margin:10px 0 0">Obs.: ${esc(r.observacao)}</p>` : ''}
         ${r._orig ? `<p style="font-size:12px;color:#5A4E46;margin:10px 0 0">Este recibo substitui o recibo ${r._orig.serie} ${r._orig.numero}/${r._orig.ano}.</p>` : ''}
         ${r._subst ? `<p style="font-size:12px;color:#A3262C;margin:6px 0 0;font-weight:700">Substituído pelo recibo ${r._subst.serie} ${r._subst.numero}/${r._subst.ano}.</p>` : ''}
@@ -2062,7 +2066,7 @@ window.KESP_VISITAS = (function () {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const COR_SIT = { em_dia: '#22C984', parcial: '#F5A524', atraso: '#E5484D', inativa: '#6E6A7C', acordo: '#3B82F6', acordo_atraso: '#E5484D' };
   const NOME_SIT = { em_dia: 'em dia', parcial: 'pendência parcial', atraso: 'em atraso', inativa: 'inativa', acordo: 'em acordo', acordo_atraso: 'acordo em atraso' };
-  let sb, eu, B, map, cluster, marcas = {}, filtroD = '', filtroS = '', fBusca = '', U = [], verInativas = false, listaAberta = innerWidth > 860;
+  let sb, eu, B, map, cluster, marcas = {}, filtroD = '', filtroS = '', fBusca = '', U = [], verInativas = false, listaAberta = false;
   const css = h => new Promise(ok => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h; l.onload = ok; l.onerror = ok; document.head.appendChild(l); });
   const js = h => new Promise((ok, er) => { const s = document.createElement('script'); s.src = h; s.onload = ok; s.onerror = er; document.head.appendChild(s); });
   async function libs() {
@@ -2075,31 +2079,53 @@ window.KESP_VISITAS = (function () {
   const K = '<rect x="-7" y="-8" width="5" height="16" fill="#1E1B19"/><path d="M-2 -8 L8 -8 L8 8 L-2 8Z" fill="#F07830"/><path d="M8 -8 L8 8 L-1 0Z" fill="#1E1B19"/>';
   const pinSvg = (borda, anel, unid) => `<svg width="52" height="62" viewBox="-26 -38 52 62">${anel ? `<circle r="23" cy="-12" fill="none" stroke="${anel}" stroke-width="3.5"/>` : ''}<path d="M0 22 C-5 12,-17 5,-17 -12 A17 17 0 1 1 17 -12 C17 5,5 12,0 22Z" fill="#fff" stroke="${borda}" stroke-width="4.5" stroke-linejoin="round"/><g transform="translate(0,-12)">${K}</g>${unid ? '<g transform="translate(12,-27)"><circle r="7" fill="#F07830"/><text y="3.5" text-anchor="middle" font-size="9" fill="#fff">★</text></g>' : ''}</svg>`;
   const icone = (borda, anel, unid) => L.divIcon({ className: 'kpin', html: pinSvg(borda, anel, unid), iconSize: [52, 62], iconAnchor: [26, 60] });
-  const endCk = ck => 'cep2|' + [ck.logradouro && (ck.logradouro + (ck.numero ? ', ' + ck.numero : '')), ck.bairro, ck.cidade, ck.uf || 'SP', ck.cep, 'Brasil'].filter(Boolean).join(', ');
+  const endCk = ck => 'cep3|' + [ck.logradouro && (ck.logradouro + (ck.numero ? ', ' + ck.numero : '')), ck.bairro, ck.cidade, ck.uf || 'SP', ck.cep, 'Brasil'].filter(Boolean).join(', ');
   const dist = (a, b) => { const R = 6371, r = x => x * Math.PI / 180, dLa = r(b[0] - a[0]), dLo = r(b[1] - a[1]); const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 
+  const sem = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  async function localizarUm(x, tabela) {
+    const end = tabela === 'unidades' ? 'cep3|' + [x.logradouro && (x.logradouro + (x.numero ? ', ' + x.numero : '')), x.bairro, x.cidade, 'SP', x.cep, 'Brasil'].filter(Boolean).join(', ') : endCk(x);
+    const cep = String(x.cep || '').replace(/\D/g, ''), cid = sem(x.cidade);
+    const salvar = async (lat, lng, aprox) => { x.lat = +lat; x.lng = +lng; x.geo_endereco = end; x.geo_aprox = !!aprox; const reg = { lat: x.lat, lng: x.lng, geo_endereco: end }; if (tabela === 'comunidades') Object.assign(reg, { geo_manual: false, geo_aprox: !!aprox }); await sb.from(tabela).update(reg).eq('id', x.id); return true; };
+    const nomi = async params => { await new Promise(r => setTimeout(r, 1100)); try { return await (await fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=3&countrycodes=br&' + params)).json(); } catch (_) { return []; } };
+    const naCidade = r => { const ad = r.address || {}; return !cid || [ad.city, ad.town, ad.village, ad.municipality, ad.city_district].some(v => sem(v) === cid); };
+    const ehRua = r => ['house', 'building', 'residential', 'road', 'street', 'secondary', 'tertiary', 'primary', 'unclassified', 'living_street', 'pedestrian', 'square', 'place'].includes(r.type) || (r.class === 'highway') || (r.class === 'building') || (r.class === 'place' && r.type === 'house');
+    // 1) rua + número + cidade + CEP (busca estruturada)
+    if (x.logradouro) { const r = await nomi('street=' + encodeURIComponent((x.numero ? x.numero + ' ' : '') + x.logradouro) + '&city=' + encodeURIComponent(x.cidade || '') + '&state=S%C3%A3o%20Paulo' + (cep.length === 8 ? '&postalcode=' + cep.slice(0, 5) + '-' + cep.slice(5) : ''));
+      const ok = r.find(y => naCidade(y) && ehRua(y)); if (ok) return salvar(ok.lat, ok.lon, false); }
+    // 2) CEP com coordenadas (BrasilAPI), conferindo a cidade
+    if (cep.length === 8 && !cep.endsWith('000')) { try { const b = await (await fetch('https://brasilapi.com.br/api/cep/v2/' + cep)).json(); const co = b && b.location && b.location.coordinates;
+      if (co && co.latitude && (!cid || sem(b.city) === cid)) return salvar(co.latitude, co.longitude, false); } catch (_) {} }
+    // 3) rua sem número + cidade
+    if (x.logradouro) { const r = await nomi('street=' + encodeURIComponent(x.logradouro) + '&city=' + encodeURIComponent(x.cidade || '') + '&state=S%C3%A3o%20Paulo'); const ok = r.find(y => naCidade(y) && ehRua(y)); if (ok) return salvar(ok.lat, ok.lon, false); }
+    // 4) bairro + cidade (aproximado)
+    if (x.bairro) { const r = await nomi('q=' + encodeURIComponent([x.bairro, x.cidade, 'SP', 'Brasil'].filter(Boolean).join(', '))); const ok = r.find(naCidade); if (ok) return salvar(ok.lat, ok.lon, true); }
+    // 5) só a cidade (aproximado)
+    if (x.cidade) { const r = await nomi('city=' + encodeURIComponent(x.cidade) + '&state=S%C3%A3o%20Paulo'); if (r[0]) return salvar(r[0].lat, r[0].lon, true); }
+    return false;
+  }
   async function geocodificar(lista, tabela) {
     let n = 0;
     for (const x of lista) {
-      const end = tabela === 'unidades' ? 'cep2|' + [x.logradouro && (x.logradouro + (x.numero ? ', ' + x.numero : '')), x.bairro, x.cidade, 'SP', x.cep, 'Brasil'].filter(Boolean).join(', ') : endCk(x);
+      const end = tabela === 'unidades' ? 'cep3|' + [x.logradouro && (x.logradouro + (x.numero ? ', ' + x.numero : '')), x.bairro, x.cidade, 'SP', x.cep, 'Brasil'].filter(Boolean).join(', ') : endCk(x);
       if ((!x.cidade && !x.cep) || (x.lat && x.geo_endereco === end) || (x.geo_manual && x.geo_endereco === end)) continue;
-      try {
-        const cep = String(x.cep || '').replace(/\D/g, '');
-        if (cep.length === 8) {
-          try { const b = await (await fetch('https://brasilapi.com.br/api/cep/v2/' + cep)).json(); const co = b && b.location && b.location.coordinates;
-            if (co && co.latitude && co.longitude) { x.lat = +co.latitude; x.lng = +co.longitude; x.geo_endereco = end; if (tabela === 'comunidades') x.geo_manual = false; await sb.from(tabela).update(tabela === 'comunidades' ? { lat: x.lat, lng: x.lng, geo_endereco: end, geo_manual: false } : { lat: x.lat, lng: x.lng, geo_endereco: end }).eq('id', x.id); n++; continue; } } catch (_) {}
-          try { const v = await (await fetch('https://viacep.com.br/ws/' + cep + '/json/')).json(); if (v && !v.erro) { x._q = [v.logradouro && (v.logradouro + (x.numero ? ', ' + x.numero : '')), v.bairro, v.localidade, v.uf, 'Brasil'].filter(Boolean).join(', '); } } catch (_) {}
-        }
-        await new Promise(r => setTimeout(r, 1100));
-        let j = await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(x._q || end))).json();
-        if (!j.length && cep.length === 8) { await new Promise(r => setTimeout(r, 1100)); j = await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&postalcode=' + cep.slice(0, 5) + '-' + cep.slice(5))).json(); }
-        if (!j.length) j = await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent([x.bairro, x.cidade, 'SP', 'Brasil'].filter(Boolean).join(', ')))).json();
-        if (j.length) { x.lat = +j[0].lat; x.lng = +j[0].lon; x.geo_endereco = end; if (tabela === 'comunidades') x.geo_manual = false; await sb.from(tabela).update(tabela === 'comunidades' ? { lat: x.lat, lng: x.lng, geo_endereco: end, geo_manual: false } : { lat: x.lat, lng: x.lng, geo_endereco: end }).eq('id', x.id); n++; }
-      } catch (_) {}
+      if (await localizarUm(x, tabela)) n++;
     }
     return n;
   }
-
+  function conferir() {
+    const D = B.dados(), d = document.createElement('div'); d.className = 'conf';
+    const lin = D.cks.filter(c => c.ativa).sort((a, b) => (a.lat ? (a.geo_aprox ? 1 : 2) : 0) - (b.lat ? (b.geo_aprox ? 1 : 2) : 0) || a.nome.localeCompare(b.nome, 'pt-BR'));
+    d.innerHTML = `<div class="cx" style="max-width:820px;max-height:92vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>Conferir localizações</b><div style="display:flex;gap:6px"><button class="btn sec" id="cfTodas">Relocalizar todas</button><button class="btn sec" data-x>Fechar</button></div></div>
+      <p class="sm" style="margin:4px 0 10px">Vermelho: sem localização · Amarelo: aproximada (só bairro ou cidade) · Verde: pelo endereço. Corrija o endereço no Editar da CK e toque em Relocalizar.</p>
+      ${lin.map(c => { const cor = !c.lat ? '#E5484D' : c.geo_aprox ? '#F5A524' : c.geo_manual ? '#3B82F6' : '#22C984'; return `<div class="pe" style="--c:${cor}"><div style="flex:1;min-width:0"><b>${esc(c.nome)}</b><div class="sm">${esc([c.logradouro, c.numero, c.bairro, c.cidade].filter(Boolean).join(', '))} · CEP ${esc(c.cep || '—')}</div><div class="sm" style="color:${cor}">${!c.lat ? 'Sem localização' : c.geo_aprox ? 'Localização aproximada: confira o CEP e a rua' : c.geo_manual ? 'Posição ajustada à mão' : 'Localizada pelo endereço'}</div></div><div class="ac"><button class="mini" data-rl="${c.id}">Relocalizar</button><button class="mini neu" data-edc="${c.id}">Editar CK</button></div></div>`; }).join('')}</div>`;
+    document.body.appendChild(d);
+    d.querySelector('[data-x]').onclick = () => d.remove();
+    d.querySelectorAll('[data-edc]').forEach(b => b.onclick = () => { d.remove(); location.hash = '#ck/' + b.dataset.edc; });
+    d.querySelectorAll('[data-rl]').forEach(b => b.onclick = async () => { const c = D.cks.find(x => x.id === b.dataset.rl); b.disabled = true; b.textContent = 'Localizando…'; const ok = await localizarUm(c, 'comunidades'); d.remove(); desenhar(); window.KESP_TOAST(ok ? (c.geo_aprox ? 'Localização aproximada: confira o endereço.' : 'Localizada.') : 'Não foi possível localizar. Confira o endereço.'); conferir(); });
+    d.querySelector('#cfTodas').onclick = async () => { if (!confirm(`Relocalizar as ${lin.length} CKs? Leva cerca de ${Math.ceil(lin.length * 2.5)} segundos.`)) return; const bt = d.querySelector('#cfTodas'); bt.disabled = true; let k = 0;
+      for (const c of lin) { if (c.geo_manual) continue; bt.textContent = `Localizando ${++k} de ${lin.length}…`; await localizarUm(c, 'comunidades'); } d.remove(); desenhar(); conferir(); };
+  }
   function filtrar(l) { return l.filter(({ ck, e }) => (verInativas || ck.ativa) && (!filtroD || ck.distrito_id === filtroD) && (!filtroS || (filtroS === 'semvisita' ? semVisita(ck) : e.situacao === filtroS)) && (!fBusca || (ck.nome + ' ' + (ck.cidade || '')).toLowerCase().includes(fBusca))); }
   function semVisita(ck) { const v = (B.dados().vis || []).find(x => x.comunidade_id === ck.id); return !v || (Date.now() - new Date(v.data + 'T12:00')) / 864e5 > 180; }
   function linhas() { const D = B.dados(), ANO = new Date().getFullYear(); return D.cks.map(ck => ({ ck, e: B.extrato(ck, ANO), d: B.dist(ck.distrito_id) })); }
@@ -2107,7 +2133,7 @@ window.KESP_VISITAS = (function () {
   function desenhar() {
     const L0 = filtrar(linhas()), com = L0.filter(x => x.ck.lat), sem = L0.filter(x => !x.ck.lat);
     cluster.clearLayers(); marcas = {};
-    com.forEach(({ ck, e, d }) => { const m = L.marker([+ck.lat, +ck.lng], { icon: icone(d ? d.cor : '#6E6A7C', COR_SIT[e.situacao], false), title: ck.nome }); m.on('click', () => cartao(ck, e, d, m)); cluster.addLayer(m); marcas[ck.id] = m; });
+    com.forEach(({ ck, e, d }) => { const ic = icone(d ? d.cor : '#6E6A7C', COR_SIT[e.situacao], false); if (ck.geo_aprox) ic.options.className = 'kpin aprox'; const m = L.marker([+ck.lat, +ck.lng], { icon: ic, title: ck.nome + (ck.geo_aprox ? ' (localização aproximada)' : '') }); m.on('click', () => cartao(ck, e, d, m)); cluster.addLayer(m); marcas[ck.id] = m; });
     U.filter(u => u.lat).forEach(u => cluster.addLayer(L.marker([+u.lat, +u.lng], { icon: icone('#F07830', null, true), title: u.nome, zIndexOffset: 1000 }).on('click', () => cartaoU(u))));
     document.getElementById('mL').innerHTML = `<div style="padding:10px"><input id="mB" placeholder="Buscar CK ou cidade" value="${esc(fBusca)}" style="width:100%;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(8,12,20,.7);color:#F2EEEA;font-size:12px"><div class="sm" style="margin-top:6px">${com.length} no mapa${sem.length ? ` · <b style="color:#F8C46A">${sem.length} sem localização</b>` : ''}</div></div>
       <div style="overflow:auto">${com.sort((a, b) => a.ck.nome.localeCompare(b.ck.nome, 'pt-BR')).map(({ ck, e, d }) => `<div class="it" data-m="${ck.id}"><span style="width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid ${d ? esc(d.cor) : '#6E6A7C'};box-shadow:0 0 0 2px ${COR_SIT[e.situacao]};flex-shrink:0"></span><span style="flex:1">${esc(ck.nome)}</span></div>`).join('')}
@@ -2121,7 +2147,7 @@ window.KESP_VISITAS = (function () {
     const el = document.getElementById('mC'); el.style.display = 'block'; el.style.setProperty('--c', COR_SIT[e.situacao]);
     el.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px"><div class="sm">${d ? '● Distrito ' + esc(d.nome) : 'Sem distrito'} · ${esc(ck.cidade || '')}</div><a style="cursor:pointer" id="mCx">✕</a></div><b>${esc(ck.nome)}</b>
       <div class="sm" style="margin-top:4px">${e.r ? e.r.efetivos + e.r.cooperadores + ' associados · ' : ''}<span style="color:${COR_SIT[e.situacao]}">${NOME_SIT[e.situacao]}${e.aberto ? ' · ' + R(e.aberto) : ''}</span></div>
-      <div class="sm">Última visita: ${v ? new Date(v.data + 'T12:00').toLocaleDateString('pt-BR') : 'nenhuma'}${sede ? ' · ' + dist([+sede.lat, +sede.lng], [+ck.lat, +ck.lng]).toFixed(1).replace('.', ',') + ' km da Sede' : ''}</div>
+      ${ck.geo_aprox ? '<div class="sm" style="color:#F8C46A">Localização aproximada: confira o CEP e a rua no cadastro.</div>' : ''}<div class="sm">Última visita: ${v ? new Date(v.data + 'T12:00').toLocaleDateString('pt-BR') : 'nenhuma'}${sede ? ' · ' + dist([+sede.lat, +sede.lng], [+ck.lat, +ck.lng]).toFixed(1).replace('.', ',') + ' km da Sede' : ''}</div>
       <a class="bt" href="#ck/${ck.id}">Abrir perfil</a>${tel ? `<a class="bt" href="https://wa.me/55${tel}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<a class="bt" href="https://www.google.com/maps/dir/?api=1&destination=${ck.lat},${ck.lng}" target="_blank" rel="noopener">Rota</a><a class="bt" id="mVis">Registrar visita</a>${eu.admin || window.KESP_PODE('comunidades.editar') ? '<a class="bt" id="mAj">Ajustar posição</a>' : ''}`;
     document.getElementById('mCx').onclick = () => (el.style.display = 'none');
     document.getElementById('mVis').onclick = () => { try { sessionStorage.setItem('kesp.ck.aba', 'vis'); } catch (_) {} location.hash = '#ck/' + ck.id; };
@@ -2146,7 +2172,7 @@ window.KESP_VISITAS = (function () {
         <div class="mvidro mfechar" id="mX" style="position:absolute;z-index:700;top:10px;right:10px;padding:8px 12px;cursor:pointer">✕ Fechar</div>
         <div class="mlista mvidro" id="mL" style="${listaAberta ? '' : 'display:none'}"></div>
         <div class="mvidro" id="mLt" style="position:absolute;z-index:520;left:10px;bottom:10px;padding:8px 12px;cursor:pointer;font-size:12px">${listaAberta ? '‹ Esconder lista' : '☰ Lista das CKs'}</div>
-        <div class="mctl"><a class="mvidro" id="mZi">+</a><a class="mvidro" id="mZo">−</a><a class="mvidro" id="mTd" title="Ver todas">⤢</a><a class="mvidro" id="mEu" title="Minha localização">◎</a><a class="mvidro" id="mCa" title="Camadas">▤</a><a class="mvidro" id="mFs" title="Tela cheia">⛶</a></div>
+        <div class="mctl"><a class="mvidro" id="mZi">+</a><a class="mvidro" id="mZo">−</a><a class="mvidro" id="mTd" title="Ver todas">⤢</a><a class="mvidro" id="mEu" title="Minha localização">◎</a><a class="mvidro" id="mCa" title="Camadas">▤</a><a class="mvidro" id="mFs" title="Tela cheia">⛶</a>${eu.admin || window.KESP_PODE('comunidades.editar') ? '<a class="mvidro" id="mCf" title="Conferir localizações">✓</a>' : ''}</div>
         <div class="mcard mvidro" id="mC" style="display:none"></div></div>`;
     map = L.map('mapa', { zoomControl: false, minZoom: 6, maxBoundsViscosity: .8, attributionControl: true });
     const escuro = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19, className: 'osm-escuro' }).addTo(map);
@@ -2167,6 +2193,7 @@ window.KESP_VISITAS = (function () {
     document.getElementById('mLt').onclick = () => { listaAberta = !listaAberta; document.getElementById('mL').style.display = listaAberta ? '' : 'none'; document.getElementById('mLt').textContent = listaAberta ? '‹ Esconder lista' : '☰ Lista das CKs'; document.getElementById('mLt').style.left = listaAberta && innerWidth > 860 ? '260px' : '10px'; };
     document.getElementById('mIn').onclick = () => { verInativas = !verInativas; document.getElementById('mIn').classList.toggle('on', verInativas); desenhar(); };
     if (listaAberta && innerWidth > 860) document.getElementById('mLt').style.left = '260px';
+    if (document.getElementById('mCf')) document.getElementById('mCf').onclick = conferir;
     document.getElementById('mX').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); location.hash = '#inicio'; };
     document.getElementById('mZi').onclick = () => map.zoomIn(); document.getElementById('mZo').onclick = () => map.zoomOut();
     document.getElementById('mTd').onclick = () => { const b = cluster.getBounds(); b.isValid() ? map.fitBounds(b, { padding: [40, 40] }) : map.fitBounds(lim); };

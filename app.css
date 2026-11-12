@@ -268,3 +268,13 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
 .rec3 .dois{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .rec3 input:not([type=checkbox]),.rec3 select{padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-size:14px;font-family:inherit}
 .rec3 input:focus,.rec3 select:focus{outline:none;border-color:rgba(240,120,48,.6)}
+/* 3.5 · alinhamento da emissão */
+.rec3 input:not([type=checkbox]),.rec3 select,.rec3 .kdt{height:44px;min-height:44px;box-sizing:border-box}
+.rec3 #rVal{height:56px}
+.rec3 .btn{height:44px;display:inline-flex;align-items:center;justify-content:center}
+.rec3 .dois{align-items:end}
+.rec3 .pas label{margin-top:10px}
+.kpin.aprox{opacity:.55}
+.rec3 select{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.rec3 .kdt{overflow:hidden}.rec3 .kdt>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rec3 .linha-item>*{margin:0}
