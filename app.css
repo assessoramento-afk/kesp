@@ -239,3 +239,32 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
 .sv .ac2{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
 .sv .ac2 a{font-size:11px;padding:4px 9px;border-radius:8px;background:rgba(255,255,255,.07);cursor:pointer;color:#F2EEEA}
 @media (max-width:860px){.sino-p{top:auto;bottom:calc(70px + env(safe-area-inset-bottom));right:8px;left:8px;width:auto;max-height:70vh}}
+/* 3.2 · calendário do KESP */
+.kdt{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;min-height:42px;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-size:14px;width:100%;box-sizing:border-box}
+.kdt .vz{color:#6E6A7C}.kdt:hover{border-color:rgba(240,120,48,.5)}
+.kcal{position:fixed;z-index:2500;width:340px;max-width:calc(100vw - 16px);border-radius:18px;background:linear-gradient(160deg,#1B2332,#141B27);color:#F2EEEA;padding:14px;font-size:13px;box-shadow:0 14px 40px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.1)}
+.kcal .at{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.kcal .at a,.kcal .hl a{font-size:12px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.06);cursor:pointer}
+.kcal .at a:hover,.kcal .hl a:hover{background:rgba(255,255,255,.1)}.kcal .hl a.on{background:rgba(240,120,48,.22);color:#FFB070}
+.kcal .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.kcal .hd b{font-size:15px;text-transform:capitalize}
+.kcal .hd a{width:32px;height:32px;border-radius:9px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.kcal .g{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}.kcal .g span{font-size:11px;color:#8E899A;padding:4px 0}
+.kcal .g a{height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer}.kcal .g a:hover{background:rgba(255,255,255,.07)}
+.kcal .g a.fo{color:#4E4A5C}.kcal .g a.fds{color:#A8A3B4}.kcal .g a.hj{box-shadow:inset 0 0 0 1.5px #3B82F6}.kcal .g a.se{background:linear-gradient(90deg,#F07830,#FF9A4D);color:#fff;font-weight:700}
+.kcal .hr{margin-top:12px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px}.kcal .hl{display:flex;gap:6px;flex-wrap:wrap}
+.kcal .rs{margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.kcal-fundo{position:fixed;inset:0;z-index:2400;background:rgba(0,0,0,.35)}
+@media (max-width:860px){.kcal{left:0!important;right:0;bottom:0;top:auto!important;width:auto;max-width:none;border-radius:20px 20px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}.kcal .g a{height:42px}}
+/* 3.3 · emissão em passos */
+.rec3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:16px;align-items:start}
+.rec3 .pas{margin-bottom:10px}.rec3 .pas label{display:block;font-size:12px;color:#A8A3B4;margin:8px 0 4px}
+.rec3 .pas input,.rec3 .pas select{width:100%;box-sizing:border-box}
+.rec3 .st{display:flex;align-items:center;gap:8px;margin-bottom:8px}.rec3 .st i{width:22px;height:22px;border-radius:50%;color:#0F1622;font-style:normal;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
+.prev3{position:sticky;top:12px}
+.sug{display:none;position:absolute;z-index:50;left:0;right:0;top:calc(100% + 4px);max-height:300px;overflow-y:auto;background:#1B2332;border:1px solid rgba(255,255,255,.12);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.sug a{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;font-size:13px}.sug a:hover{background:rgba(255,255,255,.06)}
+.folha{background:#E9E5DF;border-radius:12px;padding:10px;overflow:hidden}
+.folha-in{width:760px;transform-origin:top left}
+@media (max-width:860px){.rec3{grid-template-columns:1fr}.prev3{position:static}}
+.rec3 .dois{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rec3 input:not([type=checkbox]),.rec3 select{padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-size:14px;font-family:inherit}
+.rec3 input:focus,.rec3 select:focus{outline:none;border-color:rgba(240,120,48,.6)}

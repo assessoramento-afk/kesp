@@ -794,14 +794,14 @@ window.KESP_EVOL = (function () {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const R = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const MES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-  const COR = { em_dia: '#22C984', parcial: '#F5A524', atraso: '#E5484D', inativa: '#6E6A7C' };
-  const NOME = { em_dia: 'Em dia', parcial: 'Com pendência parcial', atraso: 'Em atraso', inativa: 'Inativa' };
-  const SIT_MES = { pago: ['rgba(34,201,132,.14)', '#5FE0A8'], parcial: ['rgba(245,165,36,.14)', '#F8C46A'], atraso: ['rgba(229,72,77,.14)', '#FF9A9D'], a_vencer: ['rgba(255,255,255,.04)', '#A8A3B4'], isento: ['rgba(255,255,255,.04)', '#6E6A7C'] };
+  const COR = { em_dia: '#22C984', parcial: '#F5A524', atraso: '#E5484D', inativa: '#6E6A7C', acordo: '#3B82F6', acordo_atraso: '#E5484D' };
+  const NOME = { em_dia: 'Em dia', parcial: 'Com pendência parcial', atraso: 'Em atraso', inativa: 'Inativa', acordo: 'Em acordo', acordo_atraso: 'Acordo em atraso' };
+  const SIT_MES = { pago: ['rgba(34,201,132,.14)', '#5FE0A8'], parcial: ['rgba(245,165,36,.14)', '#F8C46A'], atraso: ['rgba(229,72,77,.14)', '#FF9A9D'], a_vencer: ['rgba(255,255,255,.04)', '#A8A3B4'], isento: ['rgba(255,255,255,.04)', '#6E6A7C'], acordo: ['rgba(59,130,246,.16)', '#93B8FF'] };
   const ANO = new Date().getFullYear();
   let sb, eu, D = null, filtro = 'todas', busca = '', distrito = '';
 
   async function carregar() {
-    const [c, d, r, q, t, cr, f, h, vi] = await Promise.all([
+    const [c, d, r, q, t, cr, f, h, vi, ac, acp] = await Promise.all([
       sb.from('comunidades').select('*').order('nome'),
       sb.from('distritos').select('*').order('ordem'),
       sb.from('recadastramentos').select('*').order('ano'),
@@ -810,9 +810,11 @@ window.KESP_EVOL = (function () {
       sb.from('creditos').select('comunidade_id,valor'),
       sb.from('comunidades_favoritas').select('comunidade_id').eq('perfil_id', eu.id),
       sb.from('associados_historico').select('comunidade_id,ano,efetivos,cooperadores'),
-      sb.from('visitas').select('comunidade_id,data').order('data', { ascending: false })
+      sb.from('visitas').select('comunidade_id,data').order('data', { ascending: false }),
+      sb.from('acordos').select('*').eq('situacao', 'ativo'),
+      sb.from('acordo_pagamentos').select('acordo_id,valor')
     ]);
-    D = { cks: c.data || [], dist: d.data || [], recad: r.data || [], quit: q.data || [], taxas: t.data || [], cred: cr.data || [], fav: new Set((f.data || []).map(x => x.comunidade_id)), hist: (h && !h.error && h.data) || [], vis: (vi && !vi.error && vi.data) || [] };
+    D = { cks: c.data || [], dist: d.data || [], recad: r.data || [], quit: q.data || [], taxas: t.data || [], cred: cr.data || [], fav: new Set((f.data || []).map(x => x.comunidade_id)), hist: (h && !h.error && h.data) || [], vis: (vi && !vi.error && vi.data) || [], acordos: (ac && !ac.error && ac.data) || [], acpag: (acp && !acp.error && acp.data) || [] };
   }
   const taxa = ano => D.taxas.find(t => t.ano === ano) || D.taxas[D.taxas.length - 1] || { societaria: 0, solidariedade: 0, dia_vencimento: 15, venc_societaria: ano + '-03-31', minimo_efetivos: 12 };
   const recadAno = (ck, ano) => D.recad.filter(r => r.comunidade_id === ck && r.ano <= ano && r.situacao === 'aprovado').sort((a, b) => b.ano - a.ano)[0];
@@ -839,12 +841,74 @@ window.KESP_EVOL = (function () {
     let sdev = sVenc.slice(0, 7) < ini ? 0 : Math.round(nMes(sVenc.slice(0, 7)) * t.societaria * 100) / 100;
     if (quitado('societaria', null)) sdev = spg;
     const soc = { venc: sVenc, devido: sdev, pago: spg, sit: sit(sdev, spg, sVenc) };
+    const acordo = acordoDe(ck.id);
+    if (acordo) acordo.a.composicao.forEach(it => { const m = it.tipo === 'mes' && it.ano === ano ? meses[it.mes - 1] : it.tipo === 'societaria' && it.ano === ano ? soc : null; if (m && m.sit !== 'pago') m.sit = 'acordo'; });
     const todos = [...meses, soc];
     const aberto = todos.filter(m => m.sit === 'atraso' || (m.sit === 'parcial' && m.venc < hoje)).reduce((s, m) => s + (m.devido - m.pago), 0);
-    const situacao = !ck.ativa ? 'inativa' : todos.some(m => m.sit === 'atraso') ? 'atraso' : todos.some(m => m.sit === 'parcial') ? 'parcial' : 'em_dia';
-    return { meses, soc, n, r, situacao, aberto, atrasados: todos.filter(m => m.sit === 'atraso').length };
+    const situacao = !ck.ativa ? 'inativa' : todos.some(m => m.sit === 'atraso') ? 'atraso' : acordo && acordo.atrasado ? 'acordo_atraso' : todos.some(m => m.sit === 'parcial') ? 'parcial' : acordo ? 'acordo' : 'em_dia';
+    return { meses, soc, n, r, situacao, aberto, acordo, atrasados: todos.filter(m => m.sit === 'atraso').length };
   }
   const credito = id => D.cred.filter(c => c.comunidade_id === id).reduce((s, c) => s + Number(c.valor), 0);
+  // acordo ativo: quanto já foi pago, saldo, quanto deveria ter sido pago até agora e o valor esperado neste mês
+  function ligarAcordo(ck, c) {
+    const nv = c.querySelector('#acNovo'); if (nv) nv.onclick = () => novoAcordo(ck);
+    const acd = acordoDe(ck.id); if (!acd) return;
+    const tm = c.querySelector('#acTermo'); if (tm) tm.onclick = () => termoAcordo(ck, acd);
+    const en = c.querySelector('#acEnc'); if (en) en.onclick = async () => { if (!confirm('Encerrar o acordo? O saldo devedor deixa de ser cobrado por ele.')) return; await sb.from('acordos').update({ situacao: 'encerrado' }).eq('id', acd.a.id); await carregar(); perfil(ck.id); };
+  }
+  function novoAcordo(ck) {
+    const ANO = new Date().getFullYear(), e = extrato(ck, ANO), hoje = new Date().toISOString().slice(0, 10);
+    const itens = [];
+    e.meses.filter(m => m.venc < hoje && m.sit !== 'pago' && m.devido > m.pago).forEach(m => itens.push({ tipo: 'mes', ano: ANO, mes: m.mes, descricao: ANO + ' · ' + MES[m.mes - 1].toLowerCase(), valor: Math.round((m.devido - m.pago) * 100) / 100, on: true }));
+    if (e.soc.venc < hoje && e.soc.devido > e.soc.pago) itens.push({ tipo: 'societaria', ano: ANO, descricao: ANO + ' · taxa societária', valor: Math.round((e.soc.devido - e.soc.pago) * 100) / 100, on: true });
+    const ant = [];
+    const d = document.createElement('div'); d.className = 'conf'; let parcela = 200, ini = new Date(); ini.setDate(1); ini.setMonth(ini.getMonth() + 1);
+    const desenhar = () => {
+      const lista = [...ant, ...itens].filter(x => x.on), tot = Math.round(lista.reduce((s, x) => s + Number(x.valor), 0) * 100) / 100, n = parcela ? Math.ceil(tot / parcela - 1e-9) : 0;
+      d.innerHTML = `<div class="cx fm" style="max-width:600px;max-height:92vh;overflow-y:auto"><b>Novo acordo · ${esc(ck.nome)}</b><p class="sm" style="margin:4px 0 8px">Marque os débitos que entram no acordo. A taxa do mês continua sendo cobrada à parte.</p>
+        <label>Débitos de anos anteriores (digite o valor de cada um)</label>${ant.map((x, i) => `<div class="dois" style="grid-template-columns:1fr 140px auto;gap:6px;margin-top:4px"><input data-ad="${i}" value="${esc(x.descricao)}"><input data-av="${i}" data-moeda value="${R(x.valor)}"><a class="lk" data-ar="${i}">✕</a></div>`).join('')}
+        <div class="dois" style="grid-template-columns:90px 1fr auto;gap:6px;margin-top:6px"><input id="aAno" type="number" value="${ANO - 1}"><select id="aTp"><option value="mensalidades">mensalidades</option><option value="taxa societária">taxa societária</option></select><button class="mini" id="aAdd">+ Adicionar</button></div>
+        ${itens.length ? `<label>Débitos de ${ANO} no KESP</label>${itens.map((x, i) => `<label style="display:flex;gap:8px;align-items:center;margin:4px 0;color:#F2EEEA"><input type="checkbox" data-it="${i}" style="width:auto"${x.on ? ' checked' : ''}> <span style="flex:1">${esc(x.descricao)}</span><b>${R(x.valor)}</b></label>`).join('')}` : ''}
+        <div class="cd" style="--c:#F07830;margin-top:10px"><div class="kv"><span>Total do acordo</span><span><b style="color:#FFB070;font-size:16px">${R(tot)}</b></span></div></div>
+        <div class="dois"><div><label>Parcela mensal</label><input id="aPa" data-moeda value="${R(parcela)}"></div><div><label>Mês da 1ª parcela</label><input id="aIni" type="month" value="${ini.toISOString().slice(0, 7)}"></div></div>
+        <p class="sm" style="margin:8px 0 0">${n ? `Plano: ${n > 1 ? (n - 1) + ' parcela(s) de ' + R(parcela) + ' + 1 de ' + R(tot - (n - 1) * parcela) : '1 parcela de ' + R(tot)} · vencimento dia 15` : ''}</p>
+        <label>Observação</label><input id="aOb" placeholder="Ex.: combinado com o presidente">
+        <div style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok${tot > 0 ? '' : ' disabled'}>Salvar acordo</button></div></div>`;
+      window.KESP_MOEDA.ligar(d);
+      const ler = () => { d.querySelectorAll('[data-ad]').forEach(x => (ant[+x.dataset.ad].descricao = x.value)); d.querySelectorAll('[data-av]').forEach(x => (ant[+x.dataset.av].valor = window.KESP_MOEDA.ler(x))); parcela = window.KESP_MOEDA.ler(d.querySelector('#aPa')); const m = d.querySelector('#aIni').value; if (m) ini = new Date(m + '-01T12:00'); };
+      d.querySelectorAll('[data-av],#aPa').forEach(x => x.addEventListener('change', () => { ler(); desenhar(); }));
+      d.querySelectorAll('[data-ar]').forEach(x => x.onclick = () => { ler(); ant.splice(+x.dataset.ar, 1); desenhar(); });
+      d.querySelectorAll('[data-it]').forEach(x => x.onchange = () => { ler(); itens[+x.dataset.it].on = x.checked; desenhar(); });
+      d.querySelector('#aAdd').onclick = () => { ler(); const a = +d.querySelector('#aAno').value; ant.push({ tipo: 'anterior', ano: a, descricao: a + ' · ' + d.querySelector('#aTp').value, valor: 0, on: true }); ant.sort((x, y) => x.ano - y.ano); desenhar(); };
+      d.querySelector('[data-x]').onclick = () => d.remove();
+      d.querySelector('[data-ok]').onclick = async () => { ler(); const comp = [...ant.filter(x => x.valor > 0), ...itens.filter(x => x.on)].map(({ on, ...x }) => x), total = Math.round(comp.reduce((s, x) => s + Number(x.valor), 0) * 100) / 100;
+        if (!total || !parcela) { alert('Informe os débitos e a parcela.'); return; }
+        const r = await sb.from('acordos').insert({ comunidade_id: ck.id, total, parcela, inicio: ini.toISOString().slice(0, 8) + '01', composicao: comp, observacao: d.querySelector('#aOb').value.trim() || null, criado_por: eu.id });
+        if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; } d.remove(); await carregar(); window.KESP_TOAST('Acordo salvo.'); perfil(ck.id); };
+    };
+    document.body.appendChild(d); desenhar();
+  }
+  function termoAcordo(ck, acd) {
+    const base = location.href.split('#')[0].replace(/[^/]*$/, ''), a = acd.a, n = acd.nTot, ini = new Date(a.inicio + 'T12:00');
+    const parcelas = Array.from({ length: n }, (_, i) => { const d = new Date(ini.getFullYear(), ini.getMonth() + i, a.dia_venc); return `<tr><td style="padding:4px;border-bottom:1px solid #EFE9E2">${i + 1}</td><td style="padding:4px;border-bottom:1px solid #EFE9E2">${d.toLocaleDateString('pt-BR')}</td><td style="padding:4px;border-bottom:1px solid #EFE9E2;text-align:right">${R(i < n - 1 ? a.parcela : a.total - a.parcela * (n - 1))}</td></tr>`; }).join('');
+    window.KESP_IMPRIMIR(window.KESP_ARQ.montar(['Termo de acordo', window.KESP_ARQ.titulo(ck.nome), new Date(a.criado_em).toLocaleDateString('pt-BR').replace(/\//g, '-')]), `<div style="max-width:680px;margin:0 auto;font-size:12px;line-height:1.6;color:#1E1B19">
+      <div style="height:34px;background:#F26B1D;display:flex;align-items:center;padding:0 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact"><div style="background:#fff;padding:3px 6px;border-radius:2px;display:flex"><img src="${base}logo-kolping.png" style="height:22px"></div></div>
+      <h2 style="text-align:center;margin:18px 0 6px">Termo de acordo de pagamento</h2>
+      <p>A <b>Kolping Estadual de São Paulo</b>, CNPJ 15.766.152/0001-77, e a <b>${esc((ck.razao_social || ck.nome).toUpperCase())}</b>${ck.cnpj ? ', CNPJ ' + esc(ck.cnpj) : ''}, acordam o pagamento dos débitos abaixo, no total de <b>${R(a.total)}</b>, em <b>${n} parcela(s)</b> mensais com vencimento todo dia ${a.dia_venc}, <b>sem prejuízo da taxa de solidariedade mensal</b>, que continua sendo devida normalmente.</p>
+      <table style="width:100%;border-collapse:collapse;margin:8px 0"><tr style="background:#FBF0E6"><th style="text-align:left;padding:4px">Débito</th><th style="text-align:right;padding:4px">Valor</th></tr>${a.composicao.map(x => `<tr><td style="padding:4px;border-bottom:1px solid #EFE9E2">${esc(x.descricao)}</td><td style="padding:4px;border-bottom:1px solid #EFE9E2;text-align:right">${R(x.valor)}</td></tr>`).join('')}<tr><td style="padding:4px;font-weight:700">Total</td><td style="padding:4px;text-align:right;font-weight:700">${R(a.total)}</td></tr></table>
+      <table style="width:100%;border-collapse:collapse;margin:8px 0"><tr style="background:#FBF0E6"><th style="text-align:left;padding:4px">Parcela</th><th style="text-align:left;padding:4px">Vencimento</th><th style="text-align:right;padding:4px">Valor</th></tr>${parcelas}</table>
+      <p>Valores pagos a mais abatem o saldo do acordo; valores pagos a menos são somados à parcela do mês seguinte. Cada pagamento recebe recibo com o saldo devedor atualizado.${a.observacao ? ' ' + esc(a.observacao) + '.' : ''}</p>
+      <p style="text-align:right;margin-top:16px">Carapicuíba, ${new Date(a.criado_em).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
+      <div style="display:flex;gap:30px;margin-top:40px"><div style="flex:1;text-align:center">${eu.assinatura_url ? `<img src="${esc(eu.assinatura_url)}" style="height:60px;mix-blend-mode:multiply;display:block;margin:0 auto -6px">` : '<div style="height:54px"></div>'}<div style="border-top:1px solid #1E1B19;padding-top:3px"><b>${esc(eu.nome)}</b><br><span style="color:#8A8078">Kolping Estadual de São Paulo</span></div></div><div style="flex:1;text-align:center"><div style="height:54px"></div><div style="border-top:1px solid #1E1B19;padding-top:3px"><b>Presidente</b><br><span style="color:#8A8078">${esc(ck.nome)}</span></div></div></div></div>`);
+  }
+  function acordoDe(id) {
+    const a = (D.acordos || []).find(x => x.comunidade_id === id); if (!a) return null;
+    const pago = (D.acpag || []).filter(x => x.acordo_id === a.id).reduce((s, x) => s + Number(x.valor), 0), total = Number(a.total), parc = Number(a.parcela);
+    const hj = new Date(), ini = new Date(a.inicio + 'T12:00'), mesesPassados = (hj.getFullYear() - ini.getFullYear()) * 12 + hj.getMonth() - ini.getMonth() + (hj.getDate() >= a.dia_venc ? 1 : 0);
+    const nTot = Math.ceil(total / parc - 1e-9), esperadoAte = Math.min(total, Math.max(0, mesesPassados) * parc), esperadoMes = Math.min(total, Math.max(0, mesesPassados + (hj.getDate() >= a.dia_venc ? 0 : 1)) * parc);
+    const nPagas = Math.floor((pago + 0.009) / parc);
+    return { a, pago, saldo: Math.round((total - pago) * 100) / 100, nTot, nPagas, atrasado: pago < esperadoAte - 0.01, devidoAgora: Math.max(0, Math.round((esperadoMes - pago) * 100) / 100) };
+  }
   // série anual de associados: recadastramento aprovado de cada ano (o mais recente do ano) + histórico importado
   const serieCk = id => { const m = {}; (D.hist || []).filter(h => h.comunidade_id === id).forEach(h => (m[h.ano] = { ano: h.ano, ef: h.efetivos, co: h.cooperadores }));
     D.recad.filter(r => r.comunidade_id === id && r.situacao === 'aprovado').forEach(r => (m[r.ano] = { ano: r.ano, ef: r.efetivos, co: r.cooperadores }));
@@ -927,7 +991,16 @@ window.KESP_EVOL = (function () {
     } else if (aba === 'pag') {
       const { data } = await sb.from('recibos').select('serie,ano,numero,data_pagamento,valor,situacao,referencia,legado').eq('comunidade_id', id).order('data_pagamento', { ascending: false });
       const { data: ar } = await sb.from('a_receber').select('*').eq('comunidade_id', id).eq('situacao', 'aberto');
-      c.innerHTML = ((ar || []).length ? `<div class="cd" style="--c:#F5A524;margin-bottom:10px"><div class="hd"><span>A RECEBER (ITENS)</span></div>${ar.map(a => `<div class="lin" style="display:flex;justify-content:space-between;font-size:13px"><span>${esc(a.descricao)}</span><b style="color:#F8C46A">${R(a.valor)}</b></div>`).join('')}</div>` : '') + (data || []).map(x => `<div class="pe" style="--c:${x.situacao === 'cancelado' ? '#6E6A7C' : '#22C984'}"><div style="flex:1;min-width:0"><b>Recibo ${x.serie} ${x.numero}/${x.ano}</b>${x.situacao === 'cancelado' ? ' <span class="tg2" style="background:rgba(255,255,255,.08);color:#A8A3B4">Cancelado</span>' : ''}<div class="sm">${new Date(x.data_pagamento + 'T12:00').toLocaleDateString('pt-BR')} · ${esc(x.referencia || '')}</div></div><b>${R(x.valor)}</b></div>`).join('') || '<p class="sm">Nenhum recibo.</p>';
+      const acd = acordoDe(id), podeAc = eu.admin || window.KESP_PODE('recibos.emitir');
+      const acHtml = acd ? `<div class="cd" style="--c:${acd.atrasado ? '#E5484D' : '#3B82F6'};margin-bottom:10px"><div class="hd"><span>ACORDO DE PAGAMENTO</span><span style="color:${acd.atrasado ? '#FF9A9D' : '#93B8FF'};letter-spacing:0">${acd.atrasado ? 'Acordo em atraso' : 'Em acordo'}</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><div><div class="sm">Saldo devedor</div><b style="font-size:24px;color:#93B8FF">${R(acd.saldo)}</b></div><div style="text-align:right"><div class="sm">Pago</div><b>${R(acd.pago)} de ${R(acd.a.total)}</b></div></div>
+          <div class="br" style="--c:#3B82F6;margin:8px 0 4px"><i style="width:${Math.min(100, acd.pago / acd.a.total * 100)}%"></i></div>
+          <div class="sm">${acd.nPagas} de ${acd.nTot} parcelas de ${R(acd.a.parcela)} · ${acd.devidoAgora > 0 ? 'esperado agora: ' + R(acd.devidoAgora) + ' + taxa do mês' : 'em dia'} · vencimento todo dia ${acd.a.dia_venc}</div>
+          <div class="sm" style="margin-top:6px">${acd.a.composicao.map(x => esc(x.descricao) + ' ' + R(x.valor)).join(' · ')}</div>
+          ${podeAc ? `<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="mini neu" id="acTermo">Imprimir termo</button><button class="mini ver" id="acEnc">Encerrar acordo</button></div>` : ''}</div>`
+        : podeAc ? `<button class="btn sec" id="acNovo" style="margin-bottom:10px">Novo acordo de pagamento</button>` : '';
+      c.innerHTML = acHtml + ((ar || []).length ? `<div class="cd" style="--c:#F5A524;margin-bottom:10px"><div class="hd"><span>A RECEBER (ITENS)</span></div>${ar.map(a => `<div class="lin" style="display:flex;justify-content:space-between;font-size:13px"><span>${esc(a.descricao)}</span><b style="color:#F8C46A">${R(a.valor)}</b></div>`).join('')}</div>` : '') + (data || []).map(x => `<div class="pe" style="--c:${x.situacao === 'cancelado' ? '#6E6A7C' : '#22C984'}"><div style="flex:1;min-width:0"><b>Recibo ${x.serie} ${x.numero}/${x.ano}</b>${x.situacao === 'cancelado' ? ' <span class="tg2" style="background:rgba(255,255,255,.08);color:#A8A3B4">Cancelado</span>' : ''}<div class="sm">${new Date(x.data_pagamento + 'T12:00').toLocaleDateString('pt-BR')} · ${esc(x.referencia || '')}</div></div><b>${R(x.valor)}</b></div>`).join('') || '<p class="sm">Nenhum recibo.</p>';
+      ligarAcordo(ck, c);
     } else if (aba === 'vis') {
       window.KESP_VISITAS.aba(sb, eu, ck, c, extrato(ck, ANO), r);
     } else if (aba === 'dir') {
@@ -997,7 +1070,7 @@ window.KESP_EVOL = (function () {
   window.KESP_CKS = {
     base: {
       async carregar(cliente, perfilEu) { sb = cliente; eu = perfilEu; await carregar(); return D; },
-      dados: () => D, extrato, taxa, credito, dist, serieCk, COR, NOME, R, MES
+      dados: () => D, extrato, taxa, credito, dist, serieCk, acordoDe, COR, NOME, R, MES
     },
     async abrir(cliente, perfilEu, alvo) {
       sb = cliente; eu = perfilEu; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>';
@@ -1099,31 +1172,39 @@ window.KESP_EVOL = (function () {
     e.meses.forEach(m => { if (m.devido > 0) L.push({ k: chave('solidariedade', ano, m.mes), tipo: 'solidariedade', ano, mes: m.mes, devido: m.devido, ja: m.pago, venc: m.venc, sit: m.sit, nome: MESX[m.mes - 1] + '/' + ano }); });
     return L;
   }
-  function todasLinhas(ck) { const a = new Date().getFullYear(); return [a - 1, a, a + 1].flatMap(y => linhasAno(ck, y)); }
+  function todasLinhas(ck) { const a = new Date().getFullYear(); return [a - 1, a, a + 1].flatMap(y => linhasAno(ck, y)).filter(l => l.sit !== 'acordo'); }
 
-  // ---------- cálculo (taxa + itens, evento ou livre) ----------
+  // ---------- cálculo (taxa + acordo + itens, evento ou livre) ----------
   function calcular() {
     const ck = st.ck, tipo = st.tipo || 'CK';
     if (tipo === 'CK' && !ck) return null;
     const V = r2(st.valor || 0), ex = (st.extras || []).map(e => ({ ...e, devido: r2((e.qtd || 1) * (e.unit || 0)) }));
     let restV = V; ex.forEach(e => { e.pago = r2(Math.min(e.devido, Math.max(restV, 0))); restV = r2(restV - e.pago); e.falta = r2(e.devido - e.pago); });
-    let itens = [], T = 0, cu = 0, cred = 0, parcial = null;
+    let itens = [], T = 0, cu = 0, cred = 0, parcial = null, ac = null, acVal = 0, acEsp = 0;
     if (tipo === 'CK') {
       cred = Math.max(0, B.credito(ck.id));
       const L = todasLinhas(ck).filter(l => st.sel.has(l.k)).sort((x, y) => x.venc.localeCompare(y.venc));
       let A = restV + cred;
       L.forEach(l => { const need = r2(l.devido - l.ja), take = r2(Math.min(need, Math.max(A, 0))); A = r2(A - take); itens.push({ ...l, pago: take, falta: r2(need - take) }); });
       T = r2(itens.reduce((x, i) => x + i.pago, 0)); cu = r2(Math.min(cred, T)); restV = r2(restV - (T - cu)); parcial = itens.find(i => i.falta > 0);
+      // acordo: depois da taxa do mês, o restante vai para a parcela (e o excedente, se escolhido, abate o saldo)
+      ac = B.acordoDe(ck.id);
+      if (ac && st.usarAcordo !== false && restV > 0) { acEsp = Math.max(ac.devidoAgora, Math.min(ac.saldo, Number(ac.a.parcela))); acVal = r2(Math.min(restV, st.sobraAcordo !== false ? ac.saldo : acEsp)); restV = r2(restV - acVal); }
+      else if (ac) acEsp = Math.max(ac.devidoAgora, Math.min(ac.saldo, Number(ac.a.parcela)));
     }
     const sobra = Math.max(0, restV), podeCred = !!ck && st.guarda !== false;
-    return { V, cred, itens, ex, T, cu, cn: podeCred ? sobra : 0, sb: podeCred ? 0 : sobra, saldo: r2(cred - cu + (podeCred ? sobra : 0)), parcial, faltaEx: ex.filter(e => e.falta > 0) };
+    const devido = r2(ex.reduce((x, e) => x + e.devido, 0) + (tipo === 'CK' ? todasLinhas(ck).filter(l => st.sel.has(l.k)).reduce((x, l) => x + (l.devido - l.ja), 0) - cred : 0) + (ac && st.usarAcordo !== false ? acEsp : 0));
+    return { V, cred, itens, ex, T, cu, cn: podeCred ? sobra : 0, sb: podeCred ? 0 : sobra, saldo: r2(cred - cu + (podeCred ? sobra : 0)), parcial, faltaEx: ex.filter(e => e.falta > 0), ac, acVal, acEsp, devido: Math.max(0, devido) };
   }
   function autoSelecionar() {
     const ck = st.ck; st.sel = new Set(); if (!ck || (st.tipo || 'CK') !== 'CK') return;
     let A = (st.valor || 0) - (st.extras || []).reduce((x, e) => x + (e.qtd || 1) * (e.unit || 0), 0) + Math.max(0, B.credito(ck.id));
     const abertos = todasLinhas(ck).filter(l => l.ja < l.devido - 0.001).sort((a, b) => a.venc.localeCompare(b.venc));
-    for (const l of abertos) { if (A <= 0.001) break; st.sel.add(l.k); A -= (l.devido - l.ja); }
+    const hoje = new Date().toISOString().slice(0, 10);
+    for (const l of abertos) { if (A <= 0.001) break; if (l.venc > hoje && B.acordoDe(ck.id)) break; st.sel.add(l.k); A -= (l.devido - l.ja); }
   }
+  // valor sugerido a partir do que foi marcado (meses + itens + parcela do acordo − crédito)
+  function valorSugerido() { const c0 = st.valor; st.valor = 0; const c = calcular(); st.valor = c0; return c ? c.devido : 0; }
   function texto(c, ck, dataPg) {
     const sol = c.itens.filter(i => i.tipo === 'solidariedade' && i.pago > 0), soc = c.itens.find(i => i.tipo === 'societaria' && i.pago > 0);
     const lista = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' e ' + a[a.length - 1] : a[0] || '';
@@ -1131,66 +1212,97 @@ window.KESP_EVOL = (function () {
     const ref = [];
     if (sol.length) ref.push('à taxa de solidariedade de ' + lista(sol.map(i => MESX[i.mes - 1] + (anoRef ? '' : ' de ' + i.ano))) + anoRef + (ant.length && ant.length < sol.length ? ' (sendo ' + lista(ant.map(i => MESX[i.mes - 1])) + ' antecipadamente)' : ant.length ? ', antecipadamente' : ''));
     if (soc) ref.push('à taxa societária de ' + soc.ano);
+    if (c.acVal > 0) { const n = c.ac.nPagas + 1; ref.push((ref.length ? '' : 'a ') + (c.acVal > c.acEsp + 0.009 ? `parcela ${n} do acordo de débitos anteriores, com antecipação de ${R(c.acVal - c.acEsp)}` : c.acVal < c.acEsp - 0.009 ? `parte da parcela ${n} do acordo de débitos anteriores` : `parcela ${n} do acordo de débitos anteriores`)); }
     c.ex.filter(e => e.devido > 0).forEach(e => ref.push((ref.length ? '' : 'a ') + (e.qtd > 1 ? e.qtd + ' × ' : '') + e.desc));
     const quem = ck ? `da <b>${esc((ck.razao_social || ck.nome).toUpperCase())}</b>${ck.cnpj ? ', CNPJ ' + esc(ck.cnpj) : ''}` : `de <b>${esc((st.avulso.nome || '').toUpperCase())}</b>${st.avulso.doc ? ', CPF/CNPJ ' + esc(st.avulso.doc) : ''}`;
     let t = `A <b>${KOLPING.nome}</b>, CNPJ ${KOLPING.cnpj}, recebeu ${quem}, o valor de <b>${R(c.V)}</b> (${extenso(c.V)}), referente ${lista(ref) || 'a contribuições'}${c.parcial || c.faltaEx.length ? ' (pagamento parcial)' : ''}.`;
     if (c.cu > 0) t += ` Foram usados <b>${R(c.cu)}</b> de crédito de pagamentos anteriores.`;
     if (c.parcial) t += ` Permanece em aberto <b>${R(c.parcial.falta)}</b> de ${c.parcial.tipo === 'societaria' ? 'taxa societária de ' + c.parcial.ano : MESX[c.parcial.mes - 1] + ' de ' + c.parcial.ano}.`;
+    if (c.acVal > 0 && c.acVal < c.acEsp - 0.009) t += ` Da parcela do acordo, faltam <b>${R(c.acEsp - c.acVal)}</b>, que serão cobrados no próximo mês.`;
     c.faltaEx.forEach(e => (t += ` Fica a receber <b>${R(e.falta)}</b> de ${e.desc}.`));
     if (c.cn > 0) t += ` O valor pago ficou <b>${R(c.cn)}</b> acima do devido e foi guardado como crédito da Comunidade, que será usado na taxa do próximo mês.`;
     if (c.sb > 0) t += ` O valor pago ficou <b>${R(c.sb)}</b> acima do devido${st.destinoSobra === 'doacao' ? ', considerado como doação' : ', a ser devolvido'}.`;
     return t;
+  }
+  function itensRecibo(c, ck) {
+    return [...c.ex.map(e => ({ tipo: 'item', descricao: e.desc, quantidade: e.qtd, unitario: e.unit, devido: e.devido, pago: e.pago })),
+      ...c.itens.map(i => ({ tipo: i.tipo, ano: i.ano, mes: i.mes, devido: i.devido, pago: i.pago })),
+      ...(c.acVal > 0 ? [{ tipo: 'acordo', descricao: 'Parcela ' + (c.ac.nPagas + 1) + ' de ' + c.ac.nTot + ' do acordo de débitos anteriores', devido: c.acEsp, pago: c.acVal }] : []),
+      ...(ck && (c.saldo > 0 || c.cu > 0) ? [{ tipo: '_saldo', pago: 0, saldo: c.saldo }] : []),
+      ...(c.acVal > 0 ? [{ tipo: '_acordo', pago: 0, saldo: r2(c.ac.saldo - c.acVal), n: c.ac.nPagas + 1, de: c.ac.nTot }] : [])];
   }
 
   function telaEmitir() {
     const D = B.dados(), ANO = new Date().getFullYear(), tipo = st.tipo || 'CK', ck = st.ck, c = calcular();
     const ativos = D.cks.filter(x => x.ativa).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     const e = ck ? B.extrato(ck, ANO) : null, taxaSol = B.taxa(ANO).solidariedade, anos = [ANO - 1, ANO, ANO + 1];
-    let alerta = '';
-    if (tipo === 'CK' && ck && c && e.n && st.valor && !(st.extras || []).length && Math.abs(st.valor / (e.n * taxaSol) - Math.round(st.valor / (e.n * taxaSol))) > 1e-6) { for (let m = 1; m <= 3; m++) { const k = st.valor / (m * taxaSol); if (Math.abs(k - Math.round(k)) < 1e-6 && Math.round(k) !== e.n && Math.abs(Math.round(k) - e.n) <= Math.max(3, e.n * 0.5)) { alerta = `<div class="alerta">⚠ Valor diferente do esperado: ${R(st.valor)} equivale a ${m === 1 ? '' : m + ' meses de '}${Math.round(k)} associados × ${R(taxaSol)}, mas o recadastramento tem ${e.n}.</div>`; break; } } }
     const abertosAR = ck ? AR.filter(a => a.comunidade_id === ck.id && a.situacao === 'aberto') : [];
     const exHtml = (st.extras || []).map((x, i) => `<div class="pe" style="--c:#8B5CF6;margin:4px 0"><span style="flex:1;font-size:13px">${x.qtd > 1 ? x.qtd + ' × ' : ''}${esc(x.desc)}</span><span class="sm">${R(x.qtd * x.unit)}</span><a class="lk" data-rx="${i}">✕</a></div>`).join('');
-    document.getElementById('cont').innerHTML = `<div class="rec2"><div class="fm">
-      <label>Tipo de recibo</label><div class="abas" style="grid-template-columns:repeat(3,1fr);margin:0">${[['CK', 'Taxa (+ itens)'], ['EV', 'Evento'], ['RL', 'Livre']].map(([k, n]) => `<a data-tp="${k}" class="${tipo === k ? 'on' : ''}">${n}</a>`).join('')}</div>
-      ${tipo !== 'CK' ? `<label>Pagador</label><div class="abas" style="grid-template-columns:repeat(2,1fr);margin:0"><a data-pg="ck" class="${st.pagador !== 'avulso' ? 'on' : ''}">Comunidade Kolping</a><a data-pg="avulso" class="${st.pagador === 'avulso' ? 'on' : ''}">Pessoa ou empresa</a></div>` : ''}
-      ${tipo === 'CK' || st.pagador !== 'avulso' ? `<label>Comunidade</label><select id="rCk"><option value="">Escolha a CK</option>${ativos.map(x => `<option value="${x.id}"${ck && ck.id === x.id ? ' selected' : ''}>${esc(x.nome)}</option>`).join('')}</select>${ck ? `<p class="sm" style="margin:6px 0 0">${tipo === 'CK' ? e.n + ' associados · ' + R(e.n * taxaSol) + ' por mês · ' : ''}<span style="display:inline-block;font-size:13px;font-weight:700;padding:4px 10px;border-radius:10px;background:rgba(34,201,132,.16);color:#5FE0A8;border:1px solid rgba(34,201,132,.4)">Crédito: ${R(Math.max(0, B.credito(ck.id)))}</span>${abertosAR.length ? ` · <b style="color:#F8C46A">a receber ${R(abertosAR.reduce((x, a) => x + Number(a.valor), 0))}</b>` : ''}</p>` : ''}`
-        : `<div class="dois"><div><label>Nome</label><input id="aN" value="${esc(st.avulso.nome || '')}"></div><div><label>CPF ou CNPJ</label><input id="aD" data-cnpj value="${esc(st.avulso.doc || '')}"></div></div>`}
-      <div class="dois"><div><label>Valor recebido (do comprovante)</label><input id="rVal" data-moeda placeholder="R$ 0,00" value="${st.valor ? R(st.valor) : ''}"></div><div><label>Data do pagamento</label><input id="rData" type="date" value="${st.data}"></div></div>
-      <div class="dois"><div><label>Forma de pagamento</label><select id="rForma">${['PIX', 'Transferência', 'Depósito', 'Dinheiro', 'Boleto'].map(f => `<option${st.forma === f ? ' selected' : ''}>${f}</option>`).join('')}</select></div><div><label>Modelo</label><select id="rMod"><option value="padrao"${st.modelo === 'padrao' ? ' selected' : ''}>Padrão</option><option value="timbrado"${st.modelo === 'timbrado' ? ' selected' : ''}>Papel timbrado</option></select></div></div>
-      <label>${tipo === 'CK' ? 'Itens além da taxa (camisetas, inscrições…)' : 'Itens'}</label>${exHtml}
-      <div class="dois" style="grid-template-columns:2fr 70px 1fr auto;gap:6px;align-items:end"><select id="xI"><option value="">Item cadastrado…</option>${ITENS.filter(i => i.ativo && (tipo === 'CK' || i.tipo === (tipo === 'EV' ? 'evento' : 'livre'))).map(i => `<option value="${i.id}">${esc(i.nome)} · ${R(i.valor)}</option>`).join('')}${abertosAR.map(a => `<option value="ar:${a.id}">Complemento: ${esc(a.descricao)} · ${R(a.valor)}</option>`).join('')}<option value="outro">Outro (digitar)</option></select><input id="xQ" type="number" min="1" value="1"><input id="xV" data-moeda placeholder="R$ 0,00 (unit.)"><button class="btn" id="xAdd" style="padding:9px 12px;white-space:nowrap">+ Adicionar</button></div>
-      ${tipo === 'CK' && ck ? `<label>Meses da taxa (toque para marcar ou desmarcar)</label><div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 6px"><a class="lk" id="rAnt">‹</a><b>${anos[st.ano]}</b><a class="lk" id="rPro">›</a></div>
-        <div class="gmes">${linhasAno(ck, anos[st.ano]).map(l => { const pago = l.ja >= l.devido - 0.001, it = c && c.itens.find(i => i.k === l.k);
-          if (pago) return `<button class="pg">${l.tipo === 'societaria' ? 'Societária' : MESX[l.mes - 1].slice(0, 3)}<b>pago</b></button>`;
-          return `<button data-k="${l.k}" class="${st.sel.has(l.k) ? (it && it.falta > 0 ? 'par' : 'sel') : l.sit === 'atraso' ? 'at' : ''}">${l.tipo === 'societaria' ? 'Societária' : MESX[l.mes - 1].slice(0, 3)}<b>${R(l.devido - l.ja)}</b></button>`; }).join('')}</div>` : ''}
-      <label>Observação (opcional, aparece no recibo)</label><input id="rObs" value="${esc(st.obs)}">${alerta}
-      </div><div>
-      ${c && st.valor && (tipo !== 'CK' || ck) && (st.pagador !== 'avulso' || tipo === 'CK' || st.avulso.nome) ? `<div class="cd" style="--c:${c.parcial || c.faltaEx.length ? '#F5A524' : '#22C984'};margin-bottom:10px"><div class="kv"><span>Recebido</span><span>${R(c.V)}${c.cred && tipo === 'CK' ? ' + ' + R(c.cred) + ' de crédito' : ''}</span>${c.ex.length ? `<span>Itens</span><span>${R(c.ex.reduce((x, e) => x + e.devido, 0))}</span>` : ''}${tipo === 'CK' ? `<span>Meses da taxa</span><span>${c.itens.length} · ${R(c.T)}</span>` : ''}
-          ${c.parcial ? `<span style="color:#F8C46A">Taxa parcial</span><span style="color:#F8C46A">falta ${R(c.parcial.falta)}</span>` : ''}${c.faltaEx.map(x => `<span style="color:#F8C46A">A receber</span><span style="color:#F8C46A">${R(x.falta)} · ${esc(x.desc)}</span>`).join('')}
-          ${c.cn + c.sb > 0 ? `<span style="color:#5FE0A8">Sobra</span><span style="color:#5FE0A8">${R(c.cn + c.sb)}${ck ? ' → crédito da Comunidade' : ''}</span>` : ''}</div>
-          ${ck && c.cn + c.sb > 0 ? `<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px"><input type="checkbox" id="rGu" style="width:auto"${st.guarda !== false ? ' checked' : ''}> Guardar a sobra como crédito (abate a próxima taxa)</label>` : ''}
+    const passo = (n, cor, t, extra) => `<div class="st"><i style="background:${cor}">${n}</i><b>${t}</b>${extra ? `<span class="sm" style="margin-left:auto">${extra}</span>` : ''}</div>`;
+    const temPrev = c && st.valor && (tipo !== 'CK' || ck) && (st.pagador !== 'avulso' || tipo === 'CK' || st.avulso.nome);
+    const dif = c && st.valor && c.devido ? r2(c.V - c.devido) : 0;
+    const chip = (t, bg, fg, b) => `<span style="display:inline-block;font-size:12px;padding:3px 9px;border-radius:9px;background:${bg};color:${fg};${b ? 'font-weight:700;border:1px solid ' + fg + '55' : ''}">${t}</span>`;
+    document.getElementById('cont').innerHTML = `<div class="rec3"><div>
+      <div class="cd pas" style="--c:#F07830">${passo(1, '#F07830', 'Quem pagou')}
+        <div class="abas" style="grid-template-columns:repeat(3,1fr);margin:0 0 8px">${[['CK', 'Taxa (+ itens)'], ['EV', 'Evento'], ['RL', 'Livre']].map(([k, n]) => `<a data-tp="${k}" class="${tipo === k ? 'on' : ''}">${n}</a>`).join('')}</div>
+        ${tipo !== 'CK' ? `<div class="abas" style="grid-template-columns:repeat(2,1fr);margin:0 0 8px"><a data-pg="ck" class="${st.pagador !== 'avulso' ? 'on' : ''}">Comunidade Kolping</a><a data-pg="avulso" class="${st.pagador === 'avulso' ? 'on' : ''}">Pessoa ou empresa</a></div>` : ''}
+        ${tipo === 'CK' || st.pagador !== 'avulso' ? `<div style="position:relative"><input id="rBus" placeholder="🔍 Digite o nome da CK ou a cidade" value="${ck ? esc(ck.nome) : ''}" autocomplete="off"><div id="rSug" class="sug"></div></div>
+          ${ck ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${tipo === 'CK' ? chip(e.n + ' associados · ' + R(e.n * taxaSol) + '/mês', 'rgba(255,255,255,.06)', '#D8D3DE') : ''}${chip(B.NOME[e.situacao], B.COR[e.situacao] + '26', B.COR[e.situacao])}${chip('Crédito ' + R(Math.max(0, B.credito(ck.id))), 'rgba(34,201,132,.16)', '#5FE0A8', 1)}${abertosAR.length ? chip('A receber ' + R(abertosAR.reduce((x, a) => x + Number(a.valor), 0)), 'rgba(245,165,36,.16)', '#F8C46A') : ''}${c && c.ac ? chip('Acordo: saldo ' + R(c.ac.saldo), 'rgba(59,130,246,.18)', '#93B8FF', 1) : ''}</div>` : ''}`
+          : `<div class="dois"><div><label>Nome</label><input id="aN" value="${esc(st.avulso.nome || '')}"></div><div><label>CPF ou CNPJ</label><input id="aD" data-cnpj value="${esc(st.avulso.doc || '')}"></div></div>`}</div>
+      <div class="cd pas" style="--c:#3B82F6">${passo(2, '#3B82F6', 'Pagamento')}
+        <label>Valor do comprovante</label><input id="rVal" data-moeda placeholder="R$ 0,00" value="${st.valor ? R(st.valor) : ''}" style="font-size:22px;font-weight:700;padding:10px 12px">
+        ${st.valorAuto && st.valor ? '<p class="sm" style="margin:4px 0 0">Preenchido pelo que foi marcado. Se o comprovante for diferente, digite o valor real.</p>' : ''}
+        ${dif && Math.abs(dif) > 0.009 ? `<div style="margin-top:8px;padding:8px 10px;border-radius:10px;font-size:13px;${dif > 0 ? 'background:rgba(34,201,132,.12);color:#5FE0A8' : 'background:rgba(245,165,36,.14);color:#F8C46A'}"><b>Comprovante ${R(Math.abs(dif))} ${dif > 0 ? 'acima' : 'abaixo'} do devido</b> → ${dif > 0 ? (c.ac && st.sobraAcordo !== false ? 'abate o acordo' : ck && st.guarda !== false ? 'vira crédito' : 'fica registrado no recibo') : c.parcial ? (c.parcial.tipo === 'societaria' ? 'a societária' : MESX[c.parcial.mes - 1]) + ' fica parcial' : c.ac && c.acVal < c.acEsp ? 'a parcela do acordo fica parcial (o restante vai para o próximo mês)' : 'fica a receber'} ${st.valorAuto ? '' : '· <a class="lk" id="rUsar">usar o valor devido (' + R(c.devido) + ')</a>'}</div>` : ''}
+        <div class="dois" style="margin-top:8px"><div><label>Data do pagamento</label><input id="rData" type="date" value="${st.data}"></div><div><label>Forma de pagamento</label><select id="rForma">${['PIX', 'Transferência', 'Depósito', 'Dinheiro', 'Boleto'].map(f => `<option${st.forma === f ? ' selected' : ''}>${f}</option>`).join('')}</select></div></div></div>
+      <div class="cd pas" style="--c:#22C984">${passo(3, '#22C984', 'O que está sendo pago', 'toque para marcar ou desmarcar')}
+        ${tipo === 'CK' && ck ? `<div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 6px"><a class="lk" id="rAnt">‹</a><b>${anos[st.ano]}</b><a class="lk" id="rPro">›</a></div>
+          <div class="gmes">${linhasAno(ck, anos[st.ano]).map(l => { const pago = l.ja >= l.devido - 0.001, it = c && c.itens.find(i => i.k === l.k), nm = l.tipo === 'societaria' ? 'Societária' : MESX[l.mes - 1].slice(0, 3);
+            if (pago) return `<button class="pg">${nm}<b>pago</b></button>`; if (l.sit === 'acordo') return `<button class="pg" style="background:rgba(59,130,246,.14);color:#93B8FF">${nm}<b>acordo</b></button>`;
+            return `<button data-k="${l.k}" class="${st.sel.has(l.k) ? (it && it.falta > 0 ? 'par' : 'sel') : l.sit === 'atraso' ? 'at' : ''}">${nm}<b>${R(l.devido - l.ja)}</b></button>`; }).join('')}</div>` : ''}
+        ${c && c.ac ? `<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="rAc" style="width:auto"${st.usarAcordo !== false ? ' checked' : ''}> Parcela do acordo (${c.ac.nPagas + 1} de ${c.ac.nTot}) · <b>${R(c.acEsp)}</b>${c.acEsp > Number(c.ac.a.parcela) + 0.009 ? ' <span class="sm">(inclui o que faltou)</span>' : ''}</label>` : ''}
+        ${exHtml}
+        <div class="dois" style="grid-template-columns:2fr 64px 1fr auto;gap:6px;align-items:end;margin-top:8px"><select id="xI"><option value="">+ Item (camisetas, inscrições…)</option>${ITENS.filter(i => i.ativo && (tipo === 'CK' || i.tipo === (tipo === 'EV' ? 'evento' : 'livre'))).map(i => `<option value="${i.id}">${esc(i.nome)} · ${R(i.valor)}</option>`).join('')}${abertosAR.map(a => `<option value="ar:${a.id}">Complemento: ${esc(a.descricao)} · ${R(a.valor)}</option>`).join('')}<option value="outro">Outro (digitar)</option></select><input id="xQ" type="number" min="1" value="1"><input id="xV" data-moeda placeholder="R$ 0,00"><button class="btn" id="xAdd" style="padding:9px 12px;white-space:nowrap">+ Adicionar</button></div></div>
+      <div class="cd pas" style="--c:#6E6A7C">${passo(4, '#6E6A7C', 'Detalhes', 'opcional')}
+        <div class="dois"><div><label>Modelo</label><select id="rMod"><option value="padrao"${st.modelo === 'padrao' ? ' selected' : ''}>Padrão</option><option value="timbrado"${st.modelo === 'timbrado' ? ' selected' : ''}>Papel timbrado</option></select></div><div><label>Observação (aparece no recibo)</label><input id="rObs" value="${esc(st.obs)}"></div></div></div>
+      </div><div class="prev3">
+      ${temPrev ? `<div class="cd" style="--c:${c.parcial || c.faltaEx.length ? '#F5A524' : '#22C984'};margin-bottom:10px"><div class="kv"><span>Recebido</span><span>${R(c.V)}</span>${c.cu ? `<span>Crédito usado</span><span>${R(c.cu)}</span>` : ''}${c.ex.length ? `<span>Itens</span><span>${R(c.ex.reduce((x, e) => x + e.pago, 0))}</span>` : ''}${c.itens.length ? `<span>Taxa (${c.itens.length} ${c.itens.length > 1 ? 'meses' : 'mês'})</span><span>${R(c.T)}</span>` : ''}${c.acVal ? `<span style="color:#93B8FF">Acordo</span><span style="color:#93B8FF">${R(c.acVal)}</span>` : ''}${c.cn + c.sb > 0 ? `<span style="color:#5FE0A8">Sobra</span><span style="color:#5FE0A8">${R(c.cn + c.sb)}${ck ? ' → crédito' : ''}</span>` : ''}</div>
+          ${c.ac && c.V > 0 && (c.V - c.T + c.cu - c.ex.reduce((x, e) => x + e.pago, 0)) > c.acEsp + 0.009 ? `<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px"><input type="checkbox" id="rSa" style="width:auto"${st.sobraAcordo !== false ? ' checked' : ''}> Valor a mais abate o acordo (desmarque para virar crédito)</label>` : ''}
+          ${ck && c.cn + c.sb > 0 ? `<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px"><input type="checkbox" id="rGu" style="width:auto"${st.guarda !== false ? ' checked' : ''}> Guardar a sobra como crédito</label>` : ''}
           ${c.sb > 0 ? `<div style="margin-top:6px;font-size:12px">A sobra será: <select id="rDs" style="width:auto"><option value="devolver"${st.destinoSobra !== 'doacao' ? ' selected' : ''}>devolvida</option><option value="doacao"${st.destinoSobra === 'doacao' ? ' selected' : ''}>considerada doação</option></select></div>` : ''}</div>
-        <div class="prev"><b>Prévia do recibo · série ${tipo}</b><p style="margin:6px 0 0">${texto(c, ck, st.data)}</p>${ck && (c.saldo > 0 || c.cu > 0) ? `<div style="margin-top:10px;background:#DDF5E9;border-left:4px solid #22C984;border-radius:8px;padding:8px 12px;color:#0E5C37;font-weight:700">Saldo de crédito da Comunidade após este pagamento: ${R(c.saldo)}</div>` : ''}</div>
-        <button class="btn" id="rEmit" style="width:100%;margin-top:12px">Emitir recibo</button>` : '<div class="cd" style="--c:#6E6A7C"><p class="sm" style="margin:0">Escolha o pagador e informe o valor recebido para ver a prévia do recibo.</p></div>'}
+        <div class="folha" id="rFolha"></div>
+        <button class="btn" id="rEmit" style="width:100%;margin-top:12px;padding:13px;font-size:15px">Emitir recibo</button>`
+      : `<div class="cd" style="--c:#6E6A7C"><b>Prévia do recibo</b><p class="sm" style="margin:6px 0 0">Escolha quem pagou e marque o que está sendo pago (ou digite o valor do comprovante). A folha do recibo aparece aqui, do jeito que vai sair.</p></div>`}
       </div></div>`;
+    // folha inteira na prévia
+    if (temPrev) { const quem = { nome: eu.nome, cargo: eu.cargo, assinatura_url: eu.assinatura_url }, it = itensRecibo(c, ck);
+      const fake = { serie: tipo, numero: '—', ano: new Date(st.data + 'T12:00').getFullYear(), valor: c.V, referencia: texto(c, ck, st.data), itens: it, data_pagamento: st.data, forma_pagamento: st.forma, modelo: st.modelo, observacao: st.obs || null, comunidade_id: ck ? ck.id : null, situacao: 'emitido' };
+      const f = document.getElementById('rFolha'); f.innerHTML = `<div class="folha-in">${documento(fake, quem)}</div>`;
+      requestAnimationFrame(() => { const inn = f.firstChild, w = f.clientWidth, esc2 = Math.min(1, w / 760); inn.style.transform = `scale(${esc2})`; f.style.height = inn.scrollHeight * esc2 + 'px'; }); }
     const g = id => document.getElementById(id), re = () => setTimeout(telaEmitir, 0);
+    const recalcAuto = () => { if (st.valorAuto || !st.valor) { st.valorAuto = true; st.valor = valorSugerido(); } };
     document.querySelectorAll('[data-tp]').forEach(a => a.onclick = () => { st.tipo = a.dataset.tp; st.extras = []; st.sel = new Set(); if (st.tipo === 'CK') st.pagador = 'ck'; autoSelecionar(); re(); });
     document.querySelectorAll('[data-pg]').forEach(a => a.onclick = () => { st.pagador = a.dataset.pg; if (st.pagador === 'avulso') st.ck = null; re(); });
-    if (g('rCk')) g('rCk').onchange = ev => { st.ck = D.cks.find(x => x.id === ev.target.value) || null; autoSelecionar(); re(); };
+    const bus = g('rBus'); if (bus) { const sug = g('rSug'); const mostrar = () => { const q = bus.value.toLowerCase().trim(); const L = ativos.filter(x => !q || (x.nome + ' ' + (x.cidade || '')).toLowerCase().includes(q)).slice(0, 8);
+        sug.innerHTML = L.map(x => { const ex2 = B.extrato(x, ANO); return `<a data-ck="${x.id}"><span style="width:8px;height:8px;border-radius:50%;background:${B.COR[ex2.situacao]};flex-shrink:0"></span><span style="flex:1">${esc(x.nome)}<span class="sm"> · ${esc(x.cidade || '')}</span></span></a>`; }).join('') || '<div class="sm" style="padding:8px">Nenhuma CK encontrada.</div>'; sug.style.display = 'block';
+        sug.querySelectorAll('[data-ck]').forEach(o => o.onmousedown = ev => { ev.preventDefault(); st.ck = D.cks.find(x => x.id === o.dataset.ck); st.valor = 0; st.valorAuto = true; st.sel = new Set(); st.extras = []; const ac0 = B.acordoDe(st.ck.id); if (ac0) { st.usarAcordo = true; } const hoje = new Date().toISOString().slice(0, 7); todasLinhas(st.ck).filter(l => l.ja < l.devido - 0.001 && l.venc.slice(0, 7) <= hoje).forEach(l => st.sel.add(l.k)); st.valor = valorSugerido(); re(); }); };
+      bus.onfocus = () => { bus.select(); mostrar(); }; bus.oninput = mostrar; bus.onblur = () => setTimeout(() => (sug.style.display = 'none'), 150); }
     if (g('aN')) { g('aN').onchange = ev => { st.avulso.nome = ev.target.value.trim(); re(); }; g('aD').onchange = ev => { st.avulso.doc = ev.target.value.trim(); }; window.KESP_BUSCA.ligar(document.getElementById('cont')); }
-    g('rVal').onchange = ev => { st.valor = window.KESP_MOEDA.ler(ev.target); autoSelecionar(); re(); };
+    g('rVal').onchange = ev => { st.valor = window.KESP_MOEDA.ler(ev.target); st.valorAuto = false; autoSelecionar(); re(); };
+    const us = g('rUsar'); if (us) us.onclick = () => { st.valorAuto = true; st.valor = valorSugerido(); re(); };
     g('rData').onchange = ev => { st.data = ev.target.value; re(); };
-    g('rForma').onchange = ev => (st.forma = ev.target.value); g('rMod').onchange = ev => (st.modelo = ev.target.value); g('rObs').onchange = ev => (st.obs = ev.target.value);
+    g('rForma').onchange = ev => (st.forma = ev.target.value); g('rMod').onchange = ev => { st.modelo = ev.target.value; re(); }; g('rObs').onchange = ev => { st.obs = ev.target.value; re(); };
     if (g('rGu')) g('rGu').onchange = ev => { st.guarda = ev.target.checked; re(); };
+    if (g('rSa')) g('rSa').onchange = ev => { st.sobraAcordo = ev.target.checked; re(); };
+    if (g('rAc')) g('rAc').onchange = ev => { st.usarAcordo = ev.target.checked; recalcAuto(); re(); };
     if (g('rDs')) g('rDs').onchange = ev => { st.destinoSobra = ev.target.value; re(); };
     if (g('rAnt')) { g('rAnt').onclick = () => { if (st.ano > 0) { st.ano--; re(); } }; g('rPro').onclick = () => { if (st.ano < 2) { st.ano++; re(); } }; }
-    document.querySelectorAll('.gmes [data-k]').forEach(b => b.onclick = () => { st.sel.has(b.dataset.k) ? st.sel.delete(b.dataset.k) : st.sel.add(b.dataset.k); re(); });
-    document.querySelectorAll('[data-rx]').forEach(a => a.onclick = () => { const x = st.extras.splice(+a.dataset.rx, 1)[0]; if (x && x.ar) st.quitar = (st.quitar || []).filter(i => i !== x.ar); autoSelecionar(); re(); });
+    document.querySelectorAll('.gmes [data-k]').forEach(b => b.onclick = () => { st.sel.has(b.dataset.k) ? st.sel.delete(b.dataset.k) : st.sel.add(b.dataset.k); if (st.valorAuto || !st.valor) { st.valorAuto = true; st.valor = valorSugerido(); } re(); });
+    document.querySelectorAll('[data-rx]').forEach(a => a.onclick = () => { const x = st.extras.splice(+a.dataset.rx, 1)[0]; if (x && x.ar) st.quitar = (st.quitar || []).filter(i => i !== x.ar); recalcAuto(); re(); });
     g('xI').onchange = ev => { const v = ev.target.value, it = ITENS.find(i => i.id === v), ar = v.startsWith('ar:') ? AR.find(a => a.id === v.slice(3)) : null; g('xV').value = it ? R(it.valor) : ar ? R(ar.valor) : ''; };
     g('xAdd').onclick = () => { const v = g('xI').value, q = Math.max(1, parseInt(g('xQ').value, 10) || 1), un = window.KESP_MOEDA.ler(g('xV'));
       let desc; if (v.startsWith('ar:')) { const ar = AR.find(a => a.id === v.slice(3)); desc = 'complemento de ' + ar.descricao; st.extras.push({ desc, qtd: 1, unit: un, ar: ar.id }); st.quitar = [...(st.quitar || []), ar.id]; }
       else { const it = ITENS.find(i => i.id === v); desc = it ? it.nome : (prompt('Descrição do item:') || '').trim(); if (!desc || !un) { alert('Informe o item e o valor.'); return; } st.extras.push({ desc, qtd: q, unit: un }); }
-      autoSelecionar(); re(); };
+      recalcAuto(); re(); };
     window.KESP_MOEDA.ligar(document.getElementById('cont'));
     const em = g('rEmit'); if (em) em.onclick = () => emitir(c);
     window.KESP_RASCUNHO.salvar('recibo', { ...st, sel: [...st.sel], ck: st.ck ? st.ck.id : null });
@@ -1202,8 +1314,7 @@ window.KESP_EVOL = (function () {
     if (tipo !== 'CK' && !ck && !st.avulso.nome) { alert('Informe o pagador.'); return; }
     if (!confirm(`Emitir o recibo ${tipo} de ${R(c.V)}?`)) return;
     const b = document.getElementById('rEmit'); b.disabled = true; b.textContent = 'Emitindo…';
-    const itens = [...c.ex.map(e => ({ tipo: 'item', descricao: e.desc, quantidade: e.qtd, unitario: e.unit, devido: e.devido, pago: e.pago })), ...c.itens.map(i => ({ tipo: i.tipo, ano: i.ano, mes: i.mes, devido: i.devido, pago: i.pago })), ...(ck && (c.saldo > 0 || c.cu > 0) ? [{ tipo: '_saldo', pago: 0, saldo: c.saldo }] : [])];
-    const { data: id, error } = await sb.rpc('emitir_recibo2', { p_serie: tipo, p_ck: ck ? ck.id : null, p_pagador_nome: ck ? null : st.avulso.nome, p_pagador_doc: ck ? null : (st.avulso.doc || null), p_data: st.data, p_forma: st.forma, p_valor: c.V, p_itens: itens, p_credito_usado: c.cu, p_credito_novo: c.cn, p_sobra: c.sb, p_referencia: texto(c, ck, st.data), p_modelo: st.modelo, p_obs: st.obs || null, p_a_receber: c.faltaEx.map(e => ({ descricao: e.desc, valor: e.falta })), p_quitar: st.quitar || [] });
+    const { data: id, error } = await sb.rpc('emitir_recibo3', { p_serie: tipo, p_ck: ck ? ck.id : null, p_pagador_nome: ck ? null : st.avulso.nome, p_pagador_doc: ck ? null : (st.avulso.doc || null), p_data: st.data, p_forma: st.forma, p_valor: c.V, p_itens: itensRecibo(c, ck), p_credito_usado: c.cu, p_credito_novo: c.cn, p_sobra: c.sb, p_referencia: texto(c, ck, st.data), p_modelo: st.modelo, p_obs: st.obs || null, p_a_receber: c.faltaEx.map(e => ({ descricao: e.desc, valor: e.falta })), p_quitar: st.quitar || [], p_acordo: c.acVal > 0 ? c.ac.a.id : null, p_acordo_valor: c.acVal });
     if (error) { b.disabled = false; b.textContent = 'Emitir recibo'; alert('Não foi possível emitir: ' + error.message); return; }
     await B.carregar(sb, eu); await extras(); novoEstado(); window.KESP_RASCUNHO.limpar('recibo'); abrirRecibo(id);
   }
@@ -1263,8 +1374,8 @@ window.KESP_EVOL = (function () {
     const base = location.href.split('#')[0].replace(/[^/]*$/, '');
     const logo = base + 'logo-kolping.png';
     const timbrado = r.modelo === 'timbrado';
-    const saldoIt = (r.itens || []).find(i => i.tipo === '_saldo');
-    const itens = (r.itens || []).filter(i => i.tipo !== '_saldo').map(i => `<tr><td style="padding:7px 0;border-bottom:1px solid #EFE9E2">${i.tipo === 'solidariedade' ? 'Solidariedade ' + (i.mes ? MESX[i.mes - 1] + '/' + i.ano : '') : i.tipo === 'societaria' ? 'Societária ' + (i.ano || '') : (i.quantidade > 1 ? i.quantidade + ' × ' : '') + esc(i.descricao || i.tipo)}${i.devido && i.pago < i.devido - 0.001 ? ' · parcial' : ''}</td><td style="text-align:right;border-bottom:1px solid #EFE9E2">${i.devido ? R(i.devido) : ''}</td><td style="text-align:right;border-bottom:1px solid #EFE9E2">${R(i.pago)}</td></tr>`).join('');
+    const saldoIt = (r.itens || []).find(i => i.tipo === '_saldo'), acIt = (r.itens || []).find(i => i.tipo === '_acordo');
+    const itens = (r.itens || []).filter(i => i.tipo[0] !== '_').map(i => `<tr><td style="padding:7px 0;border-bottom:1px solid #EFE9E2">${i.tipo === 'solidariedade' ? 'Solidariedade ' + (i.mes ? MESX[i.mes - 1] + '/' + i.ano : '') : i.tipo === 'societaria' ? 'Societária ' + (i.ano || '') : (i.quantidade > 1 ? i.quantidade + ' × ' : '') + esc(i.descricao || i.tipo)}${i.devido && i.pago < i.devido - 0.001 ? ' · parcial' : ''}</td><td style="text-align:right;border-bottom:1px solid #EFE9E2">${i.devido ? R(i.devido) : ''}</td><td style="text-align:right;border-bottom:1px solid #EFE9E2">${R(i.pago)}</td></tr>`).join('');
     const corpo = r.referencia && /recebeu/.test(r.referencia) ? r.referencia : `A <b>${KOLPING.nome}</b>, CNPJ ${KOLPING.cnpj}, recebeu de <b>${esc(r.pagador_nome)}</b>${r.pagador_doc ? ', CNPJ ' + esc(r.pagador_doc) : ''}, o valor de <b>${R(r.valor)}</b> (${extenso(Number(r.valor))}), referente a ${esc(r.referencia || 'contribuições')}.`;
     const cancel = r.situacao === 'cancelado' ? `<div style="position:absolute;top:40%;left:0;right:0;text-align:center;transform:rotate(-18deg);font-size:64px;font-weight:800;color:rgba(217,54,62,.22);letter-spacing:6px">CANCELADO</div>` : '';
     const topo = timbrado
@@ -1278,6 +1389,7 @@ window.KESP_EVOL = (function () {
         <div style="text-align:right"><div style="font-size:10px;letter-spacing:.15em;color:#8A8078">VALOR RECEBIDO</div><div style="font-size:28px;font-weight:700;color:#C85E1C">${R(r.valor)}</div><div style="font-size:11px;color:#8A8078;font-style:italic">${extenso(Number(r.valor))}</div></div></div>
         <div style="background:#FFFBF7;border-left:3px solid #F07830;border-radius:8px;padding:12px 16px;line-height:1.6">${corpo}</div>
         ${itens ? `<table style="width:100%;border-collapse:collapse;margin-top:14px;font-size:12px"><tr style="color:#8A8078;font-size:10px;letter-spacing:.08em"><td style="padding:6px 0">REFERÊNCIA</td><td style="text-align:right">DEVIDO</td><td style="text-align:right">PAGO</td></tr>${itens}</table>` : ''}
+        ${acIt ? `<div style="margin-top:14px;background:#FDF1D6;border-left:4px solid #F5A524;border-radius:8px;padding:9px 14px;color:#7A5300;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact">Saldo devedor do acordo após este pagamento: ${R(acIt.saldo)} (parcela ${acIt.n} de ${acIt.de})</div>` : ''}
         ${saldoIt ? `<div style="margin-top:14px;background:#DDF5E9;border-left:4px solid #22C984;border-radius:8px;padding:9px 14px;color:#0E5C37;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact">Saldo de crédito da Comunidade após este pagamento: ${R(saldoIt.saldo)}</div>` : ''}
         <div style="display:flex;gap:40px;background:#F7F4F0;border-radius:8px;padding:10px 16px;margin-top:14px"><div><div style="font-size:10px;letter-spacing:.1em;color:#8A8078">FORMA DE PAGAMENTO</div><b>${esc(r.forma_pagamento || '—')}</b></div><div><div style="font-size:10px;letter-spacing:.1em;color:#8A8078">DATA DO PAGAMENTO</div><b>${dataBR(r.data_pagamento)}</b></div></div>
         ${r.observacao ? `<p style="font-size:12px;color:#5A4E46;margin:10px 0 0">Obs.: ${esc(r.observacao)}</p>` : ''}
@@ -1336,7 +1448,7 @@ window.KESP_EVOL = (function () {
     };
   }
 
-  function novoEstado() { st = { tipo: 'CK', pagador: 'ck', ck: null, avulso: {}, extras: [], quitar: [], guarda: true, destinoSobra: 'devolver', valor: 0, data: new Date().toISOString().slice(0, 10), forma: 'PIX', modelo: MODELO_PADRAO, obs: '', sel: new Set(), ano: 1 }; }
+  function novoEstado() { st = { tipo: 'CK', pagador: 'ck', ck: null, avulso: {}, extras: [], quitar: [], guarda: true, destinoSobra: 'devolver', valor: 0, valorAuto: true, usarAcordo: true, sobraAcordo: true, data: new Date().toISOString().slice(0, 10), forma: 'PIX', modelo: MODELO_PADRAO, obs: '', sel: new Set(), ano: 1 }; }
   let MODELO_PADRAO = 'padrao';
   function render() {
     const pg = document.getElementById('pg');
@@ -1376,8 +1488,9 @@ window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
   function pendencias(ck) {
     const ANO = new Date().getFullYear(), hoje = new Date().toISOString().slice(0, 10), L = [];
     [ANO - 1, ANO].forEach(a => { const e = B.extrato(ck, a);
-      e.meses.forEach(m => { if (m.venc < hoje && m.devido > 0 && m.pago < m.devido - 0.001) L.push({ ref: 'Solidariedade ' + MESX[m.mes - 1] + '/' + a, devido: m.devido, pago: m.pago, falta: Math.round((m.devido - m.pago) * 100) / 100, parcial: m.pago > 0 }); });
-      if (e.soc.venc < hoje && e.soc.devido > 0 && e.soc.pago < e.soc.devido - 0.001) L.push({ ref: 'Societária ' + a, devido: e.soc.devido, pago: e.soc.pago, falta: Math.round((e.soc.devido - e.soc.pago) * 100) / 100, parcial: e.soc.pago > 0 }); });
+      e.meses.forEach(m => { if (m.sit !== 'acordo' && m.venc < hoje && m.devido > 0 && m.pago < m.devido - 0.001) L.push({ ref: 'Solidariedade ' + MESX[m.mes - 1] + '/' + a, devido: m.devido, pago: m.pago, falta: Math.round((m.devido - m.pago) * 100) / 100, parcial: m.pago > 0 }); });
+      if (e.soc.sit !== 'acordo' && e.soc.venc < hoje && e.soc.devido > 0 && e.soc.pago < e.soc.devido - 0.001) L.push({ ref: 'Societária ' + a, devido: e.soc.devido, pago: e.soc.pago, falta: Math.round((e.soc.devido - e.soc.pago) * 100) / 100, parcial: e.soc.pago > 0 }); });
+    const ac = B.acordoDe(ck.id); if (ac && ac.atrasado) { const f = Math.round((ac.pago < 0 ? 0 : (Math.min(ac.a.total, ac.devidoAgora + ac.pago) - ac.pago)) * 100) / 100; if (f > 0) L.push({ ref: 'Parcela do acordo em atraso', devido: f, pago: 0, falta: f, parcial: false }); }
     let cred = Math.max(0, B.credito(ck.id));
     L.forEach(p => { const u = Math.min(cred, p.falta); p.falta = Math.round((p.falta - u) * 100) / 100; cred -= u; });
     return L.filter(p => p.falta > 0.001);
@@ -1418,14 +1531,14 @@ window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   let sb, eu, B, ano = new Date().getFullYear(), dist = '';
-  const COR = { pago: ['#DDF5E9', '#127A4A'], parcial: ['#FDF1D6', '#9A6A00'], atraso: ['#FBDADB', '#A3262C'], a_vencer: ['#F1EEEA', '#8A8078'], isento: ['#F1EEEA', '#B0A89F'] };
+  const COR = { pago: ['#DDF5E9', '#127A4A'], parcial: ['#FDF1D6', '#9A6A00'], atraso: ['#FBDADB', '#A3262C'], a_vencer: ['#F1EEEA', '#8A8078'], isento: ['#F1EEEA', '#B0A89F'], acordo: ['#DCE8FD', '#1D4ED8'] };
   function dados() {
     const D = B.dados(); const cks = D.cks.filter(c => c.ativa && (!dist || c.distrito_id === dist)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     return cks.map(ck => { const e = B.extrato(ck, ano); return { ck, e, total: e.meses.reduce((s, m) => s + m.pago, 0) }; });
   }
   function tabela(L, impresso) {
     const R = B.R, totMes = MESES.map((_, i) => L.reduce((s, x) => s + x.e.meses[i].pago, 0)), tot = L.reduce((s, x) => s + x.total, 0);
-    const ESC = { pago: ['rgba(34,201,132,.14)', '#5FE0A8'], parcial: ['rgba(245,165,36,.16)', '#F8C46A'], atraso: ['rgba(229,72,77,.16)', '#FF9A9D'], a_vencer: ['rgba(255,255,255,.04)', '#8E899A'], isento: ['rgba(255,255,255,.03)', '#6E6A7C'] };
+    const ESC = { pago: ['rgba(34,201,132,.14)', '#5FE0A8'], parcial: ['rgba(245,165,36,.16)', '#F8C46A'], atraso: ['rgba(229,72,77,.16)', '#FF9A9D'], a_vencer: ['rgba(255,255,255,.04)', '#8E899A'], isento: ['rgba(255,255,255,.03)', '#6E6A7C'], acordo: ['rgba(59,130,246,.16)', '#93B8FF'] };
     const cel = m => { const [bg, fg] = (impresso ? COR : ESC)[m.sit]; return `<td style="background:${bg};color:${fg};text-align:center;padding:5px 3px;border:2px solid ${impresso ? '#fff' : '#171F2D'};border-radius:${impresso ? 0 : 6}px;font-size:${impresso ? 8.5 : 11}px;white-space:nowrap">${m.sit === 'a_vencer' || m.sit === 'isento' ? (m.devido ? R(m.devido) : '—') : R(m.pago)}</td>`; };
     return `<table style="width:100%;border-collapse:collapse;font-size:${impresso ? 9 : 12}px;color:${impresso ? '#1E1B19' : '#F2EEEA'}"><tr style="font-size:${impresso ? 8 : 10}px;color:#8A8078"><th style="text-align:left;padding:5px">Comunidade</th>${MESES.map(m => `<th style="padding:5px 2px">${impresso ? m.slice(0, 3) : m}</th>`).join('')}<th style="color:#C85E1C">Total</th></tr>
       ${L.map(x => `<tr><td style="padding:5px;font-weight:600;white-space:nowrap">${esc(x.ck.nome)}</td>${x.e.meses.map(cel).join('')}<td style="text-align:right;font-weight:700;color:${impresso ? '#C85E1C' : '#FFB070'};padding:5px;white-space:nowrap">${R(x.total)}</td></tr>`).join('')}
@@ -1903,9 +2016,9 @@ window.KESP_VISITAS = (function () {
 (function () {
   'use strict';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const COR_SIT = { em_dia: '#22C984', parcial: '#F5A524', atraso: '#E5484D', inativa: '#6E6A7C' };
-  const NOME_SIT = { em_dia: 'em dia', parcial: 'pendência parcial', atraso: 'em atraso', inativa: 'inativa' };
-  let sb, eu, B, map, cluster, marcas = {}, filtroD = '', filtroS = '', fBusca = '', U = [];
+  const COR_SIT = { em_dia: '#22C984', parcial: '#F5A524', atraso: '#E5484D', inativa: '#6E6A7C', acordo: '#3B82F6', acordo_atraso: '#E5484D' };
+  const NOME_SIT = { em_dia: 'em dia', parcial: 'pendência parcial', atraso: 'em atraso', inativa: 'inativa', acordo: 'em acordo', acordo_atraso: 'acordo em atraso' };
+  let sb, eu, B, map, cluster, marcas = {}, filtroD = '', filtroS = '', fBusca = '', U = [], verInativas = false, listaAberta = innerWidth > 860;
   const css = h => new Promise(ok => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h; l.onload = ok; l.onerror = ok; document.head.appendChild(l); });
   const js = h => new Promise((ok, er) => { const s = document.createElement('script'); s.src = h; s.onload = ok; s.onerror = er; document.head.appendChild(s); });
   async function libs() {
@@ -1918,17 +2031,24 @@ window.KESP_VISITAS = (function () {
   const K = '<rect x="-7" y="-8" width="5" height="16" fill="#1E1B19"/><path d="M-2 -8 L8 -8 L8 8 L-2 8Z" fill="#F07830"/><path d="M8 -8 L8 8 L-1 0Z" fill="#1E1B19"/>';
   const pinSvg = (borda, anel, unid) => `<svg width="52" height="62" viewBox="-26 -38 52 62">${anel ? `<circle r="23" cy="-12" fill="none" stroke="${anel}" stroke-width="3.5"/>` : ''}<path d="M0 22 C-5 12,-17 5,-17 -12 A17 17 0 1 1 17 -12 C17 5,5 12,0 22Z" fill="#fff" stroke="${borda}" stroke-width="4.5" stroke-linejoin="round"/><g transform="translate(0,-12)">${K}</g>${unid ? '<g transform="translate(12,-27)"><circle r="7" fill="#F07830"/><text y="3.5" text-anchor="middle" font-size="9" fill="#fff">★</text></g>' : ''}</svg>`;
   const icone = (borda, anel, unid) => L.divIcon({ className: 'kpin', html: pinSvg(borda, anel, unid), iconSize: [52, 62], iconAnchor: [26, 60] });
-  const endCk = ck => [ck.logradouro && (ck.logradouro + (ck.numero ? ', ' + ck.numero : '')), ck.bairro, ck.cidade, ck.uf || 'SP', ck.cep, 'Brasil'].filter(Boolean).join(', ');
+  const endCk = ck => 'cep2|' + [ck.logradouro && (ck.logradouro + (ck.numero ? ', ' + ck.numero : '')), ck.bairro, ck.cidade, ck.uf || 'SP', ck.cep, 'Brasil'].filter(Boolean).join(', ');
   const dist = (a, b) => { const R = 6371, r = x => x * Math.PI / 180, dLa = r(b[0] - a[0]), dLo = r(b[1] - a[1]); const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 
   async function geocodificar(lista, tabela) {
     let n = 0;
     for (const x of lista) {
-      const end = tabela === 'unidades' ? [x.logradouro && (x.logradouro + (x.numero ? ', ' + x.numero : '')), x.bairro, x.cidade, 'SP', x.cep, 'Brasil'].filter(Boolean).join(', ') : endCk(x);
-      if (!x.cidade || (x.lat && x.geo_endereco === end) || (x.geo_manual && x.geo_endereco === end)) continue;
+      const end = tabela === 'unidades' ? 'cep2|' + [x.logradouro && (x.logradouro + (x.numero ? ', ' + x.numero : '')), x.bairro, x.cidade, 'SP', x.cep, 'Brasil'].filter(Boolean).join(', ') : endCk(x);
+      if ((!x.cidade && !x.cep) || (x.lat && x.geo_endereco === end) || (x.geo_manual && x.geo_endereco === end)) continue;
       try {
+        const cep = String(x.cep || '').replace(/\D/g, '');
+        if (cep.length === 8) {
+          try { const b = await (await fetch('https://brasilapi.com.br/api/cep/v2/' + cep)).json(); const co = b && b.location && b.location.coordinates;
+            if (co && co.latitude && co.longitude) { x.lat = +co.latitude; x.lng = +co.longitude; x.geo_endereco = end; if (tabela === 'comunidades') x.geo_manual = false; await sb.from(tabela).update(tabela === 'comunidades' ? { lat: x.lat, lng: x.lng, geo_endereco: end, geo_manual: false } : { lat: x.lat, lng: x.lng, geo_endereco: end }).eq('id', x.id); n++; continue; } } catch (_) {}
+          try { const v = await (await fetch('https://viacep.com.br/ws/' + cep + '/json/')).json(); if (v && !v.erro) { x._q = [v.logradouro && (v.logradouro + (x.numero ? ', ' + x.numero : '')), v.bairro, v.localidade, v.uf, 'Brasil'].filter(Boolean).join(', '); } } catch (_) {}
+        }
         await new Promise(r => setTimeout(r, 1100));
-        let j = await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(end))).json();
+        let j = await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(x._q || end))).json();
+        if (!j.length && cep.length === 8) { await new Promise(r => setTimeout(r, 1100)); j = await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&postalcode=' + cep.slice(0, 5) + '-' + cep.slice(5))).json(); }
         if (!j.length) j = await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent([x.bairro, x.cidade, 'SP', 'Brasil'].filter(Boolean).join(', ')))).json();
         if (j.length) { x.lat = +j[0].lat; x.lng = +j[0].lon; x.geo_endereco = end; if (tabela === 'comunidades') x.geo_manual = false; await sb.from(tabela).update(tabela === 'comunidades' ? { lat: x.lat, lng: x.lng, geo_endereco: end, geo_manual: false } : { lat: x.lat, lng: x.lng, geo_endereco: end }).eq('id', x.id); n++; }
       } catch (_) {}
@@ -1936,7 +2056,7 @@ window.KESP_VISITAS = (function () {
     return n;
   }
 
-  function filtrar(l) { return l.filter(({ ck, e }) => (!filtroD || ck.distrito_id === filtroD) && (!filtroS || (filtroS === 'semvisita' ? semVisita(ck) : e.situacao === filtroS)) && (!fBusca || (ck.nome + ' ' + (ck.cidade || '')).toLowerCase().includes(fBusca))); }
+  function filtrar(l) { return l.filter(({ ck, e }) => (verInativas || ck.ativa) && (!filtroD || ck.distrito_id === filtroD) && (!filtroS || (filtroS === 'semvisita' ? semVisita(ck) : e.situacao === filtroS)) && (!fBusca || (ck.nome + ' ' + (ck.cidade || '')).toLowerCase().includes(fBusca))); }
   function semVisita(ck) { const v = (B.dados().vis || []).find(x => x.comunidade_id === ck.id); return !v || (Date.now() - new Date(v.data + 'T12:00')) / 864e5 > 180; }
   function linhas() { const D = B.dados(), ANO = new Date().getFullYear(); return D.cks.map(ck => ({ ck, e: B.extrato(ck, ANO), d: B.dist(ck.distrito_id) })); }
 
@@ -1978,9 +2098,10 @@ window.KESP_VISITAS = (function () {
     pg.innerHTML = `<h1>Mapa das Comunidades</h1><p class="sub">Estado de São Paulo · localização pelo endereço cadastrado</p>
       <div class="mapa-box" id="mBox"><div id="mapa"></div>
         <div class="mtopo"><div class="mvidro" style="display:flex;padding:3px;overflow-x:auto;max-width:100%"><span class="mch ${!filtroD ? 'on' : ''}" data-d="">Todos</span>${D.dist.map(d => `<span class="mch ${filtroD === d.id ? 'on' : ''}" data-d="${d.id}"><span style="color:${esc(d.cor)}">●</span> ${esc(d.nome)}</span>`).join('')}</div>
-          <div class="mvidro" style="display:flex;padding:3px">${[['', 'Todas'], ['atraso', 'Em atraso'], ['parcial', 'Parcial'], ['semvisita', 'Sem visita 180+']].map(([k, n]) => `<span class="mch ${filtroS === k ? 'on' : ''}" data-s="${k}">${n}</span>`).join('')}</div></div>
+          <div class="mvidro" style="display:flex;padding:3px">${[['', 'Todas'], ['atraso', 'Em atraso'], ['parcial', 'Parcial'], ['acordo', 'Em acordo'], ['semvisita', 'Sem visita 180+']].map(([k, n]) => `<span class="mch ${filtroS === k ? 'on' : ''}" data-s="${k}">${n}</span>`).join('')}<span class="mch ${verInativas ? 'on' : ''}" id="mIn">Inativas</span></div></div>
         <div class="mvidro mfechar" id="mX" style="position:absolute;z-index:700;top:10px;right:10px;padding:8px 12px;cursor:pointer">✕ Fechar</div>
-        <div class="mlista mvidro" id="mL"></div>
+        <div class="mlista mvidro" id="mL" style="${listaAberta ? '' : 'display:none'}"></div>
+        <div class="mvidro" id="mLt" style="position:absolute;z-index:520;left:10px;bottom:10px;padding:8px 12px;cursor:pointer;font-size:12px">${listaAberta ? '‹ Esconder lista' : '☰ Lista das CKs'}</div>
         <div class="mctl"><a class="mvidro" id="mZi">+</a><a class="mvidro" id="mZo">−</a><a class="mvidro" id="mTd" title="Ver todas">⤢</a><a class="mvidro" id="mEu" title="Minha localização">◎</a><a class="mvidro" id="mCa" title="Camadas">▤</a><a class="mvidro" id="mFs" title="Tela cheia">⛶</a></div>
         <div class="mcard mvidro" id="mC" style="display:none"></div></div>`;
     map = L.map('mapa', { zoomControl: false, minZoom: 6, maxBoundsViscosity: .8, attributionControl: true });
@@ -1999,6 +2120,9 @@ window.KESP_VISITAS = (function () {
     map.setMaxBounds(lim.pad(.25));
     document.querySelectorAll('[data-d]').forEach(x => x.onclick = () => { filtroD = x.dataset.d; document.querySelectorAll('[data-d]').forEach(y => y.classList.toggle('on', y === x)); desenhar(); });
     document.querySelectorAll('[data-s]').forEach(x => x.onclick = () => { filtroS = x.dataset.s; document.querySelectorAll('[data-s]').forEach(y => y.classList.toggle('on', y === x)); desenhar(); });
+    document.getElementById('mLt').onclick = () => { listaAberta = !listaAberta; document.getElementById('mL').style.display = listaAberta ? '' : 'none'; document.getElementById('mLt').textContent = listaAberta ? '‹ Esconder lista' : '☰ Lista das CKs'; document.getElementById('mLt').style.left = listaAberta && innerWidth > 860 ? '260px' : '10px'; };
+    document.getElementById('mIn').onclick = () => { verInativas = !verInativas; document.getElementById('mIn').classList.toggle('on', verInativas); desenhar(); };
+    if (listaAberta && innerWidth > 860) document.getElementById('mLt').style.left = '260px';
     document.getElementById('mX').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); location.hash = '#inicio'; };
     document.getElementById('mZi').onclick = () => map.zoomIn(); document.getElementById('mZo').onclick = () => map.zoomOut();
     document.getElementById('mTd').onclick = () => { const b = cluster.getBounds(); b.isValid() ? map.fitBounds(b, { padding: [40, 40] }) : map.fitBounds(lim); };
@@ -2007,7 +2131,7 @@ window.KESP_VISITAS = (function () {
     document.getElementById('mFs').onclick = () => { const b = document.getElementById('mBox'); document.fullscreenElement ? document.exitFullscreen() : b.requestFullscreen && b.requestFullscreen(); setTimeout(() => map.invalidateSize(), 300); };
     try { desenhar(); } catch (e) { window.KESP_TOAST('Não foi possível desenhar as CKs no mapa.'); try { await sb.from('erros_sistema').insert({ tela: 'mapa', mensagem: 'Falha ao desenhar o mapa', detalhe: String(e && e.stack || e).slice(0, 500) }); } catch (_) {} }
     // localiza pelo endereço o que estiver faltando ou desatualizado
-    const pend = D.cks.filter(ck => ck.cidade && !(ck.lat && ck.geo_endereco === endCk(ck))).length + U.filter(u => u.cidade && !u.lat).length;
+    const pend = D.cks.filter(ck => (ck.cidade || ck.cep) && !(ck.lat && ck.geo_endereco === endCk(ck))).length + U.filter(u => u.cidade && !u.lat).length;
     if (pend && (eu.admin || window.KESP_PODE('comunidades.editar'))) { window.KESP_TOAST(`Localizando ${pend} endereço(s)… isso leva cerca de ${Math.ceil(pend * 1.2)} segundos.`);
       const n = await geocodificar(D.cks, 'comunidades') + await geocodificar(U, 'unidades'); if (n) { desenhar(); window.KESP_TOAST(n + ' localização(ões) atualizada(s).'); } }
   }
@@ -2252,4 +2376,55 @@ window.KESP_SINO = (function () {
     iniciarQR();
   }
   window.KESP_1B2 = { cofre, lixeira, modelos, aprendizagem, scanner };
+})();
+
+// ===================== Calendário do KESP (substitui o do navegador) =====================
+(function () {
+  'use strict';
+  const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const SEM = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  const p2 = n => String(n).padStart(2, '0'), iso = d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+  const ler = v => { if (!v) return null; const [a, m, d] = v.slice(0, 10).split('-').map(Number); return new Date(a, m - 1, d, 12); };
+  const texto = (inp) => { const v = inp.value; if (!v) return '<span class="vz">Escolher data' + (inp.type === 'datetime-local' ? ' e hora' : '') + '</span>'; const d = ler(v); const t = SEM[d.getDay()].replace(/^./, c => c.toUpperCase()) + ', ' + d.getDate() + ' de ' + MES[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? ' de ' + d.getFullYear() : ''); return t + (inp.type === 'datetime-local' && v.length > 10 ? ' · ' + v.slice(11, 16) : ''); };
+  function ligar(inp) {
+    if (inp._kdt || inp.closest('.kcal')) return; inp._kdt = 1;
+    const b = document.createElement('div'); b.className = 'kdt'; b.tabIndex = 0; inp.style.display = 'none'; inp.after(b);
+    const mostrar = () => { b.innerHTML = '<span>' + texto(inp) + '</span><span style="color:#8E899A">📅</span>'; b.style.opacity = inp.disabled ? .5 : 1; };
+    mostrar(); inp.addEventListener('change', mostrar); inp._kdtMostrar = mostrar;
+    const abrir = () => { if (!inp.disabled) picker(inp, b, mostrar); };
+    b.onclick = abrir; b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } };
+  }
+  function picker(inp, ancora, mostrar) {
+    document.querySelectorAll('.kcal,.kcal-fundo').forEach(x => x.remove());
+    const comHora = inp.type === 'datetime-local', hoje = new Date(); let sel = ler(inp.value) || null, hora = inp.value && inp.value.length > 10 ? inp.value.slice(11, 16) : '09:00';
+    let vis = new Date((sel || hoje).getFullYear(), (sel || hoje).getMonth(), 1);
+    const fundo = document.createElement('div'); fundo.className = 'kcal-fundo'; const c = document.createElement('div'); c.className = 'kcal';
+    document.body.append(fundo, c); const fechar = () => { fundo.remove(); c.remove(); }; fundo.onclick = fechar;
+    const r = ancora.getBoundingClientRect(); if (innerWidth > 860) { c.style.left = Math.min(r.left, innerWidth - 350) + 'px'; c.style.top = (r.bottom + 6 + 470 > innerHeight ? Math.max(8, r.top - 476) : r.bottom + 6) + 'px'; }
+    const somar = (d, n) => { const x = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + d, 12); if (n) x.setMonth(x.getMonth() + n); return x; };
+    const seg = () => { const x = somar(1); while (x.getDay() !== 1) x.setDate(x.getDate() + 1); return x; };
+    const ATALHOS = [['Hoje', () => somar(0)], ['Amanhã', () => somar(1)], ['Segunda', seg], ['Em 1 semana', () => somar(7)], ['Em 1 mês', () => somar(0, 1)]];
+    const HORAS = ['08:00', '09:00', '10:00', '12:00', '14:00', '16:00', '17:00'];
+    const desenhar = () => {
+      const ini = new Date(vis.getFullYear(), vis.getMonth(), 1 - vis.getDay(), 12); let g = 'DSTQQSS'.split('').map(x => `<span>${x}</span>`).join('');
+      for (let i = 0; i < 42; i++) { const d = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + i, 12); const cl = [d.getMonth() !== vis.getMonth() ? 'fo' : (d.getDay() % 6 === 0 ? 'fds' : ''), iso(d) === iso(hoje) ? 'hj' : '', sel && iso(d) === iso(sel) ? 'se' : ''].join(' '); g += `<a class="${cl}" data-d="${iso(d)}">${d.getDate()}</a>`; }
+      const resumo = sel ? SEM[sel.getDay()].replace(/^./, x => x.toUpperCase()) + ', ' + sel.getDate() + ' de ' + MES[sel.getMonth()] + (comHora ? ' · ' + hora : '') : 'Escolha um dia';
+      c.innerHTML = `<div class="at">${ATALHOS.map(([t], k) => `<a data-at="${k}">${t}</a>`).join('')}</div><div class="hd"><a data-m="-1">‹</a><b>${MES[vis.getMonth()]} ${vis.getFullYear()}</b><a data-m="1">›</a></div><div class="g">${g}</div>
+        ${comHora ? `<div class="hr"><div style="font-size:11px;color:#8E899A;letter-spacing:.06em;margin-bottom:6px">HORÁRIO</div><div class="hl">${HORAS.map(h => `<a data-h="${h}" class="${hora === h ? 'on' : ''}">${h}</a>`).join('')}<a data-out class="${HORAS.includes(hora) ? '' : 'on'}">${HORAS.includes(hora) ? 'Outro…' : hora}</a></div></div>` : ''}
+        <div class="rs"><span class="sm" style="color:#A8A3B4">${resumo}</span><span style="display:flex;gap:6px">${inp.required ? '' : '<button class="btn sec" data-lp>Limpar</button>'}<button class="btn" data-ok${sel ? '' : ' disabled'}>Confirmar</button></span></div>`;
+      c.querySelectorAll('[data-at]').forEach(a => a.onclick = () => { sel = ATALHOS[+a.dataset.at][1](); vis = new Date(sel.getFullYear(), sel.getMonth(), 1); desenhar(); });
+      c.querySelectorAll('[data-m]').forEach(a => a.onclick = () => { vis = new Date(vis.getFullYear(), vis.getMonth() + +a.dataset.m, 1); desenhar(); });
+      c.querySelectorAll('[data-d]').forEach(a => a.onclick = () => { sel = ler(a.dataset.d); if (!comHora) confirmar(); else desenhar(); });
+      c.querySelectorAll('[data-h]').forEach(a => a.onclick = () => { hora = a.dataset.h; desenhar(); });
+      const out = c.querySelector('[data-out]'); if (out) out.onclick = () => { const h = prompt('Horário (hh:mm):', hora); if (h && /^\d{1,2}:\d{2}$/.test(h.trim())) { const [x, y] = h.trim().split(':'); hora = p2(Math.min(23, +x)) + ':' + p2(Math.min(59, +y)); desenhar(); } };
+      const lp = c.querySelector('[data-lp]'); if (lp) lp.onclick = () => { inp.value = ''; disparar(); fechar(); };
+      c.querySelector('[data-ok]').onclick = confirmar;
+    };
+    const disparar = () => { inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); mostrar(); };
+    const confirmar = () => { if (!sel) return; inp.value = iso(sel) + (comHora ? 'T' + hora : ''); disparar(); fechar(); };
+    desenhar();
+  }
+  const varrer = raiz => (raiz.querySelectorAll ? raiz.querySelectorAll('input[type=date],input[type=datetime-local]') : []).forEach(ligar);
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) { if (n.matches && n.matches('input[type=date],input[type=datetime-local]')) ligar(n); varrer(n); } }))).observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', () => varrer(document));
 })();
