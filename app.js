@@ -25,9 +25,9 @@ window.KESP_BUSCA = (function () {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const K = s => `<svg width="${s}" height="${s}" viewBox="0 0 100 100" aria-hidden="true"><rect width="35" height="100" fill="#1E1B19"/><rect x="35" width="65" height="100" fill="#F07830"/><path d="M100 0 L100 100 L35 50Z" fill="#1E1B19"/></svg>`;
   const KAI = (s, olhos) => `<svg width="${s}" height="${s * 0.9}" viewBox="20 8 80 72" aria-hidden="true"><line x1="60" y1="14" x2="60" y2="24" stroke="#9A9088" stroke-width="2"/><circle cx="60" cy="12" r="5" fill="#F07830"/><rect x="22" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="90" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="28" y="24" width="64" height="50" rx="18" fill="#F4F1EC"/><rect x="36" y="34" width="48" height="28" rx="12" fill="#2C3045"/>${olhos || '<path d="M45 50 Q50 44 55 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M65 50 Q70 44 75 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M54 55 Q60 59 66 55" stroke="#FFB070" stroke-width="2" fill="none" stroke-linecap="round"/>'}</svg>`;
-  const ICONES = { lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
+  const ICONES = { cofre: 'shield-lock', lixeira: 'trash', modelos: 'template', aprendizagem: 'school', scanner: 'scan', lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
   const ETAPAS = [['1A', 'Base essencial'], ['1B', 'Base complementar'], ['2', 'Assessoramento'], ['3', 'Kolping Estadual'], ['4', 'Controles'], ['5', 'Conciliação bancária'], ['6', 'Financeiro'], ['7', 'RH'], ['8', 'Educação Infantil'], ['9', 'Prestação de contas']];
-  const FUNCAO_MODULO = { lembretes: '*', sugestoes: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
+  const FUNCAO_MODULO = { lembretes: '*', sugestoes: '*', scanner: '*', cofre: 'cofre.usar', modelos: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
 
   let sb, eu, sair, modulos = [], perms = new Set(), avisosN = 0;
   const pode = f => eu.admin || perms.has(f);
@@ -79,7 +79,7 @@ window.KESP_BUSCA = (function () {
     app.querySelector('[data-acao="busca"]').onclick = () => toast('A busca geral chega na próxima parte da construção.');
     const avisos = () => window.KESP_SINO.abrir(sb, eu);
     app.querySelector('[data-acao="avisos"]').onclick = avisos; document.getElementById('sino').onclick = avisos;
-    document.getElementById('qr').onclick = () => toast('O leitor de QR Code chega na etapa 1B.');
+    document.getElementById('qr').onclick = () => (location.hash = '#scanner');
     document.getElementById('perfil').onclick = () => {
       const pop = document.getElementById('pop'); pop.style.display = 'block'; lat.classList.remove('ab');
       pop.innerHTML = `<div style="padding:8px 10px"><b>${esc(eu.nome || eu.email)}</b><div class="sm">${esc(eu.cargo || '')}${eu.admin ? ' · Administrador' : ''}</div><div class="sm" style="margin-top:4px;font-size:11px">KESP versão ${esc(window.KESP_CONFIG.versao || '')}</div></div>
@@ -156,6 +156,7 @@ window.KESP_BUSCA = (function () {
   function rota() {
     const id = (location.hash || '#inicio').slice(1) || 'inicio';
     document.querySelectorAll('.conf,#sinoP').forEach(d => d.remove());
+    try { sb.rpc('registrar_uso', { p_modulo: id.split('/')[0] }).then(() => {}, () => {}); } catch (_) {}
     if (id.startsWith('ck/')) { document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === 'comunidades')); return window.KESP_CKS.abrir(sb, eu, id.slice(3)); }
     document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === id));
     const atual = document.querySelector('.lat [data-r="' + id + '"]'); if (atual && atual.parentElement.hidden) document.getElementById('caminho').click();
@@ -181,6 +182,7 @@ window.KESP_BUSCA = (function () {
     if (m.id === 'pedidos' && window.KESP_PEDIDOS) return window.KESP_PEDIDOS.abrir(sb, eu);
     if (m.id === 'mapa' && window.KESP_MAPA) return window.KESP_MAPA.abrir(sb, eu);
     if (m.id === 'lembretes') return window.KESP_SINO.telaLembretes(sb, eu);
+    if (['cofre', 'lixeira', 'modelos', 'aprendizagem', 'scanner'].includes(m.id)) return window.KESP_1B2[m.id](sb, eu);
     if (m.id === 'sugestoes') return window.KESP_SINO.telaSugestoes(sb, eu);
     if (m.id === 'compras' && window.KESP_COMPRAS) return window.KESP_COMPRAS.abrir(sb, eu);
     pagConstrucao(m);
@@ -734,6 +736,8 @@ window.KESP_ARQ = {
     if (n.length > max && c) { const sobra = max - (a.length + b.length + 6 + ' e outros'.length); c = c.slice(0, Math.max(10, sobra)).replace(/[,\s]+[^,\s]*$/, '') + ' e outros'; n = [a, b, c].filter(Boolean).join(' – '); }
     return n.slice(0, max); }
 };
+window.KESP_MOD = async sb => { if (window.KESP_MODELOS) return window.KESP_MODELOS; try { const { data } = await sb.from('modelos_texto').select('chave,texto'); window.KESP_MODELOS = Object.fromEntries((data || []).map(x => [x.chave, x.texto])); } catch (_) { window.KESP_MODELOS = {}; } return window.KESP_MODELOS; };
+window.KESP_PREENCHER = (t, v) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m));
 window.KESP_VALOR = (titulo, extras) => new Promise(res => {
   const d = document.createElement('div'); d.className = 'conf';
   d.innerHTML = `<div class="cx fm"><b>${titulo}</b>${(extras || []).map((x, k) => `<label>${x.rotulo}</label>${x.opcoes ? `<select data-ex="${k}">${x.opcoes.map(o => `<option value="${o[0]}"${o[0] === x.valor ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>` : `<input data-ex="${k}" value="${(x.valor || '').replace(/"/g, '&quot;')}">`}`).join('')}<label>Valor</label><input id="kvV" data-moeda placeholder="R$ 0,00">
@@ -1236,7 +1240,8 @@ window.KESP_EVOL = (function () {
     if (ml) ml.onclick = async () => {
       const ck = B.dados().cks.find(c => c.id === r.comunidade_id) || {};
       dlg.querySelector('[data-imp]').click();
-      window.KESP_EMAIL(ck.email, `Recibo ${r.numero}/${r.ano} – Kolping Estadual de São Paulo`, `Prezada ${ck.razao_social || ck.nome || r.pagador_nome},\n\nSegue em anexo o recibo nº ${r.numero}/${r.ano}, no valor de ${R(r.valor)}, referente ao pagamento de ${dataBR(r.data_pagamento)}.\n\nAgradecemos a contribuição da Comunidade.\n\nAtenciosamente,`);
+      const md = await window.KESP_MOD(sb);
+      window.KESP_EMAIL(ck.email, `Recibo ${r.numero}/${r.ano} – Kolping Estadual de São Paulo`, window.KESP_PREENCHER(md.email_recibo || 'Prezada {ck},\n\nSegue em anexo o recibo nº {numero}, no valor de {valor}, referente ao pagamento de {data}.\n\nAtenciosamente,', { ck: ck.razao_social || ck.nome || r.pagador_nome, numero: r.numero + '/' + r.ano, valor: R(r.valor), data: dataBR(r.data_pagamento) }));
       await sb.from('recibos').update({ enviado_em: new Date().toISOString() }).eq('id', r.id);
       window.KESP_TOAST('Salve o PDF na janela de impressão e anexe ao e-mail que abriu.');
     };
@@ -1331,7 +1336,8 @@ window.KESP_EVOL = (function () {
     };
   }
 
-  function novoEstado() { st = { tipo: 'CK', pagador: 'ck', ck: null, avulso: {}, extras: [], quitar: [], guarda: true, destinoSobra: 'devolver', valor: 0, data: new Date().toISOString().slice(0, 10), forma: 'PIX', modelo: 'padrao', obs: '', sel: new Set(), ano: 1 }; }
+  function novoEstado() { st = { tipo: 'CK', pagador: 'ck', ck: null, avulso: {}, extras: [], quitar: [], guarda: true, destinoSobra: 'devolver', valor: 0, data: new Date().toISOString().slice(0, 10), forma: 'PIX', modelo: MODELO_PADRAO, obs: '', sel: new Set(), ano: 1 }; }
+  let MODELO_PADRAO = 'padrao';
   function render() {
     const pg = document.getElementById('pg');
     pg.innerHTML = `<h1>Recibos</h1><p class="sub">Taxas (CK), eventos (EV) e livres (RL)</p><div class="abas" style="grid-template-columns:repeat(4,1fr);max-width:600px"><a data-a="emitir" class="${aba === 'emitir' ? 'on' : ''}">Emitir</a><a data-a="lote" class="${aba === 'lote' ? 'on' : ''}">Lote</a><a data-a="itens" class="${aba === 'itens' ? 'on' : ''}">Itens</a><a data-a="historico" class="${aba === 'historico' ? 'on' : ''}">Histórico</a></div><div id="cont"></div>`;
@@ -1342,7 +1348,7 @@ window.KESP_EVOL = (function () {
   window.KESP_RECIBOS = {
     async abrir(cliente, perfil) {
       sb = cliente; eu = perfil; B = window.KESP_CKS.base; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>';
-      await B.carregar(sb, eu); await extras(); if (!st) { novoEstado(); const rs = window.KESP_RASCUNHO.ler('recibo'); if (rs && (rs.valor || (rs.extras || []).length) && confirm('Há um recibo que você começou e não emitiu. Continuar de onde parou?')) { st = { ...st, ...rs, sel: new Set(rs.sel || []), ck: B.dados().cks.find(x => x.id === rs.ck) || null }; } else window.KESP_RASCUNHO.limpar('recibo'); }
+      await B.carregar(sb, eu); await extras(); const md0 = await window.KESP_MOD(sb); MODELO_PADRAO = md0.recibo_modelo === 'timbrado' ? 'timbrado' : 'padrao'; if (!st) { novoEstado(); const rs = window.KESP_RASCUNHO.ler('recibo'); if (rs && (rs.valor || (rs.extras || []).length) && confirm('Há um recibo que você começou e não emitiu. Continuar de onde parou?')) { st = { ...st, ...rs, sel: new Set(rs.sel || []), ck: B.dados().cks.find(x => x.id === rs.ck) || null }; } else window.KESP_RASCUNHO.limpar('recibo'); }
       let pre = null; try { pre = sessionStorage.getItem('kesp.recibo.ck'); sessionStorage.removeItem('kesp.recibo.ck'); } catch (_) {}
       if (pre) { novoEstado(); st.ck = B.dados().cks.find(x => x.id === pre) || null; aba = 'emitir'; }
       render();
@@ -1391,7 +1397,8 @@ window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
     const R = B.R, p = pendencias(ck), tot = p.reduce((s, x) => s + x.falta, 0);
     const { data: kd } = await sb.from('kolping_dados_bancarios').select('*').eq('id', 1).maybeSingle();
     const pag = kd && (kd.chave_pix || kd.conta) ? `Dados para pagamento: ${[kd.banco, kd.agencia && 'Ag. ' + kd.agencia, kd.conta && 'C/C ' + kd.conta, kd.chave_pix && 'PIX ' + kd.chave_pix].filter(Boolean).join(' · ')}` : '';
-    const texto = `Prezada ${ck.razao_social || ck.nome},\n\nIdentificamos as seguintes contribuições em aberto com a Kolping Estadual de São Paulo:\n\n${p.map(x => `• ${x.ref}: ${R(x.falta)}`).join('\n')}\n\nTotal em aberto: ${R(tot)}.\n\n${pag ? pag + '\n\n' : ''}Se o pagamento já foi feito, por favor desconsidere esta mensagem e nos envie o comprovante. Ficamos à disposição para conversar.\n\nAtenciosamente,`;
+    const md = await window.KESP_MOD(sb), vv = { ck: ck.razao_social || ck.nome };
+    const texto = `${window.KESP_PREENCHER(md.carta_cobranca || 'Prezada {ck},\n\nIdentificamos as seguintes contribuições em aberto com a Kolping Estadual de São Paulo:', vv)}\n\n${p.map(x => `• ${x.ref}: ${R(x.falta)}`).join('\n')}\n\nTotal em aberto: ${R(tot)}.\n\n${pag ? pag + '\n\n' : ''}${window.KESP_PREENCHER(md.carta_cobranca_fim || 'Atenciosamente,', vv)}`;
     const dlg = document.createElement('div'); dlg.className = 'conf';
     dlg.innerHTML = `<div class="cx fm" style="max-width:620px;max-height:92vh;overflow-y:auto"><b>Carta de cobrança · ${esc(ck.nome)}</b><p class="sm" style="margin:4px 0 8px">Revise o texto antes de enviar. ${ck.email ? 'Vai para ' + esc(ck.email) : '<b style="color:#F8C46A">A CK não tem e-mail cadastrado.</b>'}</p>
       <textarea id="ctx" rows="16" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-size:13px;font-family:inherit;line-height:1.5">${esc(texto)}</textarea>
@@ -2102,4 +2109,147 @@ window.KESP_SINO = (function () {
       telaSugestoes(sb, eu); });
   }
   return { abrir, novoLembrete, telaLembretes, telaSugestoes };
+})();
+
+// ===================== 1B parte 2: cofre, lixeira, modelos, aprendizagem e scanner =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const b64 = u => btoa(String.fromCharCode(...new Uint8Array(u))), deb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  let sb, eu;
+
+  // ---------- Cofre de senhas (AES-GCM 256, chave derivada por PBKDF2) ----------
+  let chave = null, tBloq = null;
+  async function derivar(senha, sal) { const k = await crypto.subtle.importKey('raw', enc.encode(senha), 'PBKDF2', false, ['deriveKey']); return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: sal, iterations: 310000, hash: 'SHA-256' }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey']); }
+  async function cifrar(k, texto) { const iv = crypto.getRandomValues(new Uint8Array(12)), c = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, enc.encode(texto)); return b64(iv) + '.' + b64(c); }
+  async function decifrar(k, t) { const [iv, c] = t.split('.'); return dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: deb64(iv) }, k, deb64(c))); }
+  async function embrulhar(kw, kc) { const raw = await crypto.subtle.exportKey('raw', kc); return cifrar(kw, b64(raw)); }
+  async function desembrulhar(kw, t) { const raw = deb64(await decifrar(kw, t)); return crypto.subtle.importKey('raw', raw, 'AES-GCM', true, ['encrypt', 'decrypt']); }
+  const bloquear = () => { chave = null; clearTimeout(tBloq); if (location.hash === '#cofre') cofre(sb, eu); };
+  const atividade = () => { clearTimeout(tBloq); tBloq = setTimeout(() => { bloquear(); window.KESP_TOAST('Cofre bloqueado por inatividade.'); }, 5 * 60 * 1000); };
+  async function cofre(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg');
+    const { data: cfg, error } = await sb.from('cofre_config').select('*').eq('id', 1).maybeSingle();
+    if (error) { pg.innerHTML = '<div class="vazio"><h1>Cofre de senhas</h1><p class="sub">Você não tem permissão para usar o cofre.</p></div>'; return; }
+    if (!cfg) {
+      if (!eu.admin) { pg.innerHTML = '<div class="vazio"><h1>Cofre de senhas</h1><p class="sub">O cofre ainda não foi criado. Peça ao administrador.</p></div>'; return; }
+      pg.innerHTML = `<h1>Cofre de senhas</h1><p class="sub">Criar o cofre da Kolping</p><div class="cd fm" style="--c:#F07830;max-width:560px"><p style="margin:0;line-height:1.55">As senhas são <b>criptografadas no seu navegador</b> com a senha mestra. Nem o Supabase nem ninguém de fora consegue ler. <b>Se a senha mestra e a chave de recuperação forem perdidas, as senhas não podem ser recuperadas.</b></p>
+        <label>Senha mestra (mínimo 12 caracteres)</label><input id="cS1" type="password" autocomplete="new-password"><label>Repita a senha mestra</label><input id="cS2" type="password" autocomplete="new-password"><button class="btn" id="cCriar" style="margin-top:12px">Criar cofre</button></div>`;
+      pg.querySelector('#cCriar').onclick = async () => { const s1 = pg.querySelector('#cS1').value, s2 = pg.querySelector('#cS2').value; if (s1.length < 12 || s1 !== s2) { alert('As senhas precisam ser iguais e ter pelo menos 12 caracteres.'); return; }
+        const sal = crypto.getRandomValues(new Uint8Array(16)), kc = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+        const rec = Array.from(crypto.getRandomValues(new Uint8Array(15)), x => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[x % 32]).join('').match(/.{5}/g).join('-');
+        const reg = { id: 1, sal: b64(sal), chave_senha: await embrulhar(await derivar(s1, sal), kc), chave_rec: await embrulhar(await derivar(rec, sal), kc), criado_por: eu.id };
+        const r = await sb.from('cofre_config').insert(reg); if (r.error) { alert('Não foi possível criar: ' + r.error.message); return; }
+        pg.innerHTML = `<div class="cd" style="--c:#22C984;max-width:560px"><h1>Cofre criado ✓</h1><p>Esta é a <b>chave de recuperação</b>. Ela só aparece agora. <b>Imprima e guarde em lugar seguro</b> (por exemplo, no cofre físico da Kolping):</p><div style="font-family:monospace;font-size:22px;letter-spacing:2px;background:#fff;color:#1E1B19;padding:14px;border-radius:10px;text-align:center">${rec}</div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn sec" id="cImp">Imprimir</button><button class="btn" id="cOk">Já guardei</button></div></div>`;
+        pg.querySelector('#cImp').onclick = () => window.KESP_IMPRIMIR('Chave de recuperação do cofre KESP', `<div style="text-align:center;padding:40px;font-family:Arial"><h2>Chave de recuperação · Cofre de senhas do KESP</h2><p style="font-family:monospace;font-size:28px;letter-spacing:3px">${rec}</p><p>Kolping Estadual de São Paulo · gerada em ${new Date().toLocaleDateString('pt-BR')}. Guarde em local seguro.</p></div>`);
+        pg.querySelector('#cOk').onclick = () => cofre(sb, eu); };
+      return;
+    }
+    if (!chave) {
+      pg.innerHTML = `<h1>Cofre de senhas</h1><p class="sub">Bloqueado · bloqueia sozinho depois de 5 minutos sem uso</p><div class="cd fm" style="--c:#F07830;max-width:440px"><label>Senha mestra</label><input id="cS" type="password" autocomplete="current-password"><button class="btn" id="cAbrir" style="margin-top:12px;width:100%">Abrir cofre</button><a class="lk" id="cRec" style="display:block;margin-top:10px;font-size:12px">Esqueci a senha mestra (usar chave de recuperação)</a></div>`;
+      const abrir = async (senha, campo) => { try { chave = await desembrulhar(await derivar(senha, deb64(cfg.sal)), cfg[campo]); atividade(); cofre(sb, eu); } catch (_) { alert('Senha incorreta.'); } };
+      pg.querySelector('#cAbrir').onclick = () => abrir(pg.querySelector('#cS').value, 'chave_senha');
+      pg.querySelector('#cS').onkeydown = e => { if (e.key === 'Enter') pg.querySelector('#cAbrir').click(); };
+      pg.querySelector('#cRec').onclick = async () => { const r = prompt('Digite a chave de recuperação (com os traços):'); if (!r) return;
+        try { const kc = await desembrulhar(await derivar(r.trim().toUpperCase(), deb64(cfg.sal)), cfg.chave_rec); const n = prompt('Crie uma nova senha mestra (mínimo 12 caracteres):'); if (!n || n.length < 12) { alert('Senha muito curta.'); return; }
+          if (!eu.admin) { alert('Só um administrador pode trocar a senha mestra.'); return; } await sb.from('cofre_config').update({ chave_senha: await embrulhar(await derivar(n, deb64(cfg.sal)), kc) }).eq('id', 1); chave = kc; atividade(); window.KESP_TOAST('Senha mestra trocada.'); cofre(sb, eu); } catch (_) { alert('Chave de recuperação incorreta.'); } };
+      return;
+    }
+    atividade();
+    const { data } = await sb.from('cofre_itens').select('*').order('atualizado_em', { ascending: false });
+    const itens = []; for (const x of data || []) { try { itens.push({ id: x.id, ...JSON.parse(await decifrar(chave, x.dados)) }); } catch (_) {} }
+    itens.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR'));
+    pg.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h1>Cofre de senhas</h1><p class="sub">🔓 Aberto · bloqueia em 5 minutos sem uso</p></div><div style="display:flex;gap:8px"><button class="btn sec" id="cBl">Bloquear</button><button class="btn" id="cNovo">Nova senha</button></div></div>
+      <input class="in" id="cBus" placeholder="Buscar" style="width:100%;margin-bottom:10px">
+      <div id="cLst">${itens.map(x => `<div class="pe" style="--c:#8B5CF6" data-n="${esc((x.titulo + ' ' + (x.categoria || '') + ' ' + (x.usuario || '')).toLowerCase())}"><div style="flex:1;min-width:0"><b>${esc(x.titulo)}</b><div class="sm">${esc(x.categoria || '')}${x.usuario ? ' · ' + esc(x.usuario) : ''}${x.url ? ' · ' + esc(x.url) : ''}</div></div><div class="ac"><button class="mini neu" data-cu="${x.id}">Copiar usuário</button><button class="mini" data-cs="${x.id}">Copiar senha</button><button class="mini neu" data-ce="${x.id}">Editar</button></div></div>`).join('') || '<p class="sm">Nenhuma senha guardada.</p>'}</div>`;
+    pg.querySelector('#cBus').oninput = e => pg.querySelectorAll('[data-n]').forEach(d => (d.style.display = d.dataset.n.includes(e.target.value.toLowerCase()) ? '' : 'none'));
+    pg.querySelector('#cBl').onclick = bloquear;
+    const copiar = async t => { try { await navigator.clipboard.writeText(t || ''); window.KESP_TOAST('Copiado. A área de transferência é limpa em 30 segundos.'); setTimeout(() => navigator.clipboard.writeText('').catch(() => {}), 30000); } catch (_) { prompt('Copie:', t); } atividade(); };
+    pg.querySelectorAll('[data-cu]').forEach(b => b.onclick = () => copiar(itens.find(x => x.id === b.dataset.cu).usuario));
+    pg.querySelectorAll('[data-cs]').forEach(b => b.onclick = () => copiar(itens.find(x => x.id === b.dataset.cs).senha));
+    const editar = x => { const d = document.createElement('div'); d.className = 'conf'; const v = x || {};
+      d.innerHTML = `<div class="cx fm"><b>${x ? 'Editar senha' : 'Nova senha'}</b><label>Nome (ex.: Supabase, GitHub, Itaú)</label><input id="eT" value="${esc(v.titulo || '')}"><div class="dois"><div><label>Categoria</label><input id="eC" value="${esc(v.categoria || '')}" list="eCl"><datalist id="eCl"><option>Sistemas</option><option>Bancos</option><option>Governo</option><option>E-mail</option><option>Fornecedores</option></datalist></div><div><label>Endereço do site</label><input id="eU" value="${esc(v.url || '')}"></div></div>
+        <label>Usuário</label><input id="eL" value="${esc(v.usuario || '')}" autocomplete="off"><label>Senha</label><div style="display:flex;gap:6px"><input id="eS" type="password" value="${esc(v.senha || '')}" autocomplete="new-password" style="flex:1"><button class="mini neu" id="eVer">👁</button><button class="mini neu" id="eGer">Gerar</button></div>
+        <label>Observação</label><input id="eO" value="${esc(v.obs || '')}">
+        <div style="display:flex;gap:8px;margin-top:14px">${x ? '<button class="btn sec" style="color:#FF9A9D" data-del>Apagar</button>' : ''}<button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok>Salvar</button></div></div>`;
+      document.body.appendChild(d); const g = id => d.querySelector('#' + id);
+      g('eVer').onclick = () => (g('eS').type = g('eS').type === 'password' ? 'text' : 'password');
+      g('eGer').onclick = () => { const cs = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*'; g('eS').value = Array.from(crypto.getRandomValues(new Uint8Array(18)), x => cs[x % cs.length]).join(''); g('eS').type = 'text'; };
+      d.querySelector('[data-x]').onclick = () => d.remove();
+      const del = d.querySelector('[data-del]'); if (del) del.onclick = async () => { if (!confirm('Apagar esta senha? Ela fica 60 dias na lixeira.')) return; await sb.from('cofre_itens').delete().eq('id', x.id); d.remove(); cofre(sb, eu); };
+      d.querySelector('[data-ok]').onclick = async () => { if (!chave) { d.remove(); return; } const o = { titulo: g('eT').value.trim(), categoria: g('eC').value.trim(), url: g('eU').value.trim(), usuario: g('eL').value, senha: g('eS').value, obs: g('eO').value.trim() }; if (!o.titulo) { alert('Informe o nome.'); return; }
+        const reg = { dados: await cifrar(chave, JSON.stringify(o)), atualizado_em: new Date().toISOString(), atualizado_por: eu.id };
+        const r = x ? await sb.from('cofre_itens').update(reg).eq('id', x.id) : await sb.from('cofre_itens').insert(reg); if (r.error) { alert('Não foi possível salvar.'); return; } d.remove(); cofre(sb, eu); }; };
+    pg.querySelector('#cNovo').onclick = () => editar(null);
+    pg.querySelectorAll('[data-ce]').forEach(b => b.onclick = () => editar(itens.find(x => x.id === b.dataset.ce)));
+  }
+
+  // ---------- Lixeira ----------
+  async function lixeira(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg'); try { await sb.rpc('limpar_lixeira'); } catch (_) {}
+    const { data } = await sb.from('lixeira').select('*').order('apagado_em', { ascending: false }).limit(200);
+    const NOME = { distritos: 'Distrito', lembretes: 'Lembrete', produtos: 'Produto', itens_cobranca: 'Item de recibo', visitas: 'Visita', cofre_itens: 'Senha do cofre' };
+    pg.innerHTML = `<h1>Lixeira</h1><p class="sub">Itens apagados ficam 60 dias e depois são removidos de vez. Recibos e documentos oficiais nunca vêm para cá: eles são cancelados, não apagados.</p>
+      ${(data || []).map(x => { const dias = 60 - Math.floor((Date.now() - new Date(x.apagado_em)) / 864e5); return `<div class="pe" style="--c:#6E6A7C"><div style="flex:1;min-width:0"><b>${esc(x.tabela === 'cofre_itens' ? 'Senha (criptografada)' : x.descricao || '')}</b><div class="sm">${NOME[x.tabela] || x.tabela} · apagado em ${new Date(x.apagado_em).toLocaleDateString('pt-BR')} · some em ${dias} dia(s)</div></div><button class="mini" data-rest="${x.id}">Restaurar</button></div>`; }).join('') || '<p class="sm">A lixeira está vazia.</p>'}`;
+    pg.querySelectorAll('[data-rest]').forEach(b => b.onclick = async () => { const r = await sb.rpc('restaurar_lixeira', { p_id: +b.dataset.rest }); if (r.error) { alert('Não foi possível restaurar: ' + r.error.message); return; } window.KESP_TOAST('Restaurado.'); lixeira(sb, eu); });
+  }
+
+  // ---------- Modelos de texto ----------
+  async function modelos(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg');
+    const { data } = await sb.from('modelos_texto').select('*').order('titulo');
+    pg.innerHTML = `<h1>Modelos de texto</h1><p class="sub">Textos usados nos e-mails e cartas. Use as marcações entre chaves: <b>{ck}</b>, <b>{numero}</b>, <b>{valor}</b>, <b>{data}</b>.</p>
+      ${(data || []).map(x => x.chave === 'recibo_modelo' ? `<div class="cd fm" style="--c:#F07830;margin-bottom:10px"><div class="hd"><span>${esc(x.titulo.toUpperCase())}</span></div><select data-k="${x.chave}"><option value="padrao"${x.texto === 'padrao' ? ' selected' : ''}>Padrão</option><option value="timbrado"${x.texto === 'timbrado' ? ' selected' : ''}>Papel timbrado</option></select></div>`
+        : `<div class="cd fm" style="--c:#3B82F6;margin-bottom:10px"><div class="hd"><span>${esc(x.titulo.toUpperCase())}</span></div><textarea data-k="${x.chave}" rows="6" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-family:inherit;font-size:13px;line-height:1.5"${eu.admin ? '' : ' disabled'}>${esc(x.texto)}</textarea></div>`).join('')}
+      ${eu.admin ? '<button class="btn" id="mSalvar">Salvar modelos</button>' : ''}`;
+    const sv = pg.querySelector('#mSalvar'); if (sv) sv.onclick = async () => { for (const el of pg.querySelectorAll('[data-k]')) await sb.from('modelos_texto').update({ texto: el.value, atualizado_em: new Date().toISOString() }).eq('chave', el.dataset.k); window.KESP_MODELOS = null; window.KESP_TOAST('Modelos salvos.'); };
+  }
+
+  // ---------- Painel de aprendizagem ----------
+  async function aprendizagem(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg');
+    if (!eu.admin) { pg.innerHTML = '<div class="vazio"><h1>Painel de aprendizagem</h1><p class="sub">Disponível só para o administrador.</p></div>'; return; }
+    const d30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+    const [p, u, k] = await Promise.all([sb.from('perfis').select('id,nome,cargo').eq('situacao', 'ativo').order('nome'), sb.from('uso_telas').select('*').gte('dia', d30), sb.from('kai_temas').select('*').gte('criado_em', d30)]);
+    const NIVEL = [['Iniciante', '#E5484D'], ['Em adaptação', '#F5A524'], ['Autônomo', '#3B82F6'], ['Referência', '#22C984']];
+    const linhas = (p.data || []).map(x => { const us = (u.data || []).filter(y => y.perfil_id === x.id), dias = new Set(us.map(y => y.dia)).size, mods = new Set(us.map(y => y.modulo)).size, kt = (k.data || []).filter(y => y.perfil_id === x.id);
+      const pts = dias * 2 + mods * 3 - kt.length, nv = pts < 6 ? 0 : pts < 20 ? 1 : pts < 45 ? 2 : 3; const temas = {}; kt.forEach(y => (temas[y.tema] = (temas[y.tema] || 0) + 1));
+      return { x, dias, mods, kt: kt.length, nv, temas: Object.entries(temas).sort((a, b) => b[1] - a[1]).slice(0, 3) }; });
+    pg.innerHTML = `<h1>Painel de aprendizagem</h1><p class="sub">Últimos 30 dias · só você vê · mostra os temas das dúvidas à KAI, nunca o conteúdo das perguntas</p>
+      ${linhas.map(l => `<div class="pe" style="--c:${NIVEL[l.nv][1]}"><div style="flex:1;min-width:0"><b>${esc(l.x.nome)}</b> <span class="tg2" style="background:${NIVEL[l.nv][1]}22;color:${NIVEL[l.nv][1]}">${NIVEL[l.nv][0]}</span><div class="sm">${esc(l.x.cargo || '')} · ${l.dias} dia(s) de uso · ${l.mods} módulo(s) · ${l.kt} dúvida(s) à KAI</div>${l.temas.length ? `<div class="sm">Mais dúvidas sobre: ${l.temas.map(([t, n]) => esc(t) + ' (' + n + ')').join(', ')}</div>` : ''}${l.nv === 0 && l.dias < 3 ? '<div class="sm" style="color:#FF9A9D">Pode precisar de apoio: usa pouco o sistema.</div>' : ''}</div></div>`).join('')}`;
+  }
+
+  // ---------- Leitor de QR Code e scanner ----------
+  async function scanner(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg');
+    pg.innerHTML = `<h1>Leitor e scanner</h1><p class="sub">Use a câmera do celular ou do computador</p><div class="abas" style="grid-template-columns:repeat(2,1fr);max-width:360px"><a data-sc="qr" class="on">Ler QR Code</a><a data-sc="doc">Digitalizar documento</a></div>
+      <div style="position:relative;max-width:520px"><video id="scV" playsinline muted style="width:100%;border-radius:14px;background:#000"></video><canvas id="scC" style="display:none"></canvas></div><p class="sm" id="scS">Abrindo a câmera…</p><div id="scR"></div>`;
+    let modo = 'qr', stream = null, loop = null, det = null;
+    const v = pg.querySelector('#scV'), st = pg.querySelector('#scS'), res = pg.querySelector('#scR');
+    const parar = () => { if (stream) stream.getTracks().forEach(t => t.stop()); clearInterval(loop); };
+    window.addEventListener('hashchange', parar, { once: true });
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 } } }); v.srcObject = stream; await v.play(); } catch (_) { st.textContent = 'Não foi possível abrir a câmera. Verifique a permissão do navegador.'; return; }
+    const iniciarQR = async () => {
+      res.innerHTML = ''; st.textContent = 'Aponte a câmera para o QR Code.';
+      if ('BarcodeDetector' in window) det = new BarcodeDetector({ formats: ['qr_code'] });
+      else if (!window.jsQR) await new Promise(ok => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'; s.onload = ok; s.onerror = ok; document.head.appendChild(s); });
+      const c = pg.querySelector('#scC'), ctx = c.getContext('2d', { willReadFrequently: true });
+      loop = setInterval(async () => { if (modo !== 'qr' || !v.videoWidth) return; let txt = null;
+        if (det) { try { const r = await det.detect(v); if (r.length) txt = r[0].rawValue; } catch (_) {} }
+        else if (window.jsQR) { c.width = v.videoWidth; c.height = v.videoHeight; ctx.drawImage(v, 0, 0); const r = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height); if (r) txt = r.data; }
+        if (txt) { clearInterval(loop); const kesp = txt.includes('/kesp/') && txt.includes('#'); res.innerHTML = `<div class="cd" style="--c:#22C984;max-width:520px"><div class="hd"><span>QR CODE LIDO</span></div><div style="word-break:break-all">${esc(txt)}</div><div style="display:flex;gap:8px;margin-top:8px">${kesp ? `<a class="btn" href="${esc(txt.slice(txt.indexOf('#')))}">Abrir no KESP</a>` : /^https?:/.test(txt) ? `<a class="btn" href="${esc(txt)}" target="_blank" rel="noopener">Abrir link</a>` : ''}<button class="btn sec" id="scDe">Ler outro</button></div></div>`; res.querySelector('#scDe').onclick = iniciarQR; } }, 350);
+    };
+    const iniciarDoc = () => { clearInterval(loop); st.textContent = 'Enquadre o documento sobre uma superfície escura e toque em Capturar. Pode capturar várias páginas.'; const pags = [];
+      const desenhar = () => { res.innerHTML = `<div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap"><button class="btn" id="scCap">Capturar página</button>${pags.length ? `<button class="btn sec" id="scPdf">Gerar PDF (${pags.length} pág.)</button><button class="btn sec" id="scLimp">Recomeçar</button>` : ''}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${pags.map(p => `<img src="${p}" style="width:110px;border-radius:6px;border:1px solid rgba(255,255,255,.2)">`).join('')}</div>`;
+        res.querySelector('#scCap').onclick = () => { const c = pg.querySelector('#scC'), ctx = c.getContext('2d'); c.width = v.videoWidth; c.height = v.videoHeight; ctx.drawImage(v, 0, 0);
+          const im = ctx.getImageData(0, 0, c.width, c.height), d = im.data; for (let i = 0; i < d.length; i += 4) { const g = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2], y = Math.max(0, Math.min(255, (g - 40) * 1.45)); d[i] = d[i + 1] = d[i + 2] = y; } ctx.putImageData(im, 0, 0);
+          pags.push(c.toDataURL('image/jpeg', .82)); desenhar(); };
+        const pdf = res.querySelector('#scPdf'); if (pdf) pdf.onclick = () => window.KESP_IMPRIMIR(window.KESP_ARQ.montar(['Documento digitalizado', new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')]), pags.map(p => `<div style="page-break-after:always;text-align:center"><img src="${p}" style="max-width:100%;max-height:270mm"></div>`).join(''));
+        const lp = res.querySelector('#scLimp'); if (lp) lp.onclick = () => { pags.length = 0; desenhar(); }; };
+      desenhar(); };
+    pg.querySelectorAll('[data-sc]').forEach(a => a.onclick = () => { modo = a.dataset.sc; pg.querySelectorAll('[data-sc]').forEach(x => x.classList.toggle('on', x === a)); modo === 'qr' ? iniciarQR() : iniciarDoc(); });
+    iniciarQR();
+  }
+  window.KESP_1B2 = { cofre, lixeira, modelos, aprendizagem, scanner };
 })();
