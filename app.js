@@ -1222,6 +1222,7 @@ window.KESP_EVOL = (function () {
     c.faltaEx.forEach(e => (t += ` Fica a receber <b>${R(e.falta)}</b> de ${e.desc}.`));
     if (c.cn > 0) t += ` O valor pago ficou <b>${R(c.cn)}</b> acima do devido e foi guardado como crédito da Comunidade, que será usado na taxa do próximo mês.`;
     if (c.sb > 0) t += ` O valor pago ficou <b>${R(c.sb)}</b> acima do devido${st.destinoSobra === 'doacao' ? ', considerado como doação' : ', a ser devolvido'}.`;
+    if (st.substitui) t += ` Este recibo substitui o recibo ${st.substitui.txt}.`;
     return t;
   }
   function itensRecibo(c, ck) {
@@ -1246,6 +1247,7 @@ window.KESP_EVOL = (function () {
       <div class="cd pas" style="--c:#F07830">${passo(1, '#F07830', 'Quem pagou')}
         <div class="abas" style="grid-template-columns:repeat(3,1fr);margin:0 0 8px">${[['CK', 'Taxa (+ itens)'], ['EV', 'Evento'], ['RL', 'Livre']].map(([k, n]) => `<a data-tp="${k}" class="${tipo === k ? 'on' : ''}">${n}</a>`).join('')}</div>
         ${tipo !== 'CK' ? `<div class="abas" style="grid-template-columns:repeat(2,1fr);margin:0 0 8px"><a data-pg="ck" class="${st.pagador !== 'avulso' ? 'on' : ''}">Comunidade Kolping</a><a data-pg="avulso" class="${st.pagador === 'avulso' ? 'on' : ''}">Pessoa ou empresa</a></div>` : ''}
+        ${st.substitui ? `<div style="margin-bottom:8px;padding:8px 10px;border-radius:10px;background:rgba(245,165,36,.14);color:#F8C46A;font-size:13px">Corrigindo o recibo <b>${esc(st.substitui.txt)}</b> (já cancelado). O novo recibo indicará a substituição.</div>` : ''}
         ${tipo === 'CK' || st.pagador !== 'avulso' ? `<div style="position:relative"><input id="rBus" placeholder="🔍 Digite o nome da CK ou a cidade" value="${ck ? esc(ck.nome) : ''}" autocomplete="off"><div id="rSug" class="sug"></div></div>
           ${ck ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${tipo === 'CK' ? chip(e.n + ' associados · ' + R(e.n * taxaSol) + '/mês', 'rgba(255,255,255,.06)', '#D8D3DE') : ''}${chip(B.NOME[e.situacao], B.COR[e.situacao] + '26', B.COR[e.situacao])}${chip('Crédito ' + R(Math.max(0, B.credito(ck.id))), 'rgba(34,201,132,.16)', '#5FE0A8', 1)}${abertosAR.length ? chip('A receber ' + R(abertosAR.reduce((x, a) => x + Number(a.valor), 0)), 'rgba(245,165,36,.16)', '#F8C46A') : ''}${c && c.ac ? chip('Acordo: saldo ' + R(c.ac.saldo), 'rgba(59,130,246,.18)', '#93B8FF', 1) : ''}</div>` : ''}`
           : `<div class="dois"><div><label>Nome</label><input id="aN" value="${esc(st.avulso.nome || '')}"></div><div><label>CPF ou CNPJ</label><input id="aD" data-cnpj value="${esc(st.avulso.doc || '')}"></div></div>`}</div>
@@ -1316,6 +1318,7 @@ window.KESP_EVOL = (function () {
     const b = document.getElementById('rEmit'); b.disabled = true; b.textContent = 'Emitindo…';
     const { data: id, error } = await sb.rpc('emitir_recibo3', { p_serie: tipo, p_ck: ck ? ck.id : null, p_pagador_nome: ck ? null : st.avulso.nome, p_pagador_doc: ck ? null : (st.avulso.doc || null), p_data: st.data, p_forma: st.forma, p_valor: c.V, p_itens: itensRecibo(c, ck), p_credito_usado: c.cu, p_credito_novo: c.cn, p_sobra: c.sb, p_referencia: texto(c, ck, st.data), p_modelo: st.modelo, p_obs: st.obs || null, p_a_receber: c.faltaEx.map(e => ({ descricao: e.desc, valor: e.falta })), p_quitar: st.quitar || [], p_acordo: c.acVal > 0 ? c.ac.a.id : null, p_acordo_valor: c.acVal });
     if (error) { b.disabled = false; b.textContent = 'Emitir recibo'; alert('Não foi possível emitir: ' + error.message); return; }
+    if (st.substitui) { try { await sb.from('recibos').update({ substitui: st.substitui.id }).eq('id', id); } catch (_) {} }
     await B.carregar(sb, eu); await extras(); novoEstado(); window.KESP_RASCUNHO.limpar('recibo'); abrirRecibo(id);
   }
   let ITENS = [], AR = [];
@@ -1337,9 +1340,11 @@ window.KESP_EVOL = (function () {
     if (r.emitido_por) { const p = await sb.from('perfis').select('nome,cargo,assinatura_url').eq('id', r.emitido_por).maybeSingle(); quem = p.data; }
     else { const p = await sb.from('perfis').select('nome,cargo,assinatura_url').eq('email', window.KESP_CONFIG.assinanteAnterior || '').maybeSingle(); quem = p.data; } // recibos do sistema anterior: assinatura de quem assinava na época
     const { data: devs } = await sb.from('recibo_devolucoes').select('*').eq('recibo_id', r.id); r._devs = devs || [];
+    try { const [v1, s1] = await Promise.all([sb.from('recibo_versoes').select('*').eq('recibo_id', r.id).order('versao'), sb.from('recibos').select('serie,numero,ano').eq('substitui', r.id).maybeSingle()]); r._vers = v1.data || []; r._subst = s1.data || null;
+      if (r.substitui) { const o = await sb.from('recibos').select('serie,numero,ano').eq('id', r.substitui).maybeSingle(); r._orig = o.data; } } catch (_) {}
     const html = documento(r, quem);
     const dlg = document.createElement('div'); dlg.className = 'conf';
-    dlg.innerHTML = `<div class="cx" style="max-width:720px;max-height:92vh;overflow-y:auto;padding:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn" data-imp>Imprimir / Salvar PDF</button>${r.situacao !== 'cancelado' && (eu.admin || window.KESP_PODE('recibos.emitir')) ? '<button class="btn sec" data-dev>Registrar devolução</button>' : ''}${r.comunidade_id && r.situacao !== 'cancelado' ? `<button class="btn sec" data-mail>${r.enviado_em ? 'Enviar de novo' : 'Enviar por e-mail'}</button>` : ''}${r.situacao !== 'cancelado' && (eu.admin || window.KESP_PODE('recibos.cancelar')) ? '<button class="btn sec" data-can style="color:#FF9A9D">Cancelar recibo</button>' : ''}<button class="btn sec" data-x style="margin-left:auto">Fechar</button></div><div style="background:#E9E5DF;padding:10px;border-radius:10px">${html}</div></div>`;
+    dlg.innerHTML = `<div class="cx" style="max-width:720px;max-height:92vh;overflow-y:auto;padding:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn" data-imp>Imprimir / Salvar PDF</button>${r.situacao !== 'cancelado' && (eu.admin || window.KESP_PODE('recibos.emitir')) ? '<button class="btn sec" data-ed>Editar</button><button class="btn sec" data-cor>Corrigir</button><button class="btn sec" data-dev>Registrar devolução</button>' : ''}${r.comunidade_id && r.situacao !== 'cancelado' ? `<button class="btn sec" data-mail>${r.enviado_em ? 'Enviar de novo' : 'Enviar por e-mail'}</button>` : ''}${r.situacao !== 'cancelado' && (eu.admin || window.KESP_PODE('recibos.cancelar')) ? '<button class="btn sec" data-can style="color:#FF9A9D">Cancelar recibo</button>' : ''}<button class="btn sec" data-x style="margin-left:auto">Fechar</button></div><div style="background:#E9E5DF;padding:10px;border-radius:10px">${html}</div>${(r._vers || []).length ? `<div class="cd" style="--c:#6E6A7C;margin-top:10px"><div class="hd"><span>HISTÓRICO DE EDIÇÕES</span></div>${r._vers.map(v => `<div class="sm" style="padding:3px 0">Versão ${v.versao} · ${new Date(v.editado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(v.motivo)} · antes: ${esc(Object.entries(v.anterior).map(([k, x]) => ({ forma_pagamento: 'forma', data_pagamento: 'data', observacao: 'observação', modelo: 'modelo', referencia: 'texto', pagador_nome: 'pagador', pagador_doc: 'documento' }[k] || k) + ' = ' + (k === 'referencia' ? '(texto anterior)' : x ?? '—')).join(', '))}</div>`).join('')}</div>` : ''}</div>`;
     document.body.appendChild(dlg);
     dlg.querySelector('[data-x]').onclick = () => { dlg.remove(); if (aba === 'historico') render(); };
     dlg.querySelector('[data-imp]').onclick = () => { const w = window.open('', '_blank'); w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(nomeArquivo(r))}</title><style>@page{size:A4;margin:12mm}body{margin:0;background:#fff}</style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`); w.document.close(); };
@@ -1356,6 +1361,42 @@ window.KESP_EVOL = (function () {
       await sb.from('recibos').update({ enviado_em: new Date().toISOString() }).eq('id', r.id);
       window.KESP_TOAST('Salve o PDF na janela de impressão e anexe ao e-mail que abriu.');
     };
+    const ed = dlg.querySelector('[data-ed]');
+    if (ed) ed.onclick = () => { const d = document.createElement('div'); d.className = 'conf'; const av = !r.comunidade_id;
+      d.innerHTML = `<div class="cx fm" style="max-width:600px;max-height:92vh;overflow-y:auto"><b>Editar recibo ${r.serie} ${r.numero}/${r.ano}</b><p class="sm" style="margin:4px 0 8px">Para mudar valor, meses, itens ou a CK, use <b>Corrigir</b>.</p>
+        <div class="dois"><div><label>Data do pagamento</label><input id="eD" type="date" value="${r.data_pagamento}"></div><div><label>Forma de pagamento</label><select id="eF">${['PIX', 'Transferência', 'Depósito', 'Dinheiro', 'Boleto'].map(f => `<option${r.forma_pagamento === f ? ' selected' : ''}>${f}</option>`).join('')}</select></div></div>
+        ${av ? `<div class="dois"><div><label>Pagador</label><input id="eP" value="${esc(r.pagador_nome || '')}"></div><div><label>CPF ou CNPJ</label><input id="eDoc" value="${esc(r.pagador_doc || '')}"></div></div>` : ''}
+        <label>Modelo</label><select id="eM"><option value="padrao"${r.modelo === 'padrao' ? ' selected' : ''}>Padrão</option><option value="timbrado"${r.modelo === 'timbrado' ? ' selected' : ''}>Papel timbrado</option></select>
+        <label>Observação</label><input id="eO" value="${esc(r.observacao || '')}">
+        <label>Texto do recibo</label><textarea id="eR" rows="6" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-family:inherit;font-size:13px;line-height:1.5">${esc(String(r.referencia || '').replace(/<\/?b>/g, '**'))}</textarea><p class="sm" style="margin:2px 0 0">Palavras entre ** ficam em negrito.</p>
+        <label>Motivo da edição</label><input id="eMot" placeholder="Ex.: forma de pagamento estava errada">
+        <div style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok>Salvar edição</button></div></div>`;
+      document.body.appendChild(d); const g = id => d.querySelector('#' + id);
+      d.querySelector('[data-x]').onclick = () => d.remove();
+      d.querySelector('[data-ok]').onclick = async () => { const mot = g('eMot').value.trim(); if (!mot) { alert('Informe o motivo da edição.'); return; }
+        const ref = esc(g('eR').value).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'), campos = {};
+        if (g('eD').value !== r.data_pagamento) campos.data_pagamento = g('eD').value; if (g('eF').value !== r.forma_pagamento) campos.forma_pagamento = g('eF').value;
+        if (g('eM').value !== r.modelo) campos.modelo = g('eM').value; if (g('eO').value.trim() !== (r.observacao || '')) campos.observacao = g('eO').value.trim();
+        if (ref !== esc(String(r.referencia || '').replace(/<\/?b>/g, '**')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')) campos.referencia = ref;
+        if (av) { if (g('eP').value.trim() !== (r.pagador_nome || '')) campos.pagador_nome = g('eP').value.trim(); if (g('eDoc').value.trim() !== (r.pagador_doc || '')) campos.pagador_doc = g('eDoc').value.trim(); }
+        if (!Object.keys(campos).length) { alert('Nada foi alterado.'); return; }
+        const x = await sb.rpc('editar_recibo', { p_id: r.id, p_campos: campos, p_motivo: mot }); if (x.error) { alert('Não foi possível editar: ' + x.error.message); return; }
+        d.remove(); dlg.remove(); window.KESP_TOAST('Recibo editado.'); await abrirRecibo(r.id);
+        if (r.enviado_em && r.comunidade_id && confirm('Este recibo já tinha sido enviado. Abrir o e-mail para enviar a versão corrigida?')) { const b2 = document.querySelector('.conf [data-mail]'); if (b2) b2.click(); } };
+    };
+    const co = dlg.querySelector('[data-cor]');
+    if (co) co.onclick = async () => {
+      if (!(eu.admin || window.KESP_PODE('recibos.cancelar'))) { alert('Corrigir exige permissão de cancelar recibos.'); return; }
+      if (!confirm(`Corrigir o recibo ${r.serie} ${r.numero}/${r.ano}?\n\nEle será cancelado (desfazendo meses, crédito e acordo) e a emissão abre preenchida para você ajustar e emitir o novo recibo, que indicará a substituição.`)) return;
+      const x = await sb.from('recibos').update({ situacao: 'cancelado', cancelado_motivo: 'Substituído por recibo corrigido' }).eq('id', r.id); if (x.error) { alert('Não foi possível cancelar: ' + x.error.message); return; }
+      await B.carregar(sb, eu); await extras(); dlg.remove();
+      const ck = r.comunidade_id ? B.dados().cks.find(c => c.id === r.comunidade_id) : null; novoEstado();
+      st.tipo = r.serie; st.pagador = ck ? 'ck' : 'avulso'; st.ck = ck; st.avulso = ck ? {} : { nome: r.pagador_nome, doc: r.pagador_doc }; st.valor = Number(r.valor); st.valorAuto = false;
+      st.data = r.data_pagamento; st.forma = r.forma_pagamento; st.modelo = r.modelo || 'padrao'; st.obs = r.observacao || '';
+      st.sel = new Set((r.itens || []).filter(i => i.tipo === 'solidariedade' || i.tipo === 'societaria').map(i => chave(i.tipo, i.ano, i.tipo === 'societaria' ? 0 : i.mes)));
+      st.extras = (r.itens || []).filter(i => i.tipo === 'item').map(i => ({ desc: i.descricao, qtd: i.quantidade || 1, unit: Number(i.unitario || i.devido || 0) }));
+      st.usarAcordo = (r.itens || []).some(i => i.tipo === 'acordo'); st.substitui = { id: r.id, txt: r.serie + ' ' + r.numero + '/' + r.ano };
+      aba = 'emitir'; render(); window.KESP_TOAST('Recibo original cancelado. Ajuste e emita o novo.'); };
     const cn = dlg.querySelector('[data-can]');
     if (cn) cn.onclick = async () => { const m = prompt('Motivo do cancelamento:'); if (m === null) return; if (!m.trim()) { alert('Informe o motivo.'); return; } const x = await sb.from('recibos').update({ situacao: 'cancelado', cancelado_motivo: m.trim() }).eq('id', r.id); if (x.error) { alert('Não foi possível cancelar: ' + x.error.message); return; } await B.carregar(sb, eu); dlg.remove(); abrirRecibo(r.id); };
   }
@@ -1393,6 +1434,9 @@ window.KESP_EVOL = (function () {
         ${saldoIt ? `<div style="margin-top:14px;background:#DDF5E9;border-left:4px solid #22C984;border-radius:8px;padding:9px 14px;color:#0E5C37;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact">Saldo de crédito da Comunidade após este pagamento: ${R(saldoIt.saldo)}</div>` : ''}
         <div style="display:flex;gap:40px;background:#F7F4F0;border-radius:8px;padding:10px 16px;margin-top:14px"><div><div style="font-size:10px;letter-spacing:.1em;color:#8A8078">FORMA DE PAGAMENTO</div><b>${esc(r.forma_pagamento || '—')}</b></div><div><div style="font-size:10px;letter-spacing:.1em;color:#8A8078">DATA DO PAGAMENTO</div><b>${dataBR(r.data_pagamento)}</b></div></div>
         ${r.observacao ? `<p style="font-size:12px;color:#5A4E46;margin:10px 0 0">Obs.: ${esc(r.observacao)}</p>` : ''}
+        ${r._orig ? `<p style="font-size:12px;color:#5A4E46;margin:10px 0 0">Este recibo substitui o recibo ${r._orig.serie} ${r._orig.numero}/${r._orig.ano}.</p>` : ''}
+        ${r._subst ? `<p style="font-size:12px;color:#A3262C;margin:6px 0 0;font-weight:700">Substituído pelo recibo ${r._subst.serie} ${r._subst.numero}/${r._subst.ano}.</p>` : ''}
+        ${r.editado_em ? `<p style="font-size:10px;color:#8A8078;margin:6px 0 0">Editado em ${new Date(r.editado_em).toLocaleDateString('pt-BR')} (versão ${r.versao}).</p>` : ''}
         ${(r._devs || []).map(d => `<p style="font-size:12px;color:#A3262C;margin:6px 0 0">Devolução de ${R(d.valor)} em ${new Date(d.feito_em).toLocaleDateString('pt-BR')}: ${esc(d.motivo)}</p>`).join('')}
         <p style="text-align:right;color:#5A4E46;margin:16px 0 0">Carapicuíba, ${new Date(r.data_pagamento + 'T12:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
         <div style="text-align:center;margin:6px 0 14px">${quem && quem.assinatura_url ? `<img src="${esc(quem.assinatura_url)}" style="height:82px;max-width:280px;object-fit:contain;mix-blend-mode:multiply;position:relative;z-index:1;display:block;margin:0 auto -6px">` : '<div style="height:50px"></div>'}<div style="border-top:1px solid #1E1B19;width:260px;margin:0 auto;padding-top:4px;font-weight:700">${esc(quem ? quem.nome : 'Kolping Estadual de São Paulo')}</div><div style="color:#8A8078;font-size:12px">${esc(quem && quem.cargo ? quem.cargo : '')}${quem && quem.cargo ? ' · ' : ''}${KOLPING.nome}</div></div>
