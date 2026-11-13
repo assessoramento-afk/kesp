@@ -278,3 +278,12 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
 .rec3 select{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
 .rec3 .kdt{overflow:hidden}.rec3 .kdt>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .rec3 .linha-item>*{margin:0}
+.rec3 input:not([type=checkbox]),.rec3 select,.rec3 .kdt{margin:0!important}
+.rec3 .dois{align-items:end}.rec3 .dois>div>label{margin:0 0 4px!important}
+/* 3.6 */
+.seg-l{display:flex;gap:8px;flex-wrap:wrap}.seg{display:flex;flex:1;min-width:240px;background:rgba(255,255,255,.04);border-radius:11px;padding:3px}
+.seg a{flex:1;text-align:center;padding:8px 6px;border-radius:9px;font-size:12.5px;color:#A8A3B4;cursor:pointer;white-space:nowrap}.seg a.on{background:rgba(240,120,48,.22);color:#FFB070}
+.selos{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.pills{display:inline-flex;gap:4px}.pills a{font-size:12px;padding:3px 10px;border-radius:8px;background:rgba(255,255,255,.06);color:#D8D3DE;cursor:pointer}.pills a.on{background:rgba(240,120,48,.22);color:#FFB070}
+input[type=checkbox]{margin:0!important;width:17px;height:17px;flex-shrink:0;vertical-align:middle}
+label:has(>input[type=checkbox]){display:flex!important;align-items:center;gap:8px}

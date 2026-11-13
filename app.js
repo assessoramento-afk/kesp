@@ -6,10 +6,10 @@ window.KESP_BUSCA = (function () {
   async function cep(v) { const d = so(v); if (d.length !== 8) return null; try { const r = await fetch('https://viacep.com.br/ws/' + d + '/json/'); const j = await r.json(); return j.erro ? null : { logradouro: j.logradouro, bairro: j.bairro, cidade: j.localidade, uf: j.uf }; } catch (_) { return null; } }
   async function cnpj(v) { const d = so(v); if (d.length !== 14) return null; try { const r = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + d); if (!r.ok) return null; const j = await r.json();
     const tel = String(j.ddd_telefone_1 || '').replace(/\D/g, ''); return { razao_social: j.razao_social, nome_fantasia: j.nome_fantasia || null, situacao_receita: j.descricao_situacao_cadastral, data_fundacao: j.data_inicio_atividade, natureza_juridica: j.natureza_juridica, logradouro: [j.descricao_tipo_de_logradouro, j.logradouro].filter(Boolean).join(' '), numero: j.numero, bairro: j.bairro, cidade: j.municipio, uf: j.uf, cep: mCEP(j.cep), telefone: tel.length >= 10 ? '(' + tel.slice(0, 2) + ') ' + tel.slice(2, -4) + '-' + tel.slice(-4) : null }; } catch (_) { return null; } }
-  function preencher(form, dados) {
+  async function preencher(form, dados) {
     if (!dados) return;
     const ocupados = Object.keys(dados).filter(n => { const i = form.querySelector('[name="' + n + '"]'); return i && i.value.trim() && dados[n] && i.value.trim() !== String(dados[n]).trim(); });
-    const trocar = !ocupados.length || confirm('Encontramos dados para este campo. Substituir o que já está preenchido?');
+    const trocar = !ocupados.length || await window.KESP_CONFIRMA('Encontramos dados para este campo. Substituir o que já está preenchido?');
     Object.entries(dados).forEach(([n, v]) => { const i = form.querySelector('[name="' + n + '"]'); if (i && v && (trocar || !i.value.trim())) i.value = v; });
   }
   function ligar(form) {
@@ -720,6 +720,30 @@ window.KESP_BUSCA = (function () {
   };
 })();
 
+// ===================== Janelas do KESP (no lugar das do navegador) =====================
+(function () {
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function janela(texto, campo, valor, soOk) {
+    return new Promise(res => {
+      const d = document.createElement('div'); d.className = 'conf'; d.style.zIndex = 3000;
+      const linhas = String(texto || '').split('\n'), tit = linhas[0], resto = linhas.slice(1).join('\n').trim();
+      d.innerHTML = `<div class="cx fm" style="max-width:440px"><b style="font-size:15px;line-height:1.4">${esc(tit)}</b>${resto ? `<p class="sm" style="margin:6px 0 0;white-space:pre-line;line-height:1.5">${esc(resto)}</p>` : ''}
+        ${campo ? `<input id="kjI" value="${esc(valor || '')}" style="margin-top:12px;width:100%">` : ''}
+        <div style="display:flex;gap:8px;margin-top:16px">${soOk ? '' : '<button class="btn sec" style="flex:1" data-n>Cancelar</button>'}<button class="btn" style="flex:1" data-s>${soOk ? 'Entendi' : campo ? 'Confirmar' : 'Confirmar'}</button></div></div>`;
+      document.body.appendChild(d);
+      const i = d.querySelector('#kjI'), fim = v => { d.remove(); document.removeEventListener('keydown', tec); res(v); };
+      const tec = e => { if (e.key === 'Escape') fim(soOk ? undefined : campo ? null : false); if (e.key === 'Enter') d.querySelector('[data-s]').click(); };
+      document.addEventListener('keydown', tec);
+      d.querySelector('[data-s]').onclick = () => fim(campo ? i.value : true);
+      const n = d.querySelector('[data-n]'); if (n) n.onclick = () => fim(campo ? null : false);
+      setTimeout(() => (i || d.querySelector('[data-s]')).focus(), 30);
+    });
+  }
+  window.KESP_CONFIRMA = t => janela(t, false);
+  window.KESP_PERGUNTA = (t, v) => janela(t, true, v);
+  window.alert = t => { janela(t, false, '', true); };
+})();
+
 // ===================== Apoio: moeda e rascunhos =====================
 window.KESP_MOEDA = {
   fmt: v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -854,7 +878,7 @@ window.KESP_EVOL = (function () {
     const nv = c.querySelector('#acNovo'); if (nv) nv.onclick = () => novoAcordo(ck);
     const acd = acordoDe(ck.id); if (!acd) return;
     const tm = c.querySelector('#acTermo'); if (tm) tm.onclick = () => termoAcordo(ck, acd);
-    const en = c.querySelector('#acEnc'); if (en) en.onclick = async () => { if (!confirm('Encerrar o acordo? O saldo devedor deixa de ser cobrado por ele.')) return; await sb.from('acordos').update({ situacao: 'encerrado' }).eq('id', acd.a.id); await carregar(); perfil(ck.id); };
+    const en = c.querySelector('#acEnc'); if (en) en.onclick = async () => { if (!await window.KESP_CONFIRMA('Encerrar o acordo? O saldo devedor deixa de ser cobrado por ele.')) return; await sb.from('acordos').update({ situacao: 'encerrado' }).eq('id', acd.a.id); await carregar(); perfil(ck.id); };
   }
   function novoAcordo(ck) {
     const ANO = new Date().getFullYear(), e = extrato(ck, ANO), hoje = new Date().toISOString().slice(0, 10);
@@ -1060,8 +1084,8 @@ window.KESP_EVOL = (function () {
 
   async function inativar(ck) {
     let motivo = null;
-    if (ck.ativa) { motivo = prompt('Motivo da inativação:'); if (motivo === null) return; if (!motivo.trim()) { alert('Informe o motivo.'); return; } }
-    else if (!confirm('Reativar ' + ck.nome + '? Ela volta para a lista e para a cobrança.')) return;
+    if (ck.ativa) { motivo = await window.KESP_PERGUNTA('Motivo da inativação:'); if (motivo === null) return; if (!motivo.trim()) { alert('Informe o motivo.'); return; } }
+    else if (!await window.KESP_CONFIRMA('Reativar ' + ck.nome + '? Ela volta para a lista e para a cobrança.')) return;
     const r = await sb.from('comunidades').update(ck.ativa ? { ativa: false, motivo_inativacao: motivo.trim() } : { ativa: true }).eq('id', ck.id);
     if (r.error) { alert('Não foi possível concluir.'); return; }
     await carregar(); perfil(ck.id);
@@ -1128,7 +1152,7 @@ window.KESP_EVOL = (function () {
     dlg.querySelectorAll('[data-c]').forEach(a => a.onclick = () => { cor = a.dataset.c; dlg.querySelectorAll('[data-c]').forEach(x => x.classList.toggle('on', x === a)); });
     dlg.querySelector('[data-x]').onclick = () => dlg.remove();
     const del = dlg.querySelector('[data-del]');
-    if (del) del.onclick = async () => { if (nCks || !confirm('Excluir o distrito ' + d.nome + '?')) return; const r = await sb.from('distritos').delete().eq('id', d.id); if (r.error) { alert('Não foi possível excluir.'); return; } dlg.remove(); await B.carregar(sb, eu); render(); };
+    if (del) del.onclick = async () => { if (nCks || !await window.KESP_CONFIRMA('Excluir o distrito ' + d.nome + '?')) return; const r = await sb.from('distritos').delete().eq('id', d.id); if (r.error) { alert('Não foi possível excluir.'); return; } dlg.remove(); await B.carregar(sb, eu); render(); };
     dlg.querySelector('[data-ok]').onclick = async () => {
       const nome = dlg.querySelector('[name=nome]').value.trim(), ordem = parseInt(dlg.querySelector('[name=ordem]').value, 10) || 0;
       if (!nome) { alert('Informe o nome.'); return; }
@@ -1225,12 +1249,27 @@ window.KESP_EVOL = (function () {
     if (st.substitui) t += ` Este recibo substitui o recibo ${st.substitui.txt}.`;
     return t;
   }
+  // próximo pagamento da CK depois deste recibo: meses em aberto até o próximo vencimento − crédito + parcela do acordo
+  function proximoPag(c, ck, dataPg) {
+    if (!ck || !c) return null;
+    const pagoAgora = {}; c.itens.forEach(i => (pagoAgora[i.k] = (pagoAgora[i.k] || 0) + i.pago));
+    const L = todasLinhas(ck).map(l => ({ ...l, resta: r2(l.devido - l.ja - (pagoAgora[l.k] || 0)) })).filter(l => l.resta > 0.009).sort((a, b) => a.venc.localeCompare(b.venc));
+    const ref = dataPg > new Date().toISOString().slice(0, 10) ? dataPg : new Date().toISOString().slice(0, 10);
+    const alvo = L.find(l => l.venc >= ref) || L[L.length - 1]; if (!alvo && !(c.ac && c.ac.saldo - c.acVal > 0.009)) return null;
+    const ate = alvo ? L.filter(l => l.venc <= alvo.venc) : [], taxa = r2(ate.reduce((x, l) => x + l.resta, 0)), cred = Math.min(Math.max(0, c.saldo), taxa);
+    const det = []; ate.forEach(l => det.push((l.tipo === 'societaria' ? 'Societária ' + l.ano : MESX[l.mes - 1] + (l.venc < ref ? ' (em aberto)' : '')) + ' ' + R(l.resta)));
+    if (cred > 0) det.push('crédito −' + R(cred));
+    let acP = 0; if (c.ac) { const sAp = r2(c.ac.saldo - c.acVal); if (sAp > 0.009) { acP = r2(Math.min(sAp, Number(c.ac.a.parcela) + Math.max(0, c.acEsp - c.acVal))); det.push('parcela ' + (c.ac.nPagas + (c.acVal >= c.acEsp - 0.009 && c.acVal > 0 ? 2 : 1)) + ' do acordo ' + R(acP)); } }
+    const venc = alvo ? alvo.venc : null, nomeRef = alvo ? (alvo.tipo === 'societaria' ? 'taxa societária de ' + alvo.ano : MESX[alvo.mes - 1] + ' de ' + alvo.ano) : 'próxima parcela do acordo';
+    return { tipo: '_proximo', pago: 0, ref: nomeRef, venc, valor: r2(taxa - cred + acP), det };
+  }
   function itensRecibo(c, ck) {
     return [...c.ex.map(e => ({ tipo: 'item', descricao: e.desc, quantidade: e.qtd, unitario: e.unit, devido: e.devido, pago: e.pago })),
       ...c.itens.map(i => ({ tipo: i.tipo, ano: i.ano, mes: i.mes, devido: i.devido, pago: i.pago })),
       ...(c.acVal > 0 ? [{ tipo: 'acordo', descricao: 'Parcela ' + (c.ac.nPagas + 1) + ' de ' + c.ac.nTot + ' do acordo de débitos anteriores', devido: c.acEsp, pago: c.acVal }] : []),
       ...(ck && (c.saldo > 0 || c.cu > 0) ? [{ tipo: '_saldo', pago: 0, saldo: c.saldo }] : []),
-      ...(c.acVal > 0 ? [{ tipo: '_acordo', pago: 0, saldo: r2(c.ac.saldo - c.acVal), n: c.ac.nPagas + 1, de: c.ac.nTot }] : [])];
+      ...(c.acVal > 0 ? [{ tipo: '_acordo', pago: 0, saldo: r2(c.ac.saldo - c.acVal), n: c.ac.nPagas + 1, de: c.ac.nTot }] : []),
+      ...(ck ? [proximoPag(c, ck, st.data)].filter(Boolean) : [])];
   }
 
   function telaEmitir() {
@@ -1245,11 +1284,10 @@ window.KESP_EVOL = (function () {
     const chip = (t, bg, fg, b) => `<span style="display:inline-block;font-size:12px;padding:3px 9px;border-radius:9px;background:${bg};color:${fg};${b ? 'font-weight:700;border:1px solid ' + fg + '55' : ''}">${t}</span>`;
     document.getElementById('cont').innerHTML = `<div class="rec3"><div>
       <div class="cd pas" style="--c:#F07830">${passo(1, '#F07830', 'Quem pagou')}
-        <div class="abas" style="grid-template-columns:repeat(3,1fr);margin:0 0 8px">${[['CK', 'Taxa (+ itens)'], ['EV', 'Evento'], ['RL', 'Livre']].map(([k, n]) => `<a data-tp="${k}" class="${tipo === k ? 'on' : ''}">${n}</a>`).join('')}</div>
-        ${tipo !== 'CK' ? `<div class="abas" style="grid-template-columns:repeat(2,1fr);margin:0 0 8px"><a data-pg="ck" class="${st.pagador !== 'avulso' ? 'on' : ''}">Comunidade Kolping</a><a data-pg="avulso" class="${st.pagador === 'avulso' ? 'on' : ''}">Pessoa ou empresa</a></div>` : ''}
-        ${st.substitui ? `<div style="margin-bottom:8px;padding:8px 10px;border-radius:10px;background:rgba(245,165,36,.14);color:#F8C46A;font-size:13px">Corrigindo o recibo <b>${esc(st.substitui.txt)}</b> (já cancelado). O novo recibo indicará a substituição.</div>` : ''}
-        ${tipo === 'CK' || st.pagador !== 'avulso' ? `<div style="position:relative"><input id="rBus" placeholder="🔍 Digite o nome da CK ou a cidade" value="${ck ? esc(ck.nome) : ''}" autocomplete="off"><div id="rSug" class="sug"></div></div>
-          ${ck ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${tipo === 'CK' ? chip(e.n + ' associados · ' + R(e.n * taxaSol) + '/mês', 'rgba(255,255,255,.06)', '#D8D3DE') : ''}${chip(B.NOME[e.situacao], B.COR[e.situacao] + '26', B.COR[e.situacao])}${chip('Crédito ' + R(Math.max(0, B.credito(ck.id))), 'rgba(34,201,132,.16)', '#5FE0A8', 1)}${abertosAR.length ? chip('A receber ' + R(abertosAR.reduce((x, a) => x + Number(a.valor), 0)), 'rgba(245,165,36,.16)', '#F8C46A') : ''}${c && c.ac ? chip('Acordo: saldo ' + R(c.ac.saldo), 'rgba(59,130,246,.18)', '#93B8FF', 1) : ''}</div>` : ''}`
+        <div class="seg-l"><div class="seg">${[['CK', 'Taxa (+ itens)'], ['EV', 'Evento'], ['RL', 'Livre']].map(([k, n]) => `<a data-tp="${k}" class="${tipo === k ? 'on' : ''}">${n}</a>`).join('')}</div>${tipo !== 'CK' ? `<div class="seg"><a data-pg="ck" class="${st.pagador !== 'avulso' ? 'on' : ''}">Comunidade Kolping</a><a data-pg="avulso" class="${st.pagador === 'avulso' ? 'on' : ''}">Pessoa ou empresa</a></div>` : ''}</div>
+        ${st.substitui ? `<div style="margin:8px 0;padding:6px 10px;border-radius:9px;background:rgba(245,165,36,.12);color:#F8C46A;font-size:12px">Corrigindo o recibo <b>${esc(st.substitui.txt)}</b> (já cancelado). O novo recibo indicará a substituição.</div>` : ''}
+        ${tipo === 'CK' || st.pagador !== 'avulso' ? `<div style="position:relative;margin-top:8px"><input id="rBus" placeholder="🔍 Digite o nome da CK ou a cidade" value="${ck ? esc(ck.nome) : ''}" autocomplete="off"${ck ? ' style="padding-right:10px"' : ''}><div id="rSug" class="sug"></div></div>
+          ${ck ? `<div class="selos">${tipo === 'CK' ? chip(e.n + ' associados · ' + R(e.n * taxaSol) + '/mês', 'rgba(255,255,255,.06)', '#D8D3DE') : ''}${chip(B.NOME[e.situacao], B.COR[e.situacao] + '26', B.COR[e.situacao])}${chip('Crédito ' + R(Math.max(0, B.credito(ck.id))), 'rgba(34,201,132,.16)', '#5FE0A8', 1)}${abertosAR.length ? chip('A receber ' + R(abertosAR.reduce((x, a) => x + Number(a.valor), 0)), 'rgba(245,165,36,.16)', '#F8C46A') : ''}${c && c.ac ? chip('Acordo: saldo ' + R(c.ac.saldo), 'rgba(59,130,246,.18)', '#93B8FF', 1) : ''}</div>` : ''}`
           : `<div class="dois"><div><label>Nome</label><input id="aN" value="${esc(st.avulso.nome || '')}"></div><div><label>CPF ou CNPJ</label><input id="aD" data-cnpj value="${esc(st.avulso.doc || '')}"></div></div>`}</div>
       <div class="cd pas" style="--c:#3B82F6">${passo(2, '#3B82F6', 'Pagamento')}
         <label>Valor do comprovante</label><input id="rVal" data-moeda placeholder="R$ 0,00" value="${st.valor ? R(st.valor) : ''}" style="font-size:22px;font-weight:700;padding:10px 12px">
@@ -1270,15 +1308,16 @@ window.KESP_EVOL = (function () {
       ${temPrev ? `<div class="cd" style="--c:${c.parcial || c.faltaEx.length ? '#F5A524' : '#22C984'};margin-bottom:10px"><div class="kv"><span>Recebido</span><span>${R(c.V)}</span>${c.cu ? `<span>Crédito usado</span><span>${R(c.cu)}</span>` : ''}${c.ex.length ? `<span>Itens</span><span>${R(c.ex.reduce((x, e) => x + e.pago, 0))}</span>` : ''}${c.itens.length ? `<span>Taxa (${c.itens.length} ${c.itens.length > 1 ? 'meses' : 'mês'})</span><span>${R(c.T)}</span>` : ''}${c.acVal ? `<span style="color:#93B8FF">Acordo</span><span style="color:#93B8FF">${R(c.acVal)}</span>` : ''}${c.cn + c.sb > 0 ? `<span style="color:#5FE0A8">Sobra</span><span style="color:#5FE0A8">${R(c.cn + c.sb)}${ck ? ' → crédito' : ''}</span>` : ''}</div>
           ${c.ac && c.V > 0 && (c.V - c.T + c.cu - c.ex.reduce((x, e) => x + e.pago, 0)) > c.acEsp + 0.009 ? `<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px"><input type="checkbox" id="rSa" style="width:auto"${st.sobraAcordo !== false ? ' checked' : ''}> Valor a mais abate o acordo (desmarque para virar crédito)</label>` : ''}
           ${ck && c.cn + c.sb > 0 ? `<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px"><input type="checkbox" id="rGu" style="width:auto"${st.guarda !== false ? ' checked' : ''}> Guardar a sobra como crédito</label>` : ''}
-          ${c.sb > 0 ? `<div style="margin-top:6px;font-size:12px">A sobra será: <select id="rDs" style="width:auto"><option value="devolver"${st.destinoSobra !== 'doacao' ? ' selected' : ''}>devolvida</option><option value="doacao"${st.destinoSobra === 'doacao' ? ' selected' : ''}>considerada doação</option></select></div>` : ''}</div>
+          ${c.sb > 0 ? `<div class="kv" style="margin-top:6px"><span>A sobra será</span><span class="pills"><a data-ds="devolver" class="${st.destinoSobra !== 'doacao' ? 'on' : ''}">Devolvida</a><a data-ds="doacao" class="${st.destinoSobra === 'doacao' ? 'on' : ''}">Doação</a></span></div>` : ''}</div>
         <div class="folha" id="rFolha"></div>
         <button class="btn" id="rEmit" style="width:100%;margin-top:12px;padding:13px;font-size:15px">Emitir recibo</button>`
       : `<div class="cd" style="--c:#6E6A7C"><b>Prévia do recibo</b><p class="sm" style="margin:6px 0 0">Escolha quem pagou e marque o que está sendo pago (ou digite o valor do comprovante). A folha do recibo aparece aqui, do jeito que vai sair.</p></div>`}
       </div></div>`;
     // folha inteira na prévia
     if (temPrev) { const quem = { nome: eu.nome, cargo: eu.cargo, assinatura_url: eu.assinatura_url }, it = itensRecibo(c, ck);
-      const fake = { serie: tipo, numero: '—', ano: new Date(st.data + 'T12:00').getFullYear(), valor: c.V, referencia: texto(c, ck, st.data), itens: it, data_pagamento: st.data, forma_pagamento: st.forma, modelo: st.modelo, observacao: st.obs || null, comunidade_id: ck ? ck.id : null, situacao: 'emitido' };
-      const f = document.getElementById('rFolha'); f.innerHTML = `<div class="folha-in">${documento(fake, quem)}</div>`;
+      const fake = { serie: tipo, numero: PROX[tipo + new Date(st.data + 'T12:00').getFullYear()] || '—', ano: new Date(st.data + 'T12:00').getFullYear(), valor: c.V, referencia: texto(c, ck, st.data), itens: it, data_pagamento: st.data, forma_pagamento: st.forma, modelo: st.modelo, observacao: st.obs || null, comunidade_id: ck ? ck.id : null, situacao: 'emitido' };
+      const f = document.getElementById('rFolha'); f.innerHTML = `<div class="folha-in" style="position:relative">${documento(fake, quem)}<div style="position:absolute;top:42%;left:0;right:0;text-align:center;transform:rotate(-14deg);font:800 64px Arial;color:rgba(200,94,28,.13);letter-spacing:6px;pointer-events:none">PRÉVIA</div></div>`;
+      proximoNumero(tipo, new Date(st.data + 'T12:00').getFullYear());
       requestAnimationFrame(() => { const inn = f.firstChild, w = f.clientWidth, esc2 = Math.min(1, w / 760); inn.style.transform = `scale(${esc2})`; f.style.height = inn.scrollHeight * esc2 + 'px'; }); }
     const g = id => document.getElementById(id), re = () => setTimeout(telaEmitir, 0);
     const recalcAuto = () => { if (st.valorAuto || !st.valor) { st.valorAuto = true; st.valor = valorSugerido(); } };
@@ -1299,30 +1338,43 @@ window.KESP_EVOL = (function () {
     if (g('rGu')) g('rGu').onchange = ev => { st.guarda = ev.target.checked; re(); };
     if (g('rSa')) g('rSa').onchange = ev => { st.sobraAcordo = ev.target.checked; re(); };
     if (g('rAc')) g('rAc').onchange = ev => { st.usarAcordo = ev.target.checked; recalcAuto(); re(); };
-    if (g('rDs')) g('rDs').onchange = ev => { st.destinoSobra = ev.target.value; re(); };
+    document.querySelectorAll('[data-ds]').forEach(a => a.onclick = () => { st.destinoSobra = a.dataset.ds; re(); });
     if (g('rAnt')) { g('rAnt').onclick = () => { if (st.ano > 0) { st.ano--; re(); } }; g('rPro').onclick = () => { if (st.ano < 2) { st.ano++; re(); } }; }
     document.querySelectorAll('.gmes [data-k]').forEach(b => b.onclick = () => { st.sel.has(b.dataset.k) ? st.sel.delete(b.dataset.k) : st.sel.add(b.dataset.k); if (st.valorAuto || !st.valor) { st.valorAuto = true; st.valor = valorSugerido(); } re(); });
     document.querySelectorAll('[data-rx]').forEach(a => a.onclick = () => { const x = st.extras.splice(+a.dataset.rx, 1)[0]; if (x && x.ar) st.quitar = (st.quitar || []).filter(i => i !== x.ar); recalcAuto(); re(); });
     g('xI').onchange = ev => { const v = ev.target.value, it = ITENS.find(i => i.id === v), ar = v.startsWith('ar:') ? AR.find(a => a.id === v.slice(3)) : null; g('xV').value = it ? R(it.valor) : ar ? R(ar.valor) : ''; };
-    g('xAdd').onclick = () => { const v = g('xI').value, q = Math.max(1, parseInt(g('xQ').value, 10) || 1), un = window.KESP_MOEDA.ler(g('xV'));
+    g('xAdd').onclick = async () => { const v = g('xI').value, q = Math.max(1, parseInt(g('xQ').value, 10) || 1), un = window.KESP_MOEDA.ler(g('xV'));
       let desc; if (v.startsWith('ar:')) { const ar = AR.find(a => a.id === v.slice(3)); desc = 'complemento de ' + ar.descricao; st.extras.push({ desc, qtd: 1, unit: un, ar: ar.id }); st.quitar = [...(st.quitar || []), ar.id]; }
-      else { const it = ITENS.find(i => i.id === v); desc = it ? it.nome : (prompt('Descrição do item:') || '').trim(); if (!desc || !un) { alert('Informe o item e o valor.'); return; } st.extras.push({ desc, qtd: q, unit: un }); }
+      else { const it = ITENS.find(i => i.id === v); desc = it ? it.nome : (await window.KESP_PERGUNTA('Descrição do item:') || '').trim(); if (!desc || !un) { alert('Informe o item e o valor.'); return; } st.extras.push({ desc, qtd: q, unit: un }); }
       recalcAuto(); re(); };
     window.KESP_MOEDA.ligar(document.getElementById('cont'));
     const em = g('rEmit'); if (em) em.onclick = () => emitir(c);
     window.KESP_RASCUNHO.salvar('recibo', { ...st, sel: [...st.sel], ck: st.ck ? st.ck.id : null });
   }
 
+  const PROX = {};
+  async function proximoNumero(serie, ano) { const k = serie + ano; if (PROX[k] !== undefined) return; PROX[k] = null;
+    try { const { data } = await sb.from('numeracao').select('ultimo').eq('serie', serie).eq('ano', ano).maybeSingle(); PROX[k] = String(((data && data.ultimo) || 0) + 1); } catch (_) { PROX[k] = '—'; }
+    if (location.hash.startsWith('#recibos') && aba === 'emitir') telaEmitir(); }
+  let emitindo = false;
   async function emitir(c) {
-    const tipo = st.tipo || 'CK', ck = st.ck;
+    if (emitindo) return; const tipo = st.tipo || 'CK', ck = st.ck;
     if (!st.data) { alert('Informe a data do pagamento.'); return; }
     if (tipo !== 'CK' && !ck && !st.avulso.nome) { alert('Informe o pagador.'); return; }
-    if (!confirm(`Emitir o recibo ${tipo} de ${R(c.V)}?`)) return;
-    const b = document.getElementById('rEmit'); b.disabled = true; b.textContent = 'Emitindo…';
+    if (!await window.KESP_CONFIRMA(`Emitir o recibo ${tipo} de ${R(c.V)}?`)) return;
+    emitindo = true; const b = document.getElementById('rEmit'); b.disabled = true; b.textContent = 'Emitindo…';
     const { data: id, error } = await sb.rpc('emitir_recibo3', { p_serie: tipo, p_ck: ck ? ck.id : null, p_pagador_nome: ck ? null : st.avulso.nome, p_pagador_doc: ck ? null : (st.avulso.doc || null), p_data: st.data, p_forma: st.forma, p_valor: c.V, p_itens: itensRecibo(c, ck), p_credito_usado: c.cu, p_credito_novo: c.cn, p_sobra: c.sb, p_referencia: texto(c, ck, st.data), p_modelo: st.modelo, p_obs: st.obs || null, p_a_receber: c.faltaEx.map(e => ({ descricao: e.desc, valor: e.falta })), p_quitar: st.quitar || [], p_acordo: c.acVal > 0 ? c.ac.a.id : null, p_acordo_valor: c.acVal });
-    if (error) { b.disabled = false; b.textContent = 'Emitir recibo'; alert('Não foi possível emitir: ' + error.message); return; }
-    if (st.substitui) { try { await sb.from('recibos').update({ substitui: st.substitui.id }).eq('id', id); } catch (_) {} }
-    await B.carregar(sb, eu); await extras(); novoEstado(); window.KESP_RASCUNHO.limpar('recibo'); abrirRecibo(id);
+    if (error) { emitindo = false; b.disabled = false; b.textContent = 'Emitir recibo'; alert('Não foi possível emitir: ' + error.message); return; }
+    b.textContent = 'Emitido ✓'; window.KESP_RASCUNHO.limpar('recibo'); const sub = st.substitui; novoEstado(); Object.keys(PROX).forEach(k => delete PROX[k]);
+    try {
+      if (sub) await sb.from('recibos').update({ substitui: sub.id }).eq('id', id);
+      await B.carregar(sb, eu); await extras();
+      aba = 'historico'; render(); await abrirRecibo(id);
+    } catch (e) {
+      try { await sb.from('erros_sistema').insert({ tela: 'recibos', mensagem: 'Falha depois de emitir: ' + (e && e.message || e), detalhe: String(e && e.stack || '').slice(0, 800) }); } catch (_) {}
+      aba = 'historico'; try { render(); } catch (_) {}
+      alert('O recibo foi emitido e gravado.\nA tela não conseguiu abri-lo sozinha: abra pelo Histórico para imprimir e enviar.');
+    } finally { emitindo = false; }
   }
   let ITENS = [], AR = [];
   async function extras() { const [i, a] = await Promise.all([sb.from('itens_cobranca').select('*').order('nome'), sb.from('a_receber').select('*').eq('situacao', 'aberto')]); ITENS = i.data || []; AR = a.data || []; }
@@ -1360,7 +1412,7 @@ window.KESP_EVOL = (function () {
       const ck = B.dados().cks.find(c => c.id === r.comunidade_id) || {};
       dlg.querySelector('[data-imp]').click();
       const md = await window.KESP_MOD(sb);
-      window.KESP_EMAIL(ck.email, `Recibo ${r.numero}/${r.ano} – Kolping Estadual de São Paulo`, window.KESP_PREENCHER(md.email_recibo || 'Prezada {ck},\n\nSegue em anexo o recibo nº {numero}, no valor de {valor}, referente ao pagamento de {data}.\n\nAtenciosamente,', { ck: ck.razao_social || ck.nome || r.pagador_nome, numero: r.numero + '/' + r.ano, valor: R(r.valor), data: dataBR(r.data_pagamento) }));
+      window.KESP_EMAIL(ck.email, `Recibo ${r.numero}/${r.ano} – Kolping Estadual de São Paulo`, window.KESP_PREENCHER(md.email_recibo || 'Prezada {ck},\n\nSegue em anexo o recibo nº {numero}, no valor de {valor}, referente ao pagamento de {data}.\n\nAtenciosamente,', { ck: ck.razao_social || ck.nome || r.pagador_nome, numero: r.numero + '/' + r.ano, valor: R(r.valor), data: dataBR(r.data_pagamento) }).replace(/\n*Atenciosamente,\s*$/, ((p0 => p0 ? `\n\nPróximo pagamento: ${p0.ref}, ${R(p0.valor)}${p0.venc ? ' (vence em ' + dataBR(p0.venc) + ')' : ''}.` : '')((r.itens || []).find(i => i.tipo === '_proximo'))) + '\n\nAtenciosamente,'));
       await sb.from('recibos').update({ enviado_em: new Date().toISOString() }).eq('id', r.id);
       window.KESP_TOAST('Salve o PDF na janela de impressão e anexe ao e-mail que abriu.');
     };
@@ -1385,12 +1437,12 @@ window.KESP_EVOL = (function () {
         if (!Object.keys(campos).length) { alert('Nada foi alterado.'); return; }
         const x = await sb.rpc('editar_recibo', { p_id: r.id, p_campos: campos, p_motivo: mot }); if (x.error) { alert('Não foi possível editar: ' + x.error.message); return; }
         d.remove(); dlg.remove(); window.KESP_TOAST('Recibo editado.'); await abrirRecibo(r.id);
-        if (r.enviado_em && r.comunidade_id && confirm('Este recibo já tinha sido enviado. Abrir o e-mail para enviar a versão corrigida?')) { const b2 = document.querySelector('.conf [data-mail]'); if (b2) b2.click(); } };
+        if (r.enviado_em && r.comunidade_id && await window.KESP_CONFIRMA('Este recibo já tinha sido enviado. Abrir o e-mail para enviar a versão corrigida?')) { const b2 = document.querySelector('.conf [data-mail]'); if (b2) b2.click(); } };
     };
     const co = dlg.querySelector('[data-cor]');
     if (co) co.onclick = async () => {
       if (!(eu.admin || window.KESP_PODE('recibos.cancelar'))) { alert('Corrigir exige permissão de cancelar recibos.'); return; }
-      if (!confirm(`Corrigir o recibo ${r.serie} ${r.numero}/${r.ano}?\n\nEle será cancelado (desfazendo meses, crédito e acordo) e a emissão abre preenchida para você ajustar e emitir o novo recibo, que indicará a substituição.`)) return;
+      if (!await window.KESP_CONFIRMA(`Corrigir o recibo ${r.serie} ${r.numero}/${r.ano}?\n\nEle será cancelado (desfazendo meses, crédito e acordo) e a emissão abre preenchida para você ajustar e emitir o novo recibo, que indicará a substituição.`)) return;
       const x = await sb.from('recibos').update({ situacao: 'cancelado', cancelado_motivo: 'Substituído por recibo corrigido' }).eq('id', r.id); if (x.error) { alert('Não foi possível cancelar: ' + x.error.message); return; }
       await B.carregar(sb, eu); await extras(); dlg.remove();
       const soD = v => String(v || '').replace(/\D/g, ''); const ck = r.comunidade_id ? B.dados().cks.find(c => c.id === r.comunidade_id) : B.dados().cks.find(c => c.cnpj && soD(c.cnpj) === soD(r.pagador_doc)) || null; novoEstado();
@@ -1401,7 +1453,7 @@ window.KESP_EVOL = (function () {
       st.usarAcordo = (r.itens || []).some(i => i.tipo === 'acordo'); st.substitui = { id: r.id, txt: r.serie + ' ' + r.numero + '/' + r.ano };
       aba = 'emitir'; render(); window.KESP_TOAST('Recibo original cancelado. Ajuste e emita o novo.'); };
     const cn = dlg.querySelector('[data-can]');
-    if (cn) cn.onclick = async () => { const m = prompt('Motivo do cancelamento:'); if (m === null) return; if (!m.trim()) { alert('Informe o motivo.'); return; } const x = await sb.from('recibos').update({ situacao: 'cancelado', cancelado_motivo: m.trim() }).eq('id', r.id); if (x.error) { alert('Não foi possível cancelar: ' + x.error.message); return; } await B.carregar(sb, eu); dlg.remove(); abrirRecibo(r.id); };
+    if (cn) cn.onclick = async () => { const m = await window.KESP_PERGUNTA('Motivo do cancelamento:'); if (m === null) return; if (!m.trim()) { alert('Informe o motivo.'); return; } const x = await sb.from('recibos').update({ situacao: 'cancelado', cancelado_motivo: m.trim() }).eq('id', r.id); if (x.error) { alert('Não foi possível cancelar: ' + x.error.message); return; } await B.carregar(sb, eu); dlg.remove(); abrirRecibo(r.id); };
   }
 
   function nomeArquivo(r) {
@@ -1419,7 +1471,7 @@ window.KESP_EVOL = (function () {
     const base = location.href.split('#')[0].replace(/[^/]*$/, '');
     const logo = base + 'logo-kolping.png';
     const timbrado = r.modelo === 'timbrado';
-    const saldoIt = (r.itens || []).find(i => i.tipo === '_saldo'), acIt = (r.itens || []).find(i => i.tipo === '_acordo');
+    const saldoIt = (r.itens || []).find(i => i.tipo === '_saldo'), acIt = (r.itens || []).find(i => i.tipo === '_acordo'), prIt = (r.itens || []).find(i => i.tipo === '_proximo');
     const itens = (r.itens || []).filter(i => i.tipo[0] !== '_').map(i => `<tr><td style="padding:7px 0;border-bottom:1px solid #EFE9E2">${i.tipo === 'solidariedade' ? 'Solidariedade ' + (i.mes ? MESX[i.mes - 1] + '/' + i.ano : '') : i.tipo === 'societaria' ? 'Societária ' + (i.ano || '') : (i.quantidade > 1 ? i.quantidade + ' × ' : '') + esc(i.descricao || i.tipo)}${i.devido && i.pago < i.devido - 0.001 ? ' · parcial' : ''}</td><td style="text-align:right;border-bottom:1px solid #EFE9E2">${i.devido ? R(i.devido) : ''}</td><td style="text-align:right;border-bottom:1px solid #EFE9E2">${R(i.pago)}</td></tr>`).join('');
     const corpo = r.referencia && /recebeu/.test(r.referencia) ? r.referencia : `A <b>${KOLPING.nome}</b>, CNPJ ${KOLPING.cnpj}, recebeu de <b>${esc(r.pagador_nome)}</b>${r.pagador_doc ? ', CNPJ ' + esc(r.pagador_doc) : ''}, o valor de <b>${R(r.valor)}</b> (${extenso(Number(r.valor))}), referente a ${esc(r.referencia || 'contribuições')}.`;
     const cancel = r.situacao === 'cancelado' ? `<div style="position:absolute;top:40%;left:0;right:0;text-align:center;transform:rotate(-18deg);font-size:64px;font-weight:800;color:rgba(217,54,62,.22);letter-spacing:6px">CANCELADO</div>` : '';
@@ -1435,6 +1487,7 @@ window.KESP_EVOL = (function () {
         <div style="background:#FFFBF7;border-left:3px solid #F07830;border-radius:8px;padding:12px 16px;line-height:1.6">${corpo}</div>
         ${itens ? `<table style="width:100%;border-collapse:collapse;margin-top:14px;font-size:12px"><tr style="color:#8A8078;font-size:10px;letter-spacing:.08em"><td style="padding:6px 0">REFERÊNCIA</td><td style="text-align:right">DEVIDO</td><td style="text-align:right">PAGO</td></tr>${itens}</table>` : ''}
         ${acIt ? `<div style="margin-top:14px;background:#FDF1D6;border-left:4px solid #F5A524;border-radius:8px;padding:9px 14px;color:#7A5300;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact">Saldo devedor do acordo após este pagamento: ${R(acIt.saldo)} (parcela ${acIt.n} de ${acIt.de})</div>` : ''}
+        ${prIt ? `<div style="margin-top:14px;background:#E3EDFD;border-left:4px solid #3B82F6;border-radius:8px;padding:9px 14px;color:#1E3A8A;-webkit-print-color-adjust:exact;print-color-adjust:exact"><b>Próximo pagamento: ${esc(prIt.ref)} · ${R(prIt.valor)}</b>${prIt.venc ? ` <span style="font-weight:400">(vence em ${dataBR(prIt.venc)})</span>` : ''}${prIt.det && prIt.det.length > 1 ? `<div style="font-size:11px;margin-top:2px;color:#3B5998">${prIt.det.map(esc).join(' · ')}</div>` : ''}</div>` : ''}
         ${saldoIt ? `<div style="margin-top:14px;background:#DDF5E9;border-left:4px solid #22C984;border-radius:8px;padding:9px 14px;color:#0E5C37;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact">Saldo de crédito da Comunidade após este pagamento: ${R(saldoIt.saldo)}</div>` : ''}
         <div style="display:flex;gap:40px;background:#F7F4F0;border-radius:8px;padding:10px 16px;margin-top:14px"><div><div style="font-size:10px;letter-spacing:.1em;color:#8A8078">FORMA DE PAGAMENTO</div><b>${esc(FORMA(r.forma_pagamento))}</b></div><div><div style="font-size:10px;letter-spacing:.1em;color:#8A8078">DATA DO PAGAMENTO</div><b>${dataBR(r.data_pagamento)}</b></div></div>
         ${r.observacao ? `<p style="font-size:12px;color:#5A4E46;margin:10px 0 0">Obs.: ${esc(r.observacao)}</p>` : ''}
@@ -1479,7 +1532,7 @@ window.KESP_EVOL = (function () {
     b.onclick = async () => {
       const sel = [...c.querySelectorAll('[data-i]:checked')].map(x => +x.dataset.i); if (!sel.length) { alert('Marque ao menos uma CK.'); return; }
       const data = document.getElementById('lData').value, forma = document.getElementById('lForma').value;
-      if (!confirm(`Emitir ${sel.length} recibo(s) com data ${dataBR(data)}?`)) return;
+      if (!await window.KESP_CONFIRMA(`Emitir ${sel.length} recibo(s) com data ${dataBR(data)}?`)) return;
       b.disabled = true; let ok = 0, falhas = [];
       for (const i of sel) {
         const x = linhas[i], v = window.KESP_MOEDA.ler(c.querySelector(`[data-v="${i}"]`));
@@ -1508,7 +1561,7 @@ window.KESP_EVOL = (function () {
   window.KESP_RECIBOS = {
     async abrir(cliente, perfil) {
       sb = cliente; eu = perfil; B = window.KESP_CKS.base; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>';
-      await B.carregar(sb, eu); await extras(); const md0 = await window.KESP_MOD(sb); MODELO_PADRAO = md0.recibo_modelo === 'timbrado' ? 'timbrado' : 'padrao'; if (!st) { novoEstado(); const rs = window.KESP_RASCUNHO.ler('recibo'); if (rs && (rs.valor || (rs.extras || []).length) && confirm('Há um recibo que você começou e não emitiu. Continuar de onde parou?')) { st = { ...st, ...rs, sel: new Set(rs.sel || []), ck: B.dados().cks.find(x => x.id === rs.ck) || null }; } else window.KESP_RASCUNHO.limpar('recibo'); }
+      await B.carregar(sb, eu); await extras(); const md0 = await window.KESP_MOD(sb); MODELO_PADRAO = md0.recibo_modelo === 'timbrado' ? 'timbrado' : 'padrao'; if (!st) { novoEstado(); const rs = window.KESP_RASCUNHO.ler('recibo'); if (rs && (rs.valor || (rs.extras || []).length) && await window.KESP_CONFIRMA('Há um recibo que você começou e não emitiu. Continuar de onde parou?')) { st = { ...st, ...rs, sel: new Set(rs.sel || []), ck: B.dados().cks.find(x => x.id === rs.ck) || null }; } else window.KESP_RASCUNHO.limpar('recibo'); }
       let pre = null; try { pre = sessionStorage.getItem('kesp.recibo.ck'); sessionStorage.removeItem('kesp.recibo.ck'); } catch (_) {}
       if (pre) { novoEstado(); st.ck = B.dados().cks.find(x => x.id === pre) || null; aba = 'emitir'; }
       render();
@@ -1667,7 +1720,7 @@ window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
       if (r.error) { alert('Não foi possível gerar os links.'); return; }
       await carregar(); render(); window.KESP_TOAST(faltam.length + ' links gerados.');
     };
-    document.querySelectorAll('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link(b.dataset.copiar)); window.KESP_TOAST('Link copiado.'); } catch (_) { prompt('Copie o link:', link(b.dataset.copiar)); } });
+    document.querySelectorAll('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link(b.dataset.copiar)); window.KESP_TOAST('Link copiado.'); } catch (_) { await window.KESP_PERGUNTA('Copie o link:', link(b.dataset.copiar)); } });
     document.querySelectorAll('[data-mail]').forEach(b => b.onclick = async () => {
       const ck = D.cks.find(c => c.id === b.dataset.mail), cv = conv.find(c => c.comunidade_id === ck.id);
       window.KESP_EMAIL(ck.email, `Recadastramento ${ano} – ${ck.nome}`, `Prezada ${ck.razao_social || ck.nome},\n\nEstá aberto o recadastramento ${ano} das Comunidades Kolping. Acesse o link abaixo, confirme o CNPJ da CK e preencha as informações:\n\n${link(cv.token)}\n\nO formulário salva a cada etapa, então é possível continuar depois. O link vale por 90 dias.\n\nAtenciosamente,`);
@@ -1691,7 +1744,7 @@ window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn sec" data-x>Fechar</button><button class="btn sec" data-dev style="color:#FF9A9D">Devolver para correção</button><button class="btn" data-apr style="flex:1">Aprovar</button></div></div>`;
     document.body.appendChild(dlg);
     dlg.querySelector('[data-x]').onclick = () => dlg.remove();
-    dlg.querySelector('[data-dev]').onclick = async () => { const m = prompt('O que a CK precisa corrigir?'); if (!m || !m.trim()) return; await sb.from('recadastramentos').update({ situacao: 'devolvido', motivo_devolucao: m.trim() }).eq('id', r.id);
+    dlg.querySelector('[data-dev]').onclick = async () => { const m = await window.KESP_PERGUNTA('O que a CK precisa corrigir?'); if (!m || !m.trim()) return; await sb.from('recadastramentos').update({ situacao: 'devolvido', motivo_devolucao: m.trim() }).eq('id', r.id);
       const cv = conv.find(c => c.comunidade_id === ck.id); if (cv) window.KESP_EMAIL(ck.email || (d.contato && d.contato.email), `Recadastramento ${ano} – correção necessária`, `Prezada ${ck.razao_social || ck.nome},\n\nConferimos o recadastramento ${ano} e precisamos de um ajuste:\n\n${m.trim()}\n\nPor favor, acesse o mesmo link, corrija e envie novamente:\n${link(cv.token)}\n\nAtenciosamente,`);
       dlg.remove(); await carregar(); render(); };
     dlg.querySelector('[data-apr]').onclick = async () => {
@@ -1700,7 +1753,7 @@ window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
       const c = d.contato || {}; const up = {}; ['logradouro', 'numero', 'bairro', 'cidade', 'uf', 'cep', 'email', 'telefone'].forEach(k => { if (c[k]) up[k] = c[k]; });
       if (Object.keys(up).length) await sb.from('comunidades').update(up).eq('id', ck.id);
       await sb.from('avisos').update({ resolvido_em: new Date().toISOString() }).is('destinatario', null).is('resolvido_em', null).eq('texto', ck.nome);
-      if (confirm('Aprovado! Abrir o e-mail de confirmação para a CK?')) window.KESP_EMAIL(ck.email || c.email, `Recadastramento ${ano} aprovado – ${ck.nome}`, `Prezada ${ck.razao_social || ck.nome},\n\nO recadastramento ${ano} foi conferido e aprovado. Obrigado!\n\nA partir de agora, a taxa de solidariedade é de ${R(n * t.solidariedade)} por mês (${n} associados) e a taxa societária de ${ano} é de ${R(n * t.societaria)}.\n\nAtenciosamente,`);
+      if (await window.KESP_CONFIRMA('Aprovado! Abrir o e-mail de confirmação para a CK?')) window.KESP_EMAIL(ck.email || c.email, `Recadastramento ${ano} aprovado – ${ck.nome}`, `Prezada ${ck.razao_social || ck.nome},\n\nO recadastramento ${ano} foi conferido e aprovado. Obrigado!\n\nA partir de agora, a taxa de solidariedade é de ${R(n * t.solidariedade)} por mês (${n} associados) e a taxa societária de ${ano} é de ${R(n * t.societaria)}.\n\nAtenciosamente,`);
       dlg.remove(); await carregar(); render();
     };
   }
@@ -1745,7 +1798,7 @@ window.KESP_VISITAS = (function () {
       const g = id => dlg.querySelector('#' + id);
       const guardar = () => { st.data = g('vD').value; st.tipo = g('vT').value; st.objetivo = g('vO').value; st.anotacoes = g('vA').value; st.relatorio = g('vR').value; };
       dlg.querySelectorAll('[data-p]').forEach(a => a.onclick = () => { guardar(); st.participantes.has(a.dataset.p) ? st.participantes.delete(a.dataset.p) : st.participantes.add(a.dataset.p); desenhar(); rest(); });
-      g('vOutro').onclick = () => { const n = prompt('Nome e função da pessoa:'); if (n && n.trim()) { guardar(); st.participantes.add(n.trim()); desenhar(); rest(); } };
+      g('vOutro').onclick = async () => { const n = await window.KESP_PERGUNTA('Nome e função da pessoa:'); if (n && n.trim()) { guardar(); st.participantes.add(n.trim()); desenhar(); rest(); } };
       dlg.querySelectorAll('[data-rf]').forEach(a => a.onclick = () => { guardar(); st.fotos.splice(+a.dataset.rf, 1); desenhar(); rest(); });
       dlg.querySelectorAll('[data-re]').forEach(a => a.onclick = () => { guardar(); st.enc.splice(+a.dataset.re, 1); desenhar(); rest(); });
       g('eAdd').onclick = () => { if (!g('eA').value.trim()) return; guardar(); st.enc.push({ acao: g('eA').value.trim(), responsavel: g('eR').value.trim(), prazo: g('eP').value || null }); desenhar(); rest(); };
@@ -1820,7 +1873,7 @@ window.KESP_VISITAS = (function () {
       if (/^\d*\s*-?\s*se sim/i.test(t.replace(/^\d+\s*-\s*/, '')) || /se sim/i.test(l)) { const ant = [...perg].reverse().find(x => x.tipo === 'simnao'); if (ant) p.se = ant.id; }
       perg.push(p);
     });
-    const titulo = prompt('Título do questionário:', 'Questionário Kolping Internacional ' + (anoRef + 1)); if (!titulo) return;
+    const titulo = await window.KESP_PERGUNTA('Título do questionário:', 'Questionário Kolping Internacional ' + (anoRef + 1)); if (!titulo) return;
     const { data, error } = await sb.from('questionarios').insert({ titulo, ano_ref: anoRef, perguntas: perg }).select().single();
     if (error) { alert('Não foi possível criar: ' + error.message); return; }
     window.KESP_TOAST(perg.length + ' perguntas criadas. Confira os tipos antes de publicar.'); abrir(data);
@@ -1843,12 +1896,12 @@ window.KESP_VISITAS = (function () {
     g('qVol').onclick = lista;
     const lerPerg = () => { pg.querySelectorAll('[data-tp]').forEach(s => (q.perguntas[+s.dataset.tp].tipo = s.value)); pg.querySelectorAll('[data-pr]').forEach(s => (q.perguntas[+s.dataset.pr].pre = s.value || undefined)); };
     if (g('qSalvar')) g('qSalvar').onclick = async () => { lerPerg(); const x = await sb.from('questionarios').update({ perguntas: q.perguntas }).eq('id', q.id); window.KESP_TOAST(x.error ? 'Não foi possível salvar.' : 'Perguntas salvas.'); };
-    if (g('qPub')) g('qPub').onclick = async () => { lerPerg(); const prazo = prompt('Prazo para as CKs responderem (dd/mm/aaaa), ou deixe em branco:', ''); const pz = prazo && /^\d{2}\/\d{2}\/\d{4}$/.test(prazo) ? prazo.split('/').reverse().join('-') : null;
+    if (g('qPub')) g('qPub').onclick = async () => { lerPerg(); const prazo = await window.KESP_PERGUNTA('Prazo para as CKs responderem (dd/mm/aaaa), ou deixe em branco:', ''); const pz = prazo && /^\d{2}\/\d{2}\/\d{4}$/.test(prazo) ? prazo.split('/').reverse().join('-') : null;
       const x = await sb.from('questionarios').update({ perguntas: q.perguntas, situacao: 'publicado', prazo: pz }).eq('id', q.id); if (x.error) { alert('Não foi possível publicar.'); return; }
       await sb.from('quest_convites').insert(D.cks.filter(ck => ck.ativa).map(ck => ({ questionario_id: q.id, comunidade_id: ck.id })));
       q.situacao = 'publicado'; q.prazo = pz; abrir(q); };
-    if (g('qEnc')) g('qEnc').onclick = async () => { if (!confirm('Encerrar o questionário? As CKs não poderão mais responder.')) return; await sb.from('questionarios').update({ situacao: 'encerrado' }).eq('id', q.id); q.situacao = 'encerrado'; abrir(q); };
-    pg.querySelectorAll('[data-cp]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link(b.dataset.cp)); window.KESP_TOAST('Link copiado.'); } catch (_) { prompt('Copie o link:', link(b.dataset.cp)); } });
+    if (g('qEnc')) g('qEnc').onclick = async () => { if (!await window.KESP_CONFIRMA('Encerrar o questionário? As CKs não poderão mais responder.')) return; await sb.from('questionarios').update({ situacao: 'encerrado' }).eq('id', q.id); q.situacao = 'encerrado'; abrir(q); };
+    pg.querySelectorAll('[data-cp]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(link(b.dataset.cp)); window.KESP_TOAST('Link copiado.'); } catch (_) { await window.KESP_PERGUNTA('Copie o link:', link(b.dataset.cp)); } });
     pg.querySelectorAll('[data-ml]').forEach(b => b.onclick = async () => { const ck = D.cks.find(x => x.id === b.dataset.ml), cv = conv.find(x => x.comunidade_id === ck.id);
       window.KESP_EMAIL(ck.email, `${q.titulo} – ${ck.nome}`, `Prezada ${ck.razao_social || ck.nome},\n\nEstá aberto o ${q.titulo}, com informações de ${q.ano_ref}. Acesse o link abaixo, confirme o CNPJ da CK e responda. Várias respostas já vêm preenchidas com os dados do recadastramento; é só conferir.\n\n${link(cv.token)}\n${q.prazo ? '\nPrazo: ' + new Date(q.prazo + 'T12:00').toLocaleDateString('pt-BR') + '\n' : ''}\nAtenciosamente,`);
       await sb.from('quest_convites').update({ enviado_em: new Date().toISOString() }).eq('token', cv.token); abrir(q); });
@@ -1925,7 +1978,7 @@ window.KESP_VISITAS = (function () {
     c.querySelector('#cSalvar').onclick = async () => {
       const regs = it.map(v => ({ v, x: q(v.id).value.trim() })).filter(r => r.x !== '').map(r => ({ unidade_id: un, variacao_id: r.v.id, tipo: 'contagem', quantidade: parseFloat(r.x.replace(',', '.')) || 0, mes, criado_por: eu.id }));
       const vazios = it.length - regs.length;
-      if (!confirm(`Salvar a contagem de ${regs.length} itens?` + (vazios ? `\n${vazios} item(ns) em branco serão considerados como 0.` : ''))) return;
+      if (!await window.KESP_CONFIRMA(`Salvar a contagem de ${regs.length} itens?` + (vazios ? `\n${vazios} item(ns) em branco serão considerados como 0.` : ''))) return;
       it.forEach(v => { if (!regs.some(r => r.variacao_id === v.id)) regs.push({ unidade_id: un, variacao_id: v.id, tipo: 'contagem', quantidade: 0, mes, criado_por: eu.id }); });
       const r = await sb.from('estoque_mov').insert(regs); if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; }
       window.KESP_RASCUNHO.limpar(rk); window.KESP_TOAST('Contagem salva.'); pedidos(sb, eu);
@@ -1944,7 +1997,7 @@ window.KESP_VISITAS = (function () {
     const salvar = async envia => {
       const itens = it.map(v => ({ variacao_id: v.id, quantidade: parseFloat((c.querySelector(`[data-q="${v.id}"]`).value || '').replace(',', '.')) || 0, sugerida: sug(v) })).filter(i => i.quantidade > 0);
       if (envia && !itens.length) { alert('O pedido está vazio.'); return; }
-      if (envia && !confirm(`Enviar o pedido com ${itens.length} itens para o setor de compras?`)) return;
+      if (envia && !await window.KESP_CONFIRMA(`Enviar o pedido com ${itens.length} itens para o setor de compras?`)) return;
       const reg = { area: 'limpeza', unidade_id: un, mes: entrega, itens, situacao: envia ? 'enviado' : 'rascunho', enviado_em: envia ? new Date().toISOString() : null, criado_por: eu.id };
       const r = await sb.from('pedidos_material').upsert(reg, { onConflict: 'area,unidade_id,mes' });
       if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; }
@@ -1982,19 +2035,19 @@ window.KESP_VISITAS = (function () {
     dlg.querySelector('[data-x]').onclick = () => dlg.remove();
     const orc = dlg.querySelector('[data-orc]'); if (orc) orc.onclick = async () => {
       const num = p.numero_orc || `ORC-LIM-${p.mes.slice(0, 7)}-${String(U.findIndex(x => x.id === u.id) + 1).padStart(2, '0')}`;
-      const prazo = prompt('Prazo para os fornecedores responderem (dd/mm/aaaa):', new Date(Date.now() + 5 * 864e5).toLocaleDateString('pt-BR')); if (prazo === null) return;
+      const prazo = await window.KESP_PERGUNTA('Prazo para os fornecedores responderem (dd/mm/aaaa):', new Date(Date.now() + 5 * 864e5).toLocaleDateString('pt-BR')); if (prazo === null) return;
       await sb.from('pedidos_material').update({ situacao: 'orcamento', numero_orc: num }).eq('id', p.id);
       folha(p, u, its, num, prazo); dlg.remove(); cPedidos();
     };
     const apr = dlg.querySelector('[data-apr]'); if (apr) apr.onclick = async () => { await sb.from('pedidos_material').update({ situacao: 'aprovado' }).eq('id', p.id); dlg.remove(); cPedidos(); };
     const rec = dlg.querySelector('[data-rec]'); if (rec) rec.onclick = async () => {
-      if (!confirm('Confirmar que a entrega chegou completa? As quantidades entram no estoque da unidade.')) return;
+      if (!await window.KESP_CONFIRMA('Confirmar que a entrega chegou completa? As quantidades entram no estoque da unidade.')) return;
       const r = await sb.from('estoque_mov').insert(its.map(i => ({ unidade_id: p.unidade_id, variacao_id: i.variacao_id, tipo: 'entrada', quantidade: i.quantidade, mes: p.mes, referencia: p.numero_orc || 'Pedido ' + mesTxt(p.mes), criado_por: eu.id })));
       if (r.error) { alert('Não foi possível registrar.'); return; }
       await sb.from('pedidos_material').update({ situacao: 'recebido', recebido_em: new Date().toISOString() }).eq('id', p.id); await base(); dlg.remove(); cPedidos();
     };
   }
-  function folha(p, u, its, num, prazo) {
+  async function folha(p, u, its, num, prazo) {
     const base = location.href.split('#')[0].replace(/[^/]*$/, ''), end = [u.logradouro, u.numero, u.bairro].filter(Boolean).join(', ');
     window.KESP_IMPRIMIR(window.KESP_ARQ.montar(['Solicitação de orçamento ' + num, u.nome]), `<div style="max-width:720px;margin:0 auto;font-size:11px;color:#1E1B19">
       <div style="height:38px;background:#F26B1D;display:flex;align-items:center;padding:0 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact"><div style="background:#fff;padding:3px 6px;border-radius:2px;display:flex"><img src="${base}logo-kolping.png" style="height:24px"></div></div>
@@ -2007,7 +2060,7 @@ window.KESP_VISITAS = (function () {
       <div style="border:1px solid #F07830;border-radius:6px;padding:8px 10px;line-height:1.5"><b>Observação obrigatória na nota fiscal:</b><br>“TERMO DE COLABORAÇÃO Nº 13/2017 – FONTE DE RECURSO MUNICIPAL – PREFEITURA DO MUNICÍPIO DE CARAPICUÍBA”<br><span style="color:#8A8078">Enviar a nota fiscal com o arquivo XML.</span></div>
       <p style="color:#8A8078;font-size:10px;margin-top:10px">Contato: ${esc(eu.nome)} · Compras · (11) 4183-6018 · coordenacao@kolping-sp.org.br</p></div>
       <div style="border-top:1px solid #CFC8C0;margin:0 24px;padding:6px 0 10px;text-align:right;font-size:8.5px;color:#6E6E6E;line-height:1.5">R. Rio Branco, 36 – Cohab II – Carapicuíba-SP · CEP 06326-030<br>Fone: (11) 4183-6018 / 4183-2194 · Facebook: Kolping Estadual SP<br>E-mail: oke-sp@kolping.org.br · www.kolping-sp.org.br</div></div>`);
-    if (confirm('Abrir também o e-mail para o fornecedor? (salve o PDF e anexe)')) window.KESP_EMAIL('', `Solicitação de orçamento ${num} – Kolping Estadual de São Paulo`, `Prezados,\n\nSegue em anexo a solicitação de orçamento ${num}, de produtos de limpeza para entrega na ${u.nome}.\n\nPedimos que o orçamento respeite as especificações de cada item e seja enviado até ${prazo}, com marca, validade, prazo de entrega e forma de pagamento.\n\nAtenciosamente,`);
+    if (await window.KESP_CONFIRMA('Abrir também o e-mail para o fornecedor? (salve o PDF e anexe)')) window.KESP_EMAIL('', `Solicitação de orçamento ${num} – Kolping Estadual de São Paulo`, `Prezados,\n\nSegue em anexo a solicitação de orçamento ${num}, de produtos de limpeza para entrega na ${u.nome}.\n\nPedimos que o orçamento respeite as especificações de cada item e seja enviado até ${prazo}, com marca, validade, prazo de entrega e forma de pagamento.\n\nAtenciosamente,`);
   }
   function cCatalogo() {
     const c = document.getElementById('cCont');
@@ -2123,7 +2176,7 @@ window.KESP_VISITAS = (function () {
     d.querySelector('[data-x]').onclick = () => d.remove();
     d.querySelectorAll('[data-edc]').forEach(b => b.onclick = () => { d.remove(); location.hash = '#ck/' + b.dataset.edc; });
     d.querySelectorAll('[data-rl]').forEach(b => b.onclick = async () => { const c = D.cks.find(x => x.id === b.dataset.rl); b.disabled = true; b.textContent = 'Localizando…'; const ok = await localizarUm(c, 'comunidades'); d.remove(); desenhar(); window.KESP_TOAST(ok ? (c.geo_aprox ? 'Localização aproximada: confira o endereço.' : 'Localizada.') : 'Não foi possível localizar. Confira o endereço.'); conferir(); });
-    d.querySelector('#cfTodas').onclick = async () => { if (!confirm(`Relocalizar as ${lin.length} CKs? Leva cerca de ${Math.ceil(lin.length * 2.5)} segundos.`)) return; const bt = d.querySelector('#cfTodas'); bt.disabled = true; let k = 0;
+    d.querySelector('#cfTodas').onclick = async () => { if (!await window.KESP_CONFIRMA(`Relocalizar as ${lin.length} CKs? Leva cerca de ${Math.ceil(lin.length * 2.5)} segundos.`)) return; const bt = d.querySelector('#cfTodas'); bt.disabled = true; let k = 0;
       for (const c of lin) { if (c.geo_manual) continue; bt.textContent = `Localizando ${++k} de ${lin.length}…`; await localizarUm(c, 'comunidades'); } d.remove(); desenhar(); conferir(); };
   }
   function filtrar(l) { return l.filter(({ ck, e }) => (verInativas || ck.ativa) && (!filtroD || ck.distrito_id === filtroD) && (!filtroS || (filtroS === 'semvisita' ? semVisita(ck) : e.situacao === filtroS)) && (!fBusca || (ck.nome + ' ' + (ck.cidade || '')).toLowerCase().includes(fBusca))); }
@@ -2283,7 +2336,7 @@ window.KESP_SINO = (function () {
     pg.querySelector('#lNovo').onclick = () => novoLembrete(sb, eu, () => telaLembretes(sb, eu), { link: null });
     pg.querySelectorAll('[data-go]').forEach(x => x.onclick = () => (location.hash = x.dataset.go));
     pg.querySelectorAll('[data-ok]').forEach(x => x.onclick = async () => { await concluir((a.data || []).find(y => y.id === x.dataset.ok)); telaLembretes(sb, eu); });
-    pg.querySelectorAll('[data-del]').forEach(x => x.onclick = async () => { if (confirm('Apagar este lembrete?')) { await sb.from('lembretes').delete().eq('id', x.dataset.del); telaLembretes(sb, eu); } });
+    pg.querySelectorAll('[data-del]').forEach(x => x.onclick = async () => { if (await window.KESP_CONFIRMA('Apagar este lembrete?')) { await sb.from('lembretes').delete().eq('id', x.dataset.del); telaLembretes(sb, eu); } });
   }
   async function telaSugestoes(cli, perfil) {
     sb = cli; eu = perfil; const pg = document.getElementById('pg');
@@ -2346,8 +2399,8 @@ window.KESP_SINO = (function () {
       const abrir = async (senha, campo) => { try { chave = await desembrulhar(await derivar(senha, deb64(cfg.sal)), cfg[campo]); atividade(); cofre(sb, eu); } catch (_) { alert('Senha incorreta.'); } };
       pg.querySelector('#cAbrir').onclick = () => abrir(pg.querySelector('#cS').value, 'chave_senha');
       pg.querySelector('#cS').onkeydown = e => { if (e.key === 'Enter') pg.querySelector('#cAbrir').click(); };
-      pg.querySelector('#cRec').onclick = async () => { const r = prompt('Digite a chave de recuperação (com os traços):'); if (!r) return;
-        try { const kc = await desembrulhar(await derivar(r.trim().toUpperCase(), deb64(cfg.sal)), cfg.chave_rec); const n = prompt('Crie uma nova senha mestra (mínimo 12 caracteres):'); if (!n || n.length < 12) { alert('Senha muito curta.'); return; }
+      pg.querySelector('#cRec').onclick = async () => { const r = await window.KESP_PERGUNTA('Digite a chave de recuperação (com os traços):'); if (!r) return;
+        try { const kc = await desembrulhar(await derivar(r.trim().toUpperCase(), deb64(cfg.sal)), cfg.chave_rec); const n = await window.KESP_PERGUNTA('Crie uma nova senha mestra (mínimo 12 caracteres):'); if (!n || n.length < 12) { alert('Senha muito curta.'); return; }
           if (!eu.admin) { alert('Só um administrador pode trocar a senha mestra.'); return; } await sb.from('cofre_config').update({ chave_senha: await embrulhar(await derivar(n, deb64(cfg.sal)), kc) }).eq('id', 1); chave = kc; atividade(); window.KESP_TOAST('Senha mestra trocada.'); cofre(sb, eu); } catch (_) { alert('Chave de recuperação incorreta.'); } };
       return;
     }
@@ -2360,7 +2413,7 @@ window.KESP_SINO = (function () {
       <div id="cLst">${itens.map(x => `<div class="pe" style="--c:#8B5CF6" data-n="${esc((x.titulo + ' ' + (x.categoria || '') + ' ' + (x.usuario || '')).toLowerCase())}"><div style="flex:1;min-width:0"><b>${esc(x.titulo)}</b><div class="sm">${esc(x.categoria || '')}${x.usuario ? ' · ' + esc(x.usuario) : ''}${x.url ? ' · ' + esc(x.url) : ''}</div></div><div class="ac"><button class="mini neu" data-cu="${x.id}">Copiar usuário</button><button class="mini" data-cs="${x.id}">Copiar senha</button><button class="mini neu" data-ce="${x.id}">Editar</button></div></div>`).join('') || '<p class="sm">Nenhuma senha guardada.</p>'}</div>`;
     pg.querySelector('#cBus').oninput = e => pg.querySelectorAll('[data-n]').forEach(d => (d.style.display = d.dataset.n.includes(e.target.value.toLowerCase()) ? '' : 'none'));
     pg.querySelector('#cBl').onclick = bloquear;
-    const copiar = async t => { try { await navigator.clipboard.writeText(t || ''); window.KESP_TOAST('Copiado. A área de transferência é limpa em 30 segundos.'); setTimeout(() => navigator.clipboard.writeText('').catch(() => {}), 30000); } catch (_) { prompt('Copie:', t); } atividade(); };
+    const copiar = async t => { try { await navigator.clipboard.writeText(t || ''); window.KESP_TOAST('Copiado. A área de transferência é limpa em 30 segundos.'); setTimeout(() => navigator.clipboard.writeText('').catch(() => {}), 30000); } catch (_) { await window.KESP_PERGUNTA('Copie:', t); } atividade(); };
     pg.querySelectorAll('[data-cu]').forEach(b => b.onclick = () => copiar(itens.find(x => x.id === b.dataset.cu).usuario));
     pg.querySelectorAll('[data-cs]').forEach(b => b.onclick = () => copiar(itens.find(x => x.id === b.dataset.cs).senha));
     const editar = x => { const d = document.createElement('div'); d.className = 'conf'; const v = x || {};
@@ -2372,7 +2425,7 @@ window.KESP_SINO = (function () {
       g('eVer').onclick = () => (g('eS').type = g('eS').type === 'password' ? 'text' : 'password');
       g('eGer').onclick = () => { const cs = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*'; g('eS').value = Array.from(crypto.getRandomValues(new Uint8Array(18)), x => cs[x % cs.length]).join(''); g('eS').type = 'text'; };
       d.querySelector('[data-x]').onclick = () => d.remove();
-      const del = d.querySelector('[data-del]'); if (del) del.onclick = async () => { if (!confirm('Apagar esta senha? Ela fica 60 dias na lixeira.')) return; await sb.from('cofre_itens').delete().eq('id', x.id); d.remove(); cofre(sb, eu); };
+      const del = d.querySelector('[data-del]'); if (del) del.onclick = async () => { if (!await window.KESP_CONFIRMA('Apagar esta senha? Ela fica 60 dias na lixeira.')) return; await sb.from('cofre_itens').delete().eq('id', x.id); d.remove(); cofre(sb, eu); };
       d.querySelector('[data-ok]').onclick = async () => { if (!chave) { d.remove(); return; } const o = { titulo: g('eT').value.trim(), categoria: g('eC').value.trim(), url: g('eU').value.trim(), usuario: g('eL').value, senha: g('eS').value, obs: g('eO').value.trim() }; if (!o.titulo) { alert('Informe o nome.'); return; }
         const reg = { dados: await cifrar(chave, JSON.stringify(o)), atualizado_em: new Date().toISOString(), atualizado_por: eu.id };
         const r = x ? await sb.from('cofre_itens').update(reg).eq('id', x.id) : await sb.from('cofre_itens').insert(reg); if (r.error) { alert('Não foi possível salvar.'); return; } d.remove(); cofre(sb, eu); }; };
@@ -2487,7 +2540,7 @@ window.KESP_SINO = (function () {
       c.querySelectorAll('[data-m]').forEach(a => a.onclick = () => { vis = new Date(vis.getFullYear(), vis.getMonth() + +a.dataset.m, 1); desenhar(); });
       c.querySelectorAll('[data-d]').forEach(a => a.onclick = () => { sel = ler(a.dataset.d); if (!comHora) confirmar(); else desenhar(); });
       c.querySelectorAll('[data-h]').forEach(a => a.onclick = () => { hora = a.dataset.h; desenhar(); });
-      const out = c.querySelector('[data-out]'); if (out) out.onclick = () => { const h = prompt('Horário (hh:mm):', hora); if (h && /^\d{1,2}:\d{2}$/.test(h.trim())) { const [x, y] = h.trim().split(':'); hora = p2(Math.min(23, +x)) + ':' + p2(Math.min(59, +y)); desenhar(); } };
+      const out = c.querySelector('[data-out]'); if (out) out.onclick = async () => { const h = await window.KESP_PERGUNTA('Horário (hh:mm):', hora); if (h && /^\d{1,2}:\d{2}$/.test(h.trim())) { const [x, y] = h.trim().split(':'); hora = p2(Math.min(23, +x)) + ':' + p2(Math.min(59, +y)); desenhar(); } };
       const lp = c.querySelector('[data-lp]'); if (lp) lp.onclick = () => { inp.value = ''; disparar(); fechar(); };
       c.querySelector('[data-ok]').onclick = confirmar;
     };
