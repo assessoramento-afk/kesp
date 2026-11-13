@@ -104,7 +104,7 @@ window.KESP_BUSCA = (function () {
     const c1 = eu.admin
       ? `<div class="cd" style="--c:#F07830;cursor:pointer" data-ir="usuarios"><div class="hd"><span>ACESSOS</span></div><div class="big" id="cAg">…</div><div class="sm">aguardando liberação</div><div class="sm" style="margin-top:6px" id="cAt"></div></div>`
       : `<div class="cd" style="--c:#F07830"><div class="hd"><span>SEUS PRIMEIROS PASSOS</span></div><div class="big" id="cTr">…</div><div class="sm">de 4 concluídos</div></div>`;
-    document.getElementById('pg').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><h1>Início</h1><span class="sm">${esc(hoje.charAt(0).toUpperCase() + hoje.slice(1))}</span></div><p class="sub">${em.length} módulos a caminho.</p>
+    document.getElementById('pg').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><h1>Início</h1><span class="sm">${esc(hoje.charAt(0).toUpperCase() + hoje.slice(1))}</span></div><p class="sub">${em.length} módulos a caminho.</p><div id="inAvisoEnv"></div>
       <div class="g4">${c1}
         <div class="cd" style="--c:#22C984;cursor:pointer" data-ir="andamento"><div class="hd"><span>ANDAMENTO</span><span class="pl" style="background:rgba(34,201,132,.15);color:#5FE0A8">Etapa ${etA[0]}</span></div><div class="big">${geral}%</div><div class="br" style="--c:#22C984"><i style="width:${geral}%"></i></div><div class="sm" style="margin-top:6px">Etapa ${etA[0]} · ${esc(etA[1])} em ${etA[2]}%</div></div>
         <div class="cd s2" style="--c:#3B82F6"><div class="hd"><span>ATALHOS</span></div><div class="atl">${at.map(([r, i, t]) => `<a data-${r === '#bv' ? 'bv' : 'ir'}="${r}"><i class="ti ti-${i}"></i>${t}</a>`).join('')}</div></div>
@@ -112,6 +112,7 @@ window.KESP_BUSCA = (function () {
         <div class="cd s2" style="--c:#6E6A7C"><div class="hd"><span>A CAMINHO</span><span>${em.length} módulos</span></div><div class="acm">${grupos.map(g => `<div><span>${esc(g.n)}</span><span class="sm">etapa ${esc(g.e)}</span></div>`).join('') || '<span class="sm">Tudo pronto!</span>'}</div></div>
         <div class="cd s4" style="--c:#3B82F6"><div class="hd"><span>NOVIDADES</span></div><div id="cNov" class="sm">…</div></div>
       </div>`;
+    if (eu.admin || pode('recibos.ver')) sb.from('recibos').select('id', { count: 'exact', head: true }).eq('situacao', 'emitido').not('comunidade_id', 'is', null).is('enviado_em', null).then(r => { const n = r.count || 0, el = document.getElementById('inAvisoEnv'); if (n && el) { el.innerHTML = `<a class="pe" style="--c:#F5A524;cursor:pointer;margin:0 0 12px;text-decoration:none;color:inherit" id="inEnv"><span style="flex:1"><b style="color:#F8C46A">${n} recibo${n > 1 ? 's' : ''} não enviado${n > 1 ? 's' : ''}</b> <span class="sm">às Comunidades</span></span><span class="sm">ver ›</span></a>`; el.querySelector('#inEnv').onclick = () => { sessionStorage.setItem('kesp.naoEnviados', '1'); sessionStorage.setItem('kesp.recAba', 'historico'); location.hash = '#recibos'; }; } }, () => {});
     document.querySelectorAll('[data-ir]').forEach(c => c.onclick = e => { e.stopPropagation(); location.hash = '#' + c.dataset.ir; });
     document.querySelectorAll('[data-bv]').forEach(c => c.onclick = () => boasVindas(true));
     if (eu.admin) {
@@ -760,6 +761,12 @@ window.KESP_ARQ = {
     if (n.length > max && c) { const sobra = max - (a.length + b.length + 6 + ' e outros'.length); c = c.slice(0, Math.max(10, sobra)).replace(/[,\s]+[^,\s]*$/, '') + ' e outros'; n = [a, b, c].filter(Boolean).join(' – '); }
     return n.slice(0, max); }
 };
+window.KESP_PDF = async (html, nome) => {
+  if (!window.html2pdf) await new Promise((ok, er) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; s.onload = ok; s.onerror = er; document.head.appendChild(s); });
+  const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:-10000px;top:0;width:760px;background:#fff;color:#1E1B19'; box.innerHTML = html; document.body.appendChild(box);
+  try { await window.html2pdf().set({ margin: [8, 8, 8, 8], filename: (nome || 'documento') + '.pdf', image: { type: 'jpeg', quality: .96 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['avoid-all'] } }).from(box).save(); }
+  finally { box.remove(); }
+};
 window.KESP_MOD = async sb => { if (window.KESP_MODELOS) return window.KESP_MODELOS; try { const { data } = await sb.from('modelos_texto').select('chave,texto'); window.KESP_MODELOS = Object.fromEntries((data || []).map(x => [x.chave, x.texto])); } catch (_) { window.KESP_MODELOS = {}; } return window.KESP_MODELOS; };
 window.KESP_PREENCHER = (t, v) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m));
 window.KESP_VALOR = (titulo, extras) => new Promise(res => {
@@ -1399,7 +1406,9 @@ window.KESP_EVOL = (function () {
       if (r.substitui) { const o = await sb.from('recibos').select('serie,numero,ano').eq('id', r.substitui).maybeSingle(); r._orig = o.data; } } catch (_) {}
     const html = documento(r, quem);
     const dlg = document.createElement('div'); dlg.className = 'conf';
-    dlg.innerHTML = `<div class="cx" style="max-width:720px;max-height:92vh;overflow-y:auto;padding:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn" data-imp>Imprimir / Salvar PDF</button>${r.situacao !== 'cancelado' && (eu.admin || window.KESP_PODE('recibos.emitir')) ? '<button class="btn sec" data-ed>Editar</button><button class="btn sec" data-cor>Corrigir</button><button class="btn sec" data-dev>Registrar devolução</button>' : ''}${r.comunidade_id && r.situacao !== 'cancelado' ? `<button class="btn sec" data-mail>${r.enviado_em ? 'Enviar de novo' : 'Enviar por e-mail'}</button>` : ''}${r.situacao !== 'cancelado' && (eu.admin || window.KESP_PODE('recibos.cancelar')) ? '<button class="btn sec" data-can style="color:#FF9A9D">Cancelar recibo</button>' : ''}<button class="btn sec" data-x style="margin-left:auto">Fechar</button></div><div style="background:#E9E5DF;padding:10px;border-radius:10px">${html}</div>${(r._vers || []).length ? `<div class="cd" style="--c:#6E6A7C;margin-top:10px"><div class="hd"><span>HISTÓRICO DE EDIÇÕES</span></div>${r._vers.map(v => `<div class="sm" style="padding:3px 0">Versão ${v.versao} · ${new Date(v.editado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(v.motivo)} · antes: ${esc(Object.entries(v.anterior).map(([k, x]) => ({ forma_pagamento: 'forma', data_pagamento: 'data', observacao: 'observação', modelo: 'modelo', referencia: 'texto', pagador_nome: 'pagador', pagador_doc: 'documento' }[k] || k) + ' = ' + (k === 'referencia' ? '(texto anterior)' : x ?? '—')).join(', '))}</div>`).join('')}</div>` : ''}</div>`;
+    dlg.innerHTML = `<div class="cx" style="max-width:720px;max-height:92vh;overflow-y:auto;padding:12px"><div class="rbar"><button class="btn" data-imp>🖨 Imprimir</button><button class="btn sec" data-pdf>⬇ Baixar PDF</button>${r.comunidade_id && r.situacao !== 'cancelado' ? `<button class="btn sec" data-mail>✉ ${r.enviado_em ? 'Enviar de novo' : 'Enviar por e-mail'}</button>` : ''}
+      ${r.situacao !== 'cancelado' && (eu.admin || window.KESP_PODE('recibos.emitir')) ? `<div class="rmn"><button class="btn sec" data-mais>Mais ações ▾</button><div class="rdd" hidden><a data-ed>✏️ Editar <span class="sm">texto, data, forma</span></a><a data-cor>🔁 Corrigir <span class="sm">valor, meses, itens</span></a><a data-dev>↩️ Registrar devolução</a><a data-env>${r.enviado_em ? '📭 Marcar como não enviado' : '📬 Marcar como enviado'}</a>${eu.admin || window.KESP_PODE('recibos.cancelar') ? '<hr><a data-can style="color:#FF9A9D">⛔ Cancelar recibo</a>' : ''}</div></div>` : ''}<button class="btn sec rx" data-x title="Fechar">✕</button></div>
+      ${r.situacao !== 'cancelado' && r.comunidade_id ? `<div class="renv ${r.enviado_em ? 'ok' : 'pend'}">${r.enviado_em ? '✓ Enviado em ' + new Date(r.enviado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '⚠ Ainda não enviado à Comunidade'}</div>` : ''}<div style="background:#E9E5DF;padding:10px;border-radius:10px">${html}</div>${(r._vers || []).length ? `<div class="cd" style="--c:#6E6A7C;margin-top:10px"><div class="hd"><span>HISTÓRICO DE EDIÇÕES</span></div>${r._vers.map(v => `<div class="sm" style="padding:3px 0">Versão ${v.versao} · ${new Date(v.editado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(v.motivo)} · antes: ${esc(Object.entries(v.anterior).map(([k, x]) => ({ forma_pagamento: 'forma', data_pagamento: 'data', observacao: 'observação', modelo: 'modelo', referencia: 'texto', pagador_nome: 'pagador', pagador_doc: 'documento' }[k] || k) + ' = ' + (k === 'referencia' ? '(texto anterior)' : x ?? '—')).join(', '))}</div>`).join('')}</div>` : ''}</div>`;
     document.body.appendChild(dlg);
     dlg.querySelector('[data-x]').onclick = () => { dlg.remove(); if (aba === 'historico') render(); };
     dlg.querySelector('[data-imp]').onclick = () => { const w = window.open('', '_blank'); w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(nomeArquivo(r))}</title><style>@page{size:A4;margin:12mm}body{margin:0;background:#fff}</style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`); w.document.close(); };
@@ -1407,14 +1416,21 @@ window.KESP_EVOL = (function () {
     if (dv) dv.onclick = async () => { const r0 = await window.KESP_VALOR('Registrar devolução', [{ rotulo: 'Motivo da devolução', valor: '' }]); if (!r0) return; const v = r0.valor, m = r0.extras[0];
       const x = await sb.rpc('registrar_devolucao', { p_recibo: r.id, p_valor: v, p_motivo: m.trim() }); if (x.error) { alert('Não foi possível registrar: ' + x.error.message); return; }
       await B.carregar(sb, eu); dlg.remove(); abrirRecibo(r.id); };
+    const mais = dlg.querySelector('[data-mais]'); if (mais) { const dd = dlg.querySelector('.rdd'); mais.onclick = e => { e.stopPropagation(); dd.hidden = !dd.hidden; }; dlg.addEventListener('click', e => { if (!e.target.closest('.rmn')) dd.hidden = true; }); }
+    const baixar = async () => { try { await window.KESP_PDF(html, nomeArquivo(r)); return true; } catch (e) { alert('Não foi possível gerar o PDF aqui. Use Imprimir › Salvar como PDF.'); return false; } };
+    dlg.querySelector('[data-pdf]').onclick = async ev => { const b = ev.currentTarget; b.disabled = true; b.textContent = 'Gerando…'; await baixar(); b.disabled = false; b.textContent = '⬇ Baixar PDF'; };
+    const env = dlg.querySelector('[data-env]'); if (env) env.onclick = async () => { await sb.from('recibos').update({ enviado_em: r.enviado_em ? null : new Date().toISOString() }).eq('id', r.id); dlg.remove(); abrirRecibo(r.id); };
     const ml = dlg.querySelector('[data-mail]');
     if (ml) ml.onclick = async () => {
       const ck = B.dados().cks.find(c => c.id === r.comunidade_id) || {};
-      dlg.querySelector('[data-imp]').click();
+      ml.disabled = true; ml.textContent = 'Gerando o PDF…'; const ok = await baixar(); ml.disabled = false; ml.textContent = '✉ Enviar por e-mail';
       const md = await window.KESP_MOD(sb);
       window.KESP_EMAIL(ck.email, `Recibo ${r.numero}/${r.ano} – Kolping Estadual de São Paulo`, window.KESP_PREENCHER(md.email_recibo || 'Prezada {ck},\n\nSegue em anexo o recibo nº {numero}, no valor de {valor}, referente ao pagamento de {data}.\n\nAtenciosamente,', { ck: ck.razao_social || ck.nome || r.pagador_nome, numero: r.numero + '/' + r.ano, valor: R(r.valor), data: dataBR(r.data_pagamento) }).replace(/\n*Atenciosamente,\s*$/, ((p0 => p0 ? `\n\nPróximo pagamento: ${p0.ref}, ${R(p0.valor)}${p0.venc ? ' (vence em ' + dataBR(p0.venc) + ')' : ''}.` : '')((r.itens || []).find(i => i.tipo === '_proximo'))) + '\n\nAtenciosamente,'));
-      await sb.from('recibos').update({ enviado_em: new Date().toISOString() }).eq('id', r.id);
-      window.KESP_TOAST('Salve o PDF na janela de impressão e anexe ao e-mail que abriu.');
+      window.KESP_TOAST(ok ? 'PDF salvo em Downloads: arraste para o e-mail que abriu.' : 'Anexe o PDF ao e-mail que abriu.');
+      // ao voltar para o KESP, pergunta se o e-mail foi enviado
+      const perguntar = async () => { if (document.hidden) return; document.removeEventListener('visibilitychange', perguntar); window.removeEventListener('focus', perguntar);
+        if (await window.KESP_CONFIRMA(`O e-mail do recibo ${r.serie} ${r.numero}/${r.ano} foi enviado?\nSe ainda não, ele continua como "não enviado".`)) { await sb.from('recibos').update({ enviado_em: new Date().toISOString() }).eq('id', r.id); window.KESP_TOAST('Marcado como enviado.'); if (document.body.contains(dlg)) { dlg.remove(); abrirRecibo(r.id); } } };
+      setTimeout(() => { document.addEventListener('visibilitychange', perguntar); window.addEventListener('focus', perguntar); }, 1500);
     };
     const ed = dlg.querySelector('[data-ed]');
     if (ed) ed.onclick = () => { const d = document.createElement('div'); d.className = 'conf'; const av = !r.comunidade_id;
@@ -1504,15 +1520,17 @@ window.KESP_EVOL = (function () {
   // ---------- histórico ----------
   async function telaHistorico() {
     const c = document.getElementById('cont'); c.innerHTML = '<p class="sm">Carregando…</p>';
-    const { data } = await sb.from('recibos').select('id,serie,ano,numero,pagador_nome,data_pagamento,valor,situacao,legado').order('emitido_em', { ascending: false }).limit(300);
-    let f = '';
+    const { data } = await sb.from('recibos').select('id,serie,ano,numero,pagador_nome,data_pagamento,valor,situacao,legado,enviado_em,comunidade_id').order('emitido_em', { ascending: false }).limit(300);
+    let f = '', soPend = sessionStorage.getItem('kesp.naoEnviados') === '1'; sessionStorage.removeItem('kesp.naoEnviados');
     const desenhar = () => {
-      const lista = (data || []).filter(r => !f || (r.pagador_nome + ' ' + r.numero + '/' + r.ano).toLowerCase().includes(f.toLowerCase()));
-      c.querySelector('#hl').innerHTML = lista.map(r => `<div class="pe" style="--c:${r.situacao === 'cancelado' ? '#6E6A7C' : '#22C984'};cursor:pointer" data-rec="${r.id}"><div style="flex:1;min-width:0"><b>${r.serie} ${r.numero}/${r.ano}</b>${r.situacao === 'cancelado' ? ' <span class="tg2" style="background:rgba(255,255,255,.08);color:#A8A3B4">Cancelado</span>' : ''}${r.legado ? ' <span class="tg2" style="background:rgba(59,130,246,.15);color:#93B8FF">Sistema anterior</span>' : ''}<div class="sm">${esc(r.pagador_nome)} · ${dataBR(r.data_pagamento)}</div></div><b>${R(r.valor)}</b></div>`).join('') || '<p class="sm">Nenhum recibo encontrado.</p>';
+      const lista = (data || []).filter(r => (!f || (r.pagador_nome + ' ' + r.numero + '/' + r.ano).toLowerCase().includes(f.toLowerCase())) && (!soPend || (r.situacao !== 'cancelado' && r.comunidade_id && !r.enviado_em)));
+      c.querySelector('#hl').innerHTML = lista.map(r => `<div class="pe" style="--c:${r.situacao === 'cancelado' ? '#6E6A7C' : '#22C984'};cursor:pointer" data-rec="${r.id}"><div style="flex:1;min-width:0"><b>${r.serie} ${r.numero}/${r.ano}</b>${r.situacao === 'cancelado' ? ' <span class="tg2" style="background:rgba(255,255,255,.08);color:#A8A3B4">Cancelado</span>' : r.comunidade_id ? (r.enviado_em ? ` <span class="tg2" style="background:rgba(34,201,132,.14);color:#5FE0A8">Enviado em ${new Date(r.enviado_em).toLocaleDateString('pt-BR')}</span>` : ' <span class="tg2" style="background:rgba(245,165,36,.16);color:#F8C46A">Não enviado</span>') : ''}${r.legado ? ' <span class="tg2" style="background:rgba(59,130,246,.15);color:#93B8FF">Sistema anterior</span>' : ''}<div class="sm">${esc(r.pagador_nome)} · ${dataBR(r.data_pagamento)}</div></div><b>${R(r.valor)}</b></div>`).join('') || '<p class="sm">Nenhum recibo encontrado.</p>';
       c.querySelectorAll('[data-rec]').forEach(x => x.onclick = () => abrirRecibo(x.dataset.rec));
     };
-    c.innerHTML = `<input class="in" id="hb" placeholder="Buscar por CK ou número" style="width:100%;margin-bottom:10px"><div id="hl"></div>`;
-    c.querySelector('#hb').oninput = e => { f = e.target.value; desenhar(); }; desenhar();
+    const pend = (data || []).filter(r => r.situacao !== 'cancelado' && r.comunidade_id && !r.enviado_em).length;
+    c.innerHTML = `<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap"><input class="in" id="hb" placeholder="Buscar por CK ou número" style="flex:1;min-width:200px"><span class="seg" style="flex:0 0 auto;min-width:0"><a data-hf="" class="${soPend ? '' : 'on'}">Todos</a><a data-hf="1" class="${soPend ? 'on' : ''}">Não enviados${pend ? ' · ' + pend : ''}</a></span></div><div id="hl"></div>`;
+    c.querySelector('#hb').oninput = e => { f = e.target.value; desenhar(); };
+    c.querySelectorAll('[data-hf]').forEach(a => a.onclick = () => { soPend = !!a.dataset.hf; c.querySelectorAll('[data-hf]').forEach(x => x.classList.toggle('on', x === a)); desenhar(); }); desenhar();
   }
 
   function telaLote() {
@@ -1561,6 +1579,7 @@ window.KESP_EVOL = (function () {
   window.KESP_RECIBOS = {
     async abrir(cliente, perfil) {
       sb = cliente; eu = perfil; B = window.KESP_CKS.base; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>';
+      try { const ab = sessionStorage.getItem('kesp.recAba'); if (ab) { aba = ab; sessionStorage.removeItem('kesp.recAba'); } } catch (_) {}
       await B.carregar(sb, eu); await extras(); const md0 = await window.KESP_MOD(sb); MODELO_PADRAO = md0.recibo_modelo === 'timbrado' ? 'timbrado' : 'padrao'; if (!st) { novoEstado(); const rs = window.KESP_RASCUNHO.ler('recibo'); if (rs && (rs.valor || (rs.extras || []).length) && await window.KESP_CONFIRMA('Há um recibo que você começou e não emitiu. Continuar de onde parou?')) { st = { ...st, ...rs, sel: new Set(rs.sel || []), ck: B.dados().cks.find(x => x.id === rs.ck) || null }; } else window.KESP_RASCUNHO.limpar('recibo'); }
       let pre = null; try { pre = sessionStorage.getItem('kesp.recibo.ck'); sessionStorage.removeItem('kesp.recibo.ck'); } catch (_) {}
       if (pre) { novoEstado(); st.ck = B.dados().cks.find(x => x.id === pre) || null; aba = 'emitir'; }

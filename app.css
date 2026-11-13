@@ -287,3 +287,9 @@ select.in,input.in{width:auto;margin:0;padding:7px 10px;font-size:13px;border-ra
 .pills{display:inline-flex;gap:4px}.pills a{font-size:12px;padding:3px 10px;border-radius:8px;background:rgba(255,255,255,.06);color:#D8D3DE;cursor:pointer}.pills a.on{background:rgba(240,120,48,.22);color:#FFB070}
 input[type=checkbox]{margin:0!important;width:17px;height:17px;flex-shrink:0;vertical-align:middle}
 label:has(>input[type=checkbox]){display:flex!important;align-items:center;gap:8px}
+/* 3.8 · barra do recibo */
+.rbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}.rbar .rx{margin-left:auto;width:42px;padding:0;justify-content:center}
+.rmn{position:relative}.rdd{position:absolute;z-index:20;top:46px;left:0;width:250px;background:#141B27;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.55)}
+.rdd a{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#F2EEEA}.rdd a:hover{background:rgba(255,255,255,.06)}.rdd a .sm{margin-left:auto}.rdd hr{border:0;border-top:1px solid rgba(255,255,255,.08);margin:4px 0}
+.renv{margin:0 0 10px;padding:7px 12px;border-radius:10px;font-size:13px}.renv.ok{background:rgba(34,201,132,.12);color:#5FE0A8}.renv.pend{background:rgba(245,165,36,.14);color:#F8C46A}
+@media (max-width:860px){.rbar .btn:not(.rx){flex:1 1 40%}}
