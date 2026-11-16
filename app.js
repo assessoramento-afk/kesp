@@ -25,9 +25,9 @@ window.KESP_BUSCA = (function () {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const K = s => `<svg width="${s}" height="${s}" viewBox="0 0 100 100" aria-hidden="true"><rect width="35" height="100" fill="#1E1B19"/><rect x="35" width="65" height="100" fill="#F07830"/><path d="M100 0 L100 100 L35 50Z" fill="#1E1B19"/></svg>`;
   const KAI = (s, olhos) => `<svg width="${s}" height="${s * 0.9}" viewBox="20 8 80 72" aria-hidden="true"><line x1="60" y1="14" x2="60" y2="24" stroke="#9A9088" stroke-width="2"/><circle cx="60" cy="12" r="5" fill="#F07830"/><rect x="22" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="90" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="28" y="24" width="64" height="50" rx="18" fill="#F4F1EC"/><rect x="36" y="34" width="48" height="28" rx="12" fill="#2C3045"/>${olhos || '<path d="M45 50 Q50 44 55 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M65 50 Q70 44 75 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M54 55 Q60 59 66 55" stroke="#FFB070" stroke-width="2" fill="none" stroke-linecap="round"/>'}</svg>`;
-  const ICONES = { fin_painel: 'chart-pie', fin_lancamentos: 'receipt-2', nfp: 'ticket', patrimonio: 'qrcode', consumo: 'bolt', manutencao: 'tool', conciliacao: 'building-bank', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'truck', cofre: 'shield-lock', lixeira: 'trash', modelos: 'template', aprendizagem: 'school', scanner: 'scan', lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
+  const ICONES = { orcamentos: 'file-invoice', fin_painel: 'chart-pie', fin_lancamentos: 'receipt-2', nfp: 'ticket', patrimonio: 'qrcode', consumo: 'bolt', manutencao: 'tool', conciliacao: 'building-bank', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'truck', cofre: 'shield-lock', lixeira: 'trash', modelos: 'template', aprendizagem: 'school', scanner: 'scan', lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
   const ETAPAS = [['1A', 'Base essencial'], ['1B', 'Base complementar'], ['2', 'Assessoramento'], ['3', 'Kolping Estadual'], ['4', 'Controles'], ['5', 'Conciliação bancária'], ['6', 'Financeiro'], ['7', 'RH'], ['8', 'Educação Infantil'], ['9', 'Prestação de contas']];
-  const FUNCAO_MODULO = { fin_painel: 'financeiro.ver', fin_lancamentos: 'financeiro.ver', nfp: 'financeiro.ver', patrimonio: 'patrimonio.ver', consumo: 'consumo.ver', manutencao: 'manutencao.abrir', conciliacao: 'conciliacao.ver', agenda: 'agenda.ver', eventos: 'eventos.ver', oficios: 'oficios.ver', documentos: 'documentos.ver', fornecedores: 'fornecedores.ver', lembretes: '*', sugestoes: '*', scanner: '*', cofre: 'cofre.usar', modelos: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
+  const FUNCAO_MODULO = { orcamentos: 'compras.ver', fin_painel: 'financeiro.ver', fin_lancamentos: 'financeiro.ver', nfp: 'financeiro.ver', patrimonio: 'patrimonio.ver', consumo: 'consumo.ver', manutencao: 'manutencao.abrir', conciliacao: 'conciliacao.ver', agenda: 'agenda.ver', eventos: 'eventos.ver', oficios: 'oficios.ver', documentos: 'documentos.ver', fornecedores: 'fornecedores.ver', lembretes: '*', sugestoes: '*', scanner: '*', cofre: 'cofre.usar', modelos: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
 
   let sb, eu, sair, modulos = [], perms = new Set(), avisosN = 0;
   const pode = f => eu.admin || perms.has(f);
@@ -191,6 +191,7 @@ window.KESP_BUSCA = (function () {
     if (m.id === 'fin_painel') return window.KESP_FIN.painel(sb, eu);
     if (m.id === 'fin_lancamentos') return window.KESP_FIN.lancamentos(sb, eu);
     if (m.id === 'nfp') return window.KESP_FIN.nfp(sb, eu);
+    if (m.id === 'orcamentos') return window.KESP_DOCS.orcamentos(sb, eu);
     if (m.id === 'patrimonio') return window.KESP_E4.patrimonio(sb, eu, id.split('/')[1]);
     if (m.id === 'consumo' || m.id === 'manutencao') return window.KESP_E4[m.id](sb, eu);
     if (m.id === 'eventos') return window.KESP_E3.eventos(sb, eu, id.split('/')[1]);
@@ -659,6 +660,7 @@ window.KESP_BUSCA = (function () {
     if (a0.tipo === 'conta_pagar') window.KESP_FIN.novaDespesa(sb, eu, { tipo: 'despesa', fornecedor: d0.fornecedor, fornecedor_doc: d0.fornecedor_doc, valor: Number(d0.valor) || null, vencimento: d0.vencimento || null, emissao: d0.emissao || null, nf_numero: d0.nf_numero || null, observacao: d0.observacao || null, grupo: 'Despesas administrativas' });
     else if (a0.tipo === 'consumo') window.KESP_E4.novaConta(sb, eu, d0);
     else if (a0.tipo === 'documento') window.KESP_E3.novoDoc(sb, eu, d0);
+    else if (a0.tipo === 'fornecedor') window.KESP_E3.novoFornecedor(sb, eu, d0);
     else if (a0.tipo === 'recibo') { const D = window.KESP_CKS.base.dados ? window.KESP_CKS.base : null; let ck = null; try { await window.KESP_CKS.base.carregar(sb, eu); const so = v => String(v || '').replace(/\D/g, ''); ck = window.KESP_CKS.base.dados().cks.find(c => (so(d0.doc).length === 14 && so(c.cnpj) === so(d0.doc)) || (d0.pagador && c.nome.toLowerCase().includes(String(d0.pagador).toLowerCase().replace(/^comunidade |^kolping /, '').slice(0, 14)))); } catch (_) {}
       sessionStorage.setItem('kesp.reciboBanco', JSON.stringify({ ck: ck ? ck.id : null, valor: Number(d0.valor) || 0, data: d0.data || new Date().toISOString().slice(0, 10), nome: d0.pagador || '', doc: d0.doc || '' })); location.hash = '#recibos'; } }
   const atalho = t => { const x = TELAS.find(([n]) => t.includes(n)); return x && window.KESP_PODE ? x : null; };
@@ -668,11 +670,11 @@ window.KESP_BUSCA = (function () {
     const pode = f => !f || (f === 'admin' ? eu.admin : eu.admin || window.KESP_PODE(f));
     const sug = SUG.filter(x => pode(x[2])).slice(0, 6);
     const pausa = estado === 'pausa';
-    pg.innerHTML = `<div class="kai2"><div class="k2-top"><div class="k2-av">${robo(estado || 'acolhendo', 40)}</div><div style="flex:1"><b style="font-size:16px">KAI</b><div class="k2-st${pausa ? ' off' : ''}">${pausa ? 'Em pausa' : 'Online · Claude Haiku'}</div></div><button class="btn sec k2-b" id="kNova">＋ Nova conversa</button><button class="btn sec k2-b" id="kHist">🕘 Conversas</button></div>
+    pg.innerHTML = `<div class="kai2"><div class="k2-top"><div class="k2-av">${robo(estado || 'acolhendo', 40)}</div><div style="flex:1"><b style="font-size:16px">KAI</b><div class="k2-st${pausa ? ' off' : ''}">${pausa ? 'Em pausa' : 'Online · Claude Haiku'}</div></div><button class="btn sec k2-b" id="kNova"><i class="ti ti-plus"></i> Nova conversa</button><button class="btn sec k2-b" id="kHist"><i class="ti ti-history"></i> Conversas</button></div>
       <div class="k2-msgs" id="kMsgs">${msgs.length ? '' : `<div class="k2-hero"><b>Oi, ${nome}!</b><div>Em que posso ajudar com o KESP hoje?</div></div><div class="k2-cards">${sug.map(([i, t]) => `<a class="k2-c" data-s="${esc(t)}"><i>${i}</i><span>${esc(t)}</span></a>`).join('')}</div>`}
-        ${msgs.map((m, i) => m.papel === 'eu' ? `<div class="k2-m eu"><div class="k2-bal">${m.doc ? `<div style="font-size:12px;opacity:.85;margin-bottom:4px">📎 ${esc(m.doc)}</div>` : ''}${esc(m.texto)}</div></div>` : `<div class="k2-m ka"><div class="k2-mini">${robo('explicando', 22)}</div><div><div class="k2-bal">${fmt(m.texto.replace(/\[\[ACAO:[\s\S]*?\]\]/g, '').trim())}</div>${(a0 => a0 ? `<button class="btn k2-acao" data-ac="${i}">${{ conta_pagar: '➕ Lançar em Contas a pagar', consumo: '➕ Lançar em Consumo', recibo: '🧾 Abrir recibo preenchido', documento: '📁 Cadastrar em Documentos' }[a0.tipo] || 'Usar estes dados'}</button>` : '')(acaoDe(m.texto))}<div class="k2-act"><a data-cp="${i}">📋 Copiar</a><a data-av="${i}:1" class="${m.av === 1 ? 'on' : ''}">👍</a><a data-av="${i}:-1" class="${m.av === -1 ? 'on' : ''}">👎</a>${(t => t ? `<a data-go="${t[1]}">↗ Abrir ${esc(t[0])}</a>` : '')(atalho(m.texto))}</div></div></div>`).join('')}</div>
-      ${anexo ? `<div class="k2-ax">📎 ${esc(anexo.nome)} <span class="sm">${(anexo.tam / 1024 / 1024).toFixed(1).replace('.', ',')} MB</span><a id="kAxX">✕</a></div>` : ''}
-      <div class="k2-in"><label class="k2-ic" title="Anexar PDF ou foto" style="cursor:pointer">📎<input type="file" id="kArq" accept="application/pdf,image/*" style="display:none"></label><textarea id="kTxt" rows="1" placeholder="${anexo ? 'O que quer saber deste documento?' : 'Pergunte à KAI…'}" maxlength="2000"></textarea>${'webkitSpeechRecognition' in window || 'SpeechRecognition' in window ? '<button id="kMic" class="k2-ic" title="Ditar">🎙</button>' : ''}<button id="kEnv" class="k2-ic k2-send" aria-label="Enviar">➤</button></div>
+        ${msgs.map((m, i) => m.papel === 'eu' ? `<div class="k2-m eu"><div class="k2-bal">${m.doc ? `<div style="font-size:12px;opacity:.85;margin-bottom:4px"><i class="ti ti-paperclip"></i> ${esc(m.doc)}</div>` : ''}${esc(m.texto)}</div></div>` : `<div class="k2-m ka"><div class="k2-mini">${robo('explicando', 22)}</div><div><div class="k2-bal">${fmt(m.texto.replace(/\[\[ACAO:[\s\S]*?\]\]/g, '').trim())}</div>${(a0 => a0 ? `<button class="btn k2-acao" data-ac="${i}">${{ conta_pagar: '➕ Lançar em Contas a pagar', consumo: '➕ Lançar em Consumo', recibo: '🧾 Abrir recibo preenchido', documento: '📁 Cadastrar em Documentos', fornecedor: '🏪 Cadastrar em Fornecedores' }[a0.tipo] || 'Usar estes dados'}</button>` : '')(acaoDe(m.texto))}<div class="k2-act">${m.cortada && i === msgs.length - 1 ? `<a data-cont="1" style="color:#FFB070"><i class="ti ti-player-play"></i> Continuar</a>` : ''}<a data-cp="${i}"><i class="ti ti-copy"></i> Copiar</a><a data-av="${i}:1" class="${m.av === 1 ? 'on' : ''}"><i class="ti ti-thumb-up"></i></a><a data-av="${i}:-1" class="${m.av === -1 ? 'on' : ''}"><i class="ti ti-thumb-down"></i></a>${(t => t ? `<a data-go="${t[1]}">↗ Abrir ${esc(t[0])}</a>` : '')(atalho(m.texto))}</div></div></div>`).join('')}</div>
+      ${anexo ? `<div class="k2-ax"><i class="ti ti-paperclip"></i> ${esc(anexo.nome)} <span class="sm">${(anexo.tam / 1024 / 1024).toFixed(1).replace('.', ',')} MB</span><a id="kAxX">✕</a></div>` : ''}
+      <div class="k2-in"><label class="k2-ic" title="Anexar PDF ou foto" style="cursor:pointer"><i class="ti ti-paperclip"></i><input type="file" id="kArq" accept="application/pdf,image/*" style="display:none"></label><textarea id="kTxt" rows="1" placeholder="${anexo ? 'O que quer saber deste documento?' : 'Pergunte à KAI…'}" maxlength="2000"></textarea>${'webkitSpeechRecognition' in window || 'SpeechRecognition' in window ? '<button id="kMic" class="k2-ic" title="Ditar"><i class="ti ti-microphone"></i></button>' : ''}<button id="kEnv" class="k2-ic k2-send" aria-label="Enviar"><i class="ti ti-send-2"></i></button></div>
       <div class="k2-ft">A KAI explica o uso do KESP; confira informações importantes antes de agir.</div></div>`;
     const txt = document.getElementById('kTxt'), env = document.getElementById('kEnv'), box = document.getElementById('kMsgs');
     box.scrollTop = box.scrollHeight;
@@ -684,6 +686,7 @@ window.KESP_BUSCA = (function () {
     box.querySelectorAll('[data-av]').forEach(a => a.onclick = () => { const [i, v] = a.dataset.av.split(':').map(Number); msgs[i].av = msgs[i].av === v ? 0 : v; guardar(); render(); });
     box.querySelectorAll('[data-go]').forEach(a => a.onclick = () => (location.hash = '#' + a.dataset.go));
     box.querySelectorAll('[data-ac]').forEach(b => b.onclick = () => usarAcao(acaoDe(msgs[+b.dataset.ac].texto)));
+    const ct = box.querySelector('[data-cont]'); if (ct) ct.onclick = () => enviar('Continue a resposta anterior de onde parou, sem repetir.');
     document.getElementById('kArq').onchange = e => prepararAnexo(e.target.files[0]);
     const axx = document.getElementById('kAxX'); if (axx) axx.onclick = () => { anexo = null; render(); };
     const kz = document.querySelector('.kai2'); kz.ondragover = e => { e.preventDefault(); kz.classList.add('drop'); }; kz.ondragleave = () => kz.classList.remove('drop'); kz.ondrop = e => { e.preventDefault(); kz.classList.remove('drop'); prepararAnexo(e.dataTransfer.files[0]); };
@@ -707,18 +710,18 @@ window.KESP_BUSCA = (function () {
     document.getElementById('kEnv').disabled = true;
     let estado = 'explicando', resp;
     try {
-      const { data, error } = await sb.functions.invoke('kai', { body: { mensagens: msgs.map(m => ({ papel: m.papel, texto: m.texto })), anexo: ax ? { media_type: ax.media_type, dados: ax.dados, nome: ax.nome } : undefined } });
+      const { data, error } = await sb.functions.invoke('kai', { body: { mensagens: msgs.map(m => ({ papel: m.papel, texto: m.texto })), anexo: ax ? { media_type: ax.media_type, dados: ax.dados, nome: ax.nome } : undefined, versao: (window.KESP_CONFIG || {}).versao } });
       if (error) {
         let corpo = null; try { corpo = await error.context.json(); } catch (_) {}
         resp = (corpo && corpo.erro) || 'Algo não saiu como esperado. Já registrei o problema para o administrador. Tente de novo em alguns instantes.';
       } else if (data && data.pausa) {
         estado = 'pausa';
         resp = 'Estou em pausa no momento. O administrador já foi avisado, e eu volto assim que for possível.';
-      } else resp = (data && data.texto) || 'Não consegui responder agora.';
+      } else { resp = (data && data.texto) || 'Não consegui responder agora.'; var cort = !!(data && data.cortada); }
     } catch (_) {
       resp = navigator.onLine ? 'Algo não saiu como esperado. Tente de novo em alguns instantes.' : 'Parece que você está sem internet. Tente de novo quando a conexão voltar.';
     }
-    msgs.push({ papel: 'kai', texto: resp }); guardar(); ocupado = false; render(estado);
+    msgs.push({ papel: 'kai', texto: resp, cortada: typeof cort !== 'undefined' && cort }); guardar(); ocupado = false; render(estado);
   }
 
   window.KESP_KAI = {
@@ -2971,8 +2974,8 @@ window.KESP_SINO = (function () {
     const nv = pg.querySelector('#foNovo'); if (nv) nv.onclick = () => editarFor(null);
     pg.querySelectorAll('[data-fo]').forEach(el => el.onclick = () => (pode('fornecedores.editar') || pode('compras.editar')) && editarFor(L.find(x => x.id === el.dataset.fo)));
   }
-  function editarFor(x) {
-    const v = x || { ativo: true };
+  function editarFor(x, pre) {
+    const v = x || { ativo: true, ...(pre || {}) };
     const d = modal(x ? 'Editar fornecedor' : 'Novo fornecedor', `<div class="dois" style="grid-template-columns:1fr auto;align-items:end"><div><label>CNPJ</label><input id="fC" value="${esc(v.cnpj || '')}" placeholder="00.000.000/0000-00"></div><button class="btn sec" id="fBus" style="height:42px">Buscar CNPJ</button></div>
       <label>Nome</label><input id="fN" value="${esc(v.nome || '')}"><div class="dois"><div><label>Categoria</label><input id="fCa" value="${esc(v.categoria || '')}" list="fCl"><datalist id="fCl"><option>Limpeza</option><option>Escritório</option><option>Pedagógico</option><option>Alimentação</option><option>Manutenção</option><option>Serviços</option><option>Eventos</option></datalist></div><div><label>O que fornece</label><input id="fF" value="${esc(v.fornece || '')}"></div></div>
       <div class="dois"><div><label>Contato</label><input id="fCo" value="${esc(v.contato || '')}"></div><div><label>Telefone</label><input id="fT" value="${esc(v.telefone || '')}"></div></div><label>E-mail</label><input id="fE" value="${esc(v.email || '')}"><label>Endereço</label><input id="fEn" value="${esc(v.endereco || '')}"><label>Observação</label><input id="fO" value="${esc(v.observacao || '')}">
@@ -2984,7 +2987,7 @@ window.KESP_SINO = (function () {
       try { const j = await (await fetch('https://brasilapi.com.br/api/cnpj/v1/' + c)).json(); if (!j.razao_social) throw 0; const s0 = (id, val) => { const el = d.querySelector('#' + id); if (val && !el.value) el.value = val; };
         s0('fN', j.nome_fantasia || j.razao_social); s0('fT', j.ddd_telefone_1); s0('fE', j.email); s0('fEn', [j.logradouro, j.numero, j.bairro, j.municipio + '/' + j.uf].filter(Boolean).join(', ')); s0('fF', j.cnae_fiscal_descricao); window.KESP_TOAST('Dados preenchidos pela Receita.'); } catch (_) { alert('CNPJ não encontrado.'); } };
   }
-  window.KESP_E3 = { agenda, eventos, oficios, documentos, fornecedores, avisosVencimento, novoDoc(cli, perfil, d0) { sb = cli; eu = perfil; editarDoc(null, d0 || {}); } };
+  window.KESP_E3 = { agenda, eventos, oficios, documentos, fornecedores, avisosVencimento, novoDoc(cli, perfil, d0) { sb = cli; eu = perfil; editarDoc(null, d0 || {}); }, novoFornecedor(cli, perfil, d0) { sb = cli; eu = perfil; d0 = d0 || {}; editarFor(null, { nome: d0.nome, cnpj: d0.cnpj, telefone: d0.telefone, email: d0.email, endereco: d0.endereco, fornece: d0.fornece }); } };
 })();
 
 // ===================== Etapa 5 · Conciliação bancária =====================
@@ -3313,7 +3316,7 @@ window.KESP_SINO = (function () {
     const F = { abertas: x => !x.pagamento, vencidas: x => !x.pagamento && x.vencimento && x.vencimento < hoje(), pagas: x => !!x.pagamento, todas: () => true };
     const vis = L.filter(x => F[fL](x) && (!fConta || x.conta_id === fConta) && (!fCentro || x.centro === fCentro) && (!fBus || [x.fornecedor, x.observacao, x.classificacao, x.nf_numero].join(' ').toLowerCase().includes(fBus)));
     const tot = vis.reduce((s, x) => s + Number(x.valor), 0), venc = L.filter(F.vencidas);
-    pg.innerHTML = `<div class="topo-tela"><div><h1>${tipoL === 'despesa' ? 'Contas a pagar' : 'Contas a receber'}</h1><p class="sub">No modelo das planilhas: fornecedor, datas, valor, centro de custo, grupo e classificação</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${ed && tipoL === 'despesa' ? '<label class="btn sec" style="cursor:pointer">📄 Importar XML da nota<input type="file" id="fXml" accept=".xml" multiple style="display:none"></label>' : ''}<button class="btn sec" id="fExp">⬇ Exportar planilha</button>${ed ? `<button class="btn" id="fNovo">Nova ${tipoL === 'despesa' ? 'despesa' : 'receita'}</button>` : ''}</div></div>
+    pg.innerHTML = `<div class="topo-tela"><div><h1>${tipoL === 'despesa' ? 'Contas a pagar' : 'Contas a receber'}</h1><p class="sub">No modelo das planilhas: fornecedor, datas, valor, centro de custo, grupo e classificação</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${ed && tipoL === 'despesa' ? '<label class="btn sec" style="cursor:pointer">📄 Importar nota (XML, PDF ou foto)<input type="file" id="fXml" accept=".xml,application/pdf,image/*" multiple style="display:none"></label>' : ''}<button class="btn sec" id="fExp">⬇ Exportar planilha</button>${ed ? `<button class="btn" id="fNovo">Nova ${tipoL === 'despesa' ? 'despesa' : 'receita'}</button>` : ''}</div></div>
       <div class="seg" style="max-width:360px;margin-bottom:10px">${[['despesa', 'Despesas'], ['receita', 'Receitas']].map(([k, n]) => `<a data-tl="${k}" class="${tipoL === k ? 'on' : ''}">${n}</a>`).join('')}</div>
       ${tipoL === 'despesa' && venc.length ? `<div class="dsem" style="background:rgba(229,72,77,.12);color:#FF9A9D"><span>⚠ ${venc.length} conta(s) vencida(s) · ${R(venc.reduce((s, x) => s + Number(x.valor), 0))}</span><a class="lk" id="fVer">ver ›</a></div>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><div class="seg" style="flex:0 0 auto;min-width:0">${[['abertas', tipoL === 'despesa' ? 'A pagar' : 'A receber'], ['vencidas', 'Vencidas'], ['pagas', tipoL === 'despesa' ? 'Pagas' : 'Recebidas'], ['todas', 'Todas']].map(([k, n]) => `<a data-fl="${k}" class="${fL === k ? 'on' : ''}">${n} · ${L.filter(F[k]).length}</a>`).join('')}</div>
@@ -3327,7 +3330,7 @@ window.KESP_SINO = (function () {
     g('fB').onchange = e => { fBus = e.target.value.toLowerCase(); lancamentos(sb, eu); };
     if (g('fVer')) g('fVer').onclick = () => { fL = 'vencidas'; lancamentos(sb, eu); };
     if (g('fNovo')) g('fNovo').onclick = () => editar(null);
-    if (g('fXml')) g('fXml').onchange = async e => { for (const f of e.target.files) await lerXml(f); };
+    if (g('fXml')) g('fXml').onchange = async e => { for (const f of e.target.files) { if (/\.xml$/i.test(f.name)) await lerXml(f); else await window.KESP_DOCS.importarNotaPdf(sb, eu, f); } };
     g('fExp').onclick = () => exportar();
     pg.querySelectorAll('[data-fl2]').forEach(el => el.onclick = () => editar(L.find(x => x.id === el.dataset.fl2)));
     pg.querySelectorAll('[data-pg]').forEach(b => b.onclick = ev => { ev.stopPropagation(); pagar(L.find(x => x.id === b.dataset.pg)); });
@@ -3356,7 +3359,7 @@ window.KESP_SINO = (function () {
     const est = d.querySelector('[data-est]'); if (est) est.onclick = async () => { if (!await window.KESP_CONFIRMA('Estornar a baixa? O lançamento volta a ficar em aberto.')) return; await sb.from('fin_lancamentos').update({ pagamento: null, comprovante: null, pago_por: null }).eq('id', x.id); d.remove(); lancamentos(sb, eu); };
     const ok = d.querySelector('[data-ok]'); if (ok) ok.onclick = async () => { const val = window.KESP_MOEDA.ler(g('lR')); if (!g('lF').value.trim() || !val) { alert('Informe ' + (desp ? 'o fornecedor' : 'o pagador') + ' e o valor.'); return; }
       let arquivo = v.arquivo || null; const f = g('lA').files[0]; if (f) { try { arquivo = await subir(f, 'financeiro'); } catch (_) { alert('Não foi possível enviar o anexo.'); return; } }
-      const reg = { tipo: v.tipo, fornecedor: g('lF').value.trim(), fornecedor_doc: v.fornecedor_doc || null, observacao: g('lO').value || null, emissao: g('lE') ? g('lE').value || null : null, vencimento: g('lV').value || null, valor: val, conta_id: g('lC').value, centro: g('lCe').value, grupo: g('lG') ? g('lG').value : (CL.find(c => c.nome === g('lCl').value) || {}).grupo || null, classificacao: g('lCl').value, arquivo, nf_numero: g('lN').value || null, nf_chave: v.nf_chave || null };
+      const reg = { tipo: v.tipo, fornecedor: g('lF').value.trim(), fornecedor_doc: v.fornecedor_doc || null, observacao: g('lO').value || null, emissao: g('lE') ? g('lE').value || null : null, vencimento: g('lV').value || null, valor: val, conta_id: g('lC').value, centro: g('lCe').value, grupo: g('lG') ? g('lG').value : (CL.find(c => c.nome === g('lCl').value) || {}).grupo || null, classificacao: g('lCl').value, arquivo, nf_numero: g('lN').value || null, nf_chave: v.nf_chave || null, unidade_id: v.unidade_id || null, itens: v.itens || null };
       const r = x ? await sb.from('fin_lancamentos').update(reg).eq('id', x.id) : await sb.from('fin_lancamentos').insert({ ...reg, criado_por: eu.id }); if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; } d.remove(); lancamentos(sb, eu); };
   }
   function pagar(x) {
@@ -3426,4 +3429,105 @@ window.KESP_SINO = (function () {
       await cli.from('avisos').insert({ destinatario: null, tipo: x.vencimento < new Date().toISOString().slice(0, 10) ? 'fazer' : 'alerta', prioridade: x.vencimento < new Date().toISOString().slice(0, 10) ? 'urgente' : 'importante', titulo: (x.vencimento < new Date().toISOString().slice(0, 10) ? 'Conta vencida: ' : 'Conta vence em ' + dBR(x.vencimento) + ': ') + x.fornecedor, texto: R(x.valor), link: chave, dispensavel: true }); } } catch (_) {} }
   async function novaDespesa(cli, perfil, pre) { sb = cli; eu = perfil; await base0(); editar(null, pre); }
   window.KESP_FIN = { lancamentos, painel, nfp, avisosContas, novaDespesa };
+})();
+
+// ===================== Notas e orçamentos em PDF · comparação com o pedido · cotação =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const R = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dBR = d => d ? new Date(String(d).slice(0, 10) + 'T12:00').toLocaleDateString('pt-BR') : '—';
+  const nrm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const pal = t => nrm(t).split(' ').filter(w => w.length > 2 && !/^\d+$/.test(w));
+  const sim = (a, b) => { const A = new Set(pal(a)), B = pal(b); if (!A.size || !B.length) return 0; return B.filter(w => A.has(w)).length / Math.max(A.size, B.length); };
+  let sb, eu;
+  // lê nota ou orçamento (PDF ou foto) pela KAI e devolve os dados organizados
+  async function lerDoc(f) {
+    if (f.size > 5 * 1024 * 1024) throw new Error('O arquivo passa de 5 MB.');
+    let dados, media = f.type;
+    if (f.type.startsWith('image/')) { const im = new Image(); await new Promise(r => { im.onload = r; im.src = URL.createObjectURL(f); }); const e0 = Math.min(1, 1800 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = im.width * e0; c.height = im.height * e0; c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); dados = c.toDataURL('image/jpeg', .88).split(',')[1]; media = 'image/jpeg'; }
+    else dados = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(',')[1]); fr.readAsDataURL(f); });
+    const veu = document.createElement('div'); veu.className = 'conf'; veu.innerHTML = '<div class="cx" style="text-align:center;max-width:360px"><b>Lendo o documento…</b><p class="sm">A KAI está organizando os dados. Leva alguns segundos.</p></div>'; document.body.appendChild(veu);
+    try { const { data, error } = await sb.functions.invoke('kai', { body: { mensagens: [{ papel: 'eu', texto: 'Extrair dados' }], anexo: { media_type: media, dados, nome: f.name }, extrair: 'doc' } });
+      if (error || !data || !data.dados) throw new Error((data && data.erro) || 'A KAI não conseguiu ler o documento. Publique a função "kai" atualizada no Supabase.'); return data.dados; }
+    finally { veu.remove(); }
+  }
+  const unidadeDe = async t => { const { data } = await sb.from('unidades').select('id,nome'); const n = nrm(t); if (!n) return null; return ((data || []).find(u => n.includes('ANGELICA') ? /angelica/i.test(nrm(u.nome)) : n.includes('PRIMEIRO') ? /PRIMEIRO/.test(nrm(u.nome)) : n.includes('SEDE') ? u.id === 'sede' : false) || {}).id || null; };
+  // pedido de material da unidade ainda não recebido
+  async function pedidoDa(unidade) { if (!unidade) return null; const { data } = await sb.from('pedidos_material').select('*').eq('unidade_id', unidade).in('situacao', ['enviado', 'orcamento', 'aprovado']).order('mes', { ascending: false }).limit(1); return (data || [])[0] || null; }
+  async function itensDoPedido(p) { if (!p) return []; const ids = (p.itens || []).map(i => i.variacao_id); if (!ids.length) return []; const { data } = await sb.from('produto_variacoes').select('id,nome,produto_id,produtos(nome)').in('id', ids);
+    return (p.itens || []).filter(i => i.quantidade > 0).map(i => { const v = (data || []).find(x => x.id === i.variacao_id) || {}; return { descricao: [v.produtos && v.produtos.nome, v.nome].filter(Boolean).join(' '), quantidade: Number(i.quantidade) }; }); }
+  // comparação item a item: pedido × documento (nota ou orçamento)
+  function comparar(pedido, doc) {
+    const usados = new Set(), L = pedido.map(pi => { let melhor = null, nota = 0; doc.forEach((di, k) => { if (usados.has(k)) return; const s0 = sim(pi.descricao, di.descricao); if (s0 > nota) { nota = s0; melhor = k; } }); if (nota >= .34) { usados.add(melhor); const di = doc[melhor]; return { p: pi, d: di, sit: Number(di.quantidade) === pi.quantidade ? 'ok' : 'dif' }; } return { p: pi, d: null, sit: 'falta' }; });
+    doc.forEach((di, k) => { if (!usados.has(k)) L.push({ p: null, d: di, sit: 'extra' }); }); return L; }
+  function tabelaComp(L) { const C = { ok: ['#22C984', 'confere'], dif: ['#F5A524', 'quantidade diferente'], falta: ['#E5484D', 'não veio'], extra: ['#3B82F6', 'não estava no pedido'] };
+    return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr class="sm"><td style="padding:5px">Pedido</td><td style="padding:5px;text-align:right">Qtd.</td><td style="padding:5px">Documento</td><td style="padding:5px;text-align:right">Qtd.</td><td style="padding:5px;text-align:right">Valor</td><td style="padding:5px">Situação</td></tr>
+      ${L.map(x => `<tr style="border-top:1px solid rgba(255,255,255,.06)"><td style="padding:5px">${esc(x.p ? x.p.descricao : '—')}</td><td style="padding:5px;text-align:right">${x.p ? x.p.quantidade : ''}</td><td style="padding:5px">${esc(x.d ? x.d.descricao : '—')}</td><td style="padding:5px;text-align:right">${x.d ? x.d.quantidade : ''}</td><td style="padding:5px;text-align:right">${x.d ? R(x.d.total) : ''}</td><td style="padding:5px;color:${C[x.sit][0]};white-space:nowrap">● ${C[x.sit][1]}</td></tr>`).join('')}</table></div>
+      <p class="sm" style="margin:6px 0 0">${['ok', 'dif', 'falta', 'extra'].map(k => `<span style="color:${C[k][0]}">${L.filter(x => x.sit === k).length} ${C[k][1]}</span>`).join(' · ')}</p>`; }
+  async function compararComPedido(unidade, itensDoc, titulo) {
+    const p = await pedidoDa(unidade); const d = document.createElement('div'); d.className = 'conf';
+    if (!p) { d.innerHTML = `<div class="cx" style="max-width:480px"><b>${esc(titulo)}</b><p class="sm">Não encontrei pedido de material em aberto para esta unidade.</p><button class="btn sec" data-x style="width:100%">Fechar</button></div>`; document.body.appendChild(d); d.querySelector('[data-x]').onclick = () => d.remove(); return; }
+    const L = comparar(await itensDoPedido(p), itensDoc || []);
+    d.innerHTML = `<div class="cx" style="max-width:860px;max-height:92vh;overflow-y:auto"><b>${esc(titulo)}</b><p class="sm">Pedido de ${new Date(p.mes + 'T12:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })} · situação: ${esc(p.situacao)}</p>${tabelaComp(L)}
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn sec" style="flex:1" data-x>Fechar</button><button class="btn" style="flex:1" data-rec>Ir para o recebimento em Compras</button></div></div>`;
+    document.body.appendChild(d); d.querySelector('[data-x]').onclick = () => d.remove(); d.querySelector('[data-rec]').onclick = () => { d.remove(); location.hash = '#compras'; }; return p;
+  }
+  // ---- Contas a pagar: importar nota em PDF ou foto ----
+  async function importarNotaPdf(cli, perfil, f) { sb = cli; eu = perfil;
+    let x; try { x = await lerDoc(f); } catch (e) { alert(e.message || e); return; }
+    if (x.chave) { const { data: ja } = await sb.from('fin_lancamentos').select('id').eq('nf_chave', String(x.chave).replace(/\D/g, '')).limit(1); if (ja && ja.length) { alert('Esta nota já foi lançada.'); return; } }
+    const un = await unidadeDe(x.unidade), dup = (x.duplicatas || []).filter(y => y.valor), limp = (x.itens || []).some(i => /DETERG|DESINF|PAPEL HIG|SACO DE LIXO|SABAO|LIMPADOR|VASSOURA/i.test(i.descricao));
+    if (dup.length > 1) window.KESP_TOAST(`A nota tem ${dup.length} parcelas: esta abre com a primeira; lance as outras ajustando o vencimento e o valor.`);
+    window.KESP_FIN.novaDespesa(sb, eu, { tipo: 'despesa', fornecedor: x.fornecedor, fornecedor_doc: x.cnpj, emissao: x.emissao || null, vencimento: dup[0] ? dup[0].vencimento : null, valor: Number(dup[0] ? dup[0].valor : x.total) || null, nf_numero: String(x.numero || '').replace(/^0+/, '').replace(/\./g, '') || null, nf_chave: String(x.chave || '').replace(/\D/g, '') || null,
+      observacao: ((x.itens || []).slice(0, 4).map(i => i.descricao).join('; ') || '').slice(0, 180), centro: x.termo_colaboracao ? 'educacao_infantil' : 'gestao', grupo: 'Despesas administrativas', classificacao: limp ? 'MATERIAL DE LIMPEZA' : null, unidade_id: un, itens: x.itens || null });
+    if (un && (x.itens || []).length) setTimeout(() => { const b = document.createElement('button'); b.className = 'btn sec'; b.style.cssText = 'position:fixed;right:20px;bottom:20px;z-index:3100'; b.textContent = '🔎 Comparar com o pedido da unidade'; b.onclick = () => { b.remove(); compararComPedido(un, x.itens, 'Nota ' + (x.numero || '') + ' × pedido'); }; document.body.appendChild(b); setTimeout(() => b.remove(), 60000); }, 400);
+    const { data: fo } = x.cnpj ? await sb.from('fornecedores').select('id').eq('cnpj', x.cnpj).limit(1) : { data: [1] }; if (fo && !fo.length && await window.KESP_CONFIRMA(`O fornecedor ${x.fornecedor} ainda não está cadastrado.\nCadastrar agora?`)) await sb.from('fornecedores').insert({ nome: x.fornecedor, cnpj: x.cnpj, telefone: x.telefone || null, endereco: x.endereco || null, categoria: limp ? 'Limpeza' : null });
+  }
+
+  // ---- Orçamentos ----
+  let abaO = 'lista';
+  async function orcamentos(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg'), ed = eu.admin || window.KESP_PODE('compras.editar');
+    const [o, u] = await Promise.all([sb.from('orcamentos_forn').select('*').order('criado_em', { ascending: false }).limit(300), sb.from('unidades').select('id,nome')]);
+    const L = o.data || [], U = u.data || [], uni = id => ((U.find(x => x.id === id) || {}).nome || '—').replace('Sede (Kolping Estadual de São Paulo)', 'Sede');
+    const SIT = { recebido: ['Recebido', '#3B82F6'], aprovado: ['Aprovado', '#22C984'], recusado: ['Recusado', '#6E6A7C'] };
+    pg.innerHTML = `<div class="topo-tela"><div><h1>Orçamentos</h1><p class="sub">Orçamentos dos fornecedores em PDF, comparação com o pedido, mapa de cotação e histórico de preços</p></div>${ed ? '<label class="btn" style="cursor:pointer">📄 Importar orçamento (PDF ou foto)<input type="file" id="oF" accept="application/pdf,image/*" style="display:none"></label>' : ''}</div>
+      <div class="seg" style="max-width:520px;margin-bottom:12px">${[['lista', 'Orçamentos'], ['mapa', 'Mapa de cotação'], ['precos', 'Histórico de preços']].map(([k, n]) => `<a data-ab="${k}" class="${abaO === k ? 'on' : ''}">${n}</a>`).join('')}</div><div id="oC"></div>`;
+    const C = pg.querySelector('#oC');
+    if (abaO === 'lista') C.innerHTML = L.map(x => `<div class="pe" style="--c:${SIT[x.situacao][1]};cursor:pointer" data-o="${x.id}"><div style="flex:1;min-width:0"><b>${esc(x.fornecedor)}</b>${x.numero ? ` <span class="sm">nº ${esc(x.numero)}</span>` : ''}<div class="sm">${esc(uni(x.unidade_id))} · ${(x.itens || []).length} itens${x.validade ? ' · válido até ' + dBR(x.validade) : ''}${x.condicao ? ' · ' + esc(x.condicao) : ''}</div></div><b style="min-width:110px;text-align:right">${R(x.total)}</b><span class="tg2" style="background:${SIT[x.situacao][1]}22;color:${SIT[x.situacao][1]}">${SIT[x.situacao][0]}</span></div>`).join('') || '<p class="sm">Nenhum orçamento importado.</p>';
+    else if (abaO === 'mapa') { const grupos = {}; L.filter(x => x.situacao !== 'recusado').forEach(x => { const k = x.pedido_id || ('u:' + x.unidade_id); (grupos[k] = grupos[k] || []).push(x); });
+      C.innerHTML = Object.values(grupos).filter(g => g.length).map(g => { const forn = g, linhas = []; forn.forEach((o0, fi) => (o0.itens || []).forEach(it => { let l = linhas.find(l0 => sim(l0.desc, it.descricao) >= .5); if (!l) { l = { desc: it.descricao, p: {} }; linhas.push(l); } l.p[fi] = Number(it.unitario) || 0; }));
+        return `<div class="cd" style="--c:#F07830;margin-bottom:12px;overflow-x:auto"><div class="hd"><span>${esc(uni(g[0].unidade_id).toUpperCase())} · ${g.length} ORÇAMENTO(S)</span></div><table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr class="sm"><td style="padding:5px">Item</td>${forn.map(o0 => `<td style="padding:5px;text-align:right">${esc(o0.fornecedor.split(' ').slice(0, 2).join(' '))}</td>`).join('')}</tr>
+          ${linhas.map(l => { const vs = Object.values(l.p).filter(v => v > 0), mn = Math.min(...vs); return `<tr style="border-top:1px solid rgba(255,255,255,.06)"><td style="padding:5px">${esc(l.desc)}</td>${forn.map((_, fi) => `<td style="padding:5px;text-align:right;${l.p[fi] && l.p[fi] === mn && vs.length > 1 ? 'color:#5FE0A8;font-weight:700' : ''}">${l.p[fi] ? R(l.p[fi]) : '—'}</td>`).join('')}</tr>`; }).join('')}
+          <tr style="border-top:1px solid rgba(255,255,255,.2)"><td style="padding:6px;font-weight:700">Total</td>${forn.map(o0 => `<td style="padding:6px;text-align:right;font-weight:700">${R(o0.total)}</td>`).join('')}</tr></table>${g.length < 2 ? '<p class="sm" style="margin:6px 0 0">Importe outro orçamento para a mesma unidade para comparar.</p>' : ''}</div>`; }).join('') || '<p class="sm">Importe orçamentos para montar o mapa.</p>'; }
+    else { C.innerHTML = `<input class="in" id="oP" placeholder="Digite um produto (ex.: detergente)" style="width:100%;margin-bottom:10px"><div id="oPr"></div>`; const inp = C.querySelector('#oP');
+      inp.oninput = () => { const q = nrm(inp.value); if (q.length < 3) { C.querySelector('#oPr').innerHTML = ''; return; } const H = []; L.forEach(o0 => (o0.itens || []).forEach(it => { if (nrm(it.descricao).includes(q)) H.push({ d: o0.emissao || o0.criado_em.slice(0, 10), f: o0.fornecedor, desc: it.descricao, u: Number(it.unitario) }); })); H.sort((a, b) => b.d.localeCompare(a.d));
+        C.querySelector('#oPr').innerHTML = H.map(h => `<div class="lin" style="display:flex;justify-content:space-between;gap:8px"><span><b>${dBR(h.d)}</b> · ${esc(h.desc)} <span class="sm">· ${esc(h.f)}</span></span><b>${R(h.u)}</b></div>`).join('') || '<p class="sm">Nenhum preço encontrado.</p>'; }; }
+    pg.querySelectorAll('[data-ab]').forEach(a => a.onclick = () => { abaO = a.dataset.ab; orcamentos(sb, eu); });
+    const fi = pg.querySelector('#oF'); if (fi) fi.onchange = async () => { const f = fi.files[0]; if (!f) return; let x; try { x = await lerDoc(f); } catch (e) { alert(e.message || e); return; }
+      const un = await unidadeDe(x.unidade), p = await pedidoDa(un); let arquivo = null; try { arquivo = 'orcamentos/' + Date.now() + '-' + f.name.replace(/[^\w.\-]+/g, '_'); const up = await sb.storage.from('kesp-arquivos').upload(arquivo, f); if (up.error) arquivo = null; } catch (_) { arquivo = null; }
+      const r = await sb.from('orcamentos_forn').insert({ fornecedor: x.fornecedor || 'Fornecedor', cnpj: x.cnpj || null, numero: x.numero || null, unidade_id: un, pedido_id: p ? p.id : null, emissao: x.emissao || null, validade: x.validade || null, condicao: x.condicao || null, total: Number(x.total) || (x.itens || []).reduce((s0, i) => s0 + Number(i.total || 0), 0), itens: x.itens || [], arquivo, criado_por: eu.id }).select().single();
+      if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; } if (p && p.situacao === 'enviado') await sb.from('pedidos_material').update({ situacao: 'orcamento' }).eq('id', p.id);
+      window.KESP_TOAST('Orçamento importado' + (un ? ' para ' + uni(un) : '') + '.'); abaO = 'lista'; await orcamentos(sb, eu); abrirOrc(r.data, U); };
+    pg.querySelectorAll('[data-o]').forEach(el => el.onclick = () => abrirOrc(L.find(x => x.id === el.dataset.o), U));
+  }
+  async function abrirOrc(x, U) {
+    const uni = id => ((U.find(y => y.id === id) || {}).nome || '—'), ed = eu.admin || window.KESP_PODE('compras.editar');
+    const p = x.pedido_id ? (await sb.from('pedidos_material').select('*').eq('id', x.pedido_id).maybeSingle()).data : null, comp = p ? comparar(await itensDoPedido(p), x.itens || []) : null;
+    const d = document.createElement('div'); d.className = 'conf';
+    d.innerHTML = `<div class="cx" style="max-width:900px;max-height:92vh;overflow-y:auto"><b>${esc(x.fornecedor)}${x.numero ? ' · nº ' + esc(x.numero) : ''}</b><p class="sm">${esc(uni(x.unidade_id))} · total ${R(x.total)}${x.validade ? ' · válido até ' + dBR(x.validade) : ''}${x.condicao ? ' · pagamento: ' + esc(x.condicao) : ''}</p>
+      ${unidadeSel(x, U, ed)}
+      ${comp ? `<div class="hd" style="margin-top:8px"><span>COMPARAÇÃO COM O PEDIDO</span></div>${tabelaComp(comp)}` : `<div class="hd" style="margin-top:8px"><span>ITENS</span></div><table style="width:100%;font-size:12.5px;border-collapse:collapse">${(x.itens || []).map(i => `<tr style="border-top:1px solid rgba(255,255,255,.06)"><td style="padding:5px">${esc(i.descricao)}</td><td style="padding:5px;text-align:right">${i.quantidade} ${esc(i.unidade || '')}</td><td style="padding:5px;text-align:right">${R(i.unitario)}</td><td style="padding:5px;text-align:right">${R(i.total)}</td></tr>`).join('')}</table><p class="sm">Sem pedido de material em aberto ligado a este orçamento.</p>`}
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">${x.arquivo ? '<button class="btn sec" data-arq>Ver PDF</button>' : ''}${ed && x.situacao === 'recebido' ? '<button class="btn sec" data-rc style="color:#FF9A9D">Recusar</button><button class="btn" data-ap>Aprovar orçamento</button>' : ''}<button class="btn sec" style="margin-left:auto" data-x>Fechar</button></div></div>`;
+    document.body.appendChild(d); d.querySelector('[data-x]').onclick = () => d.remove();
+    const su = d.querySelector('#oU'); if (su) su.onchange = async () => { const pp = await pedidoDa(su.value); await sb.from('orcamentos_forn').update({ unidade_id: su.value || null, pedido_id: pp ? pp.id : null }).eq('id', x.id); d.remove(); const { data } = await sb.from('orcamentos_forn').select('*').eq('id', x.id).single(); abrirOrc(data, U); };
+    const a = d.querySelector('[data-arq]'); if (a) a.onclick = async () => { const { data } = await sb.storage.from('kesp-arquivos').createSignedUrl(x.arquivo, 300); if (data) window.open(data.signedUrl, '_blank'); };
+    const rc = d.querySelector('[data-rc]'); if (rc) rc.onclick = async () => { await sb.from('orcamentos_forn').update({ situacao: 'recusado' }).eq('id', x.id); d.remove(); orcamentos(sb, eu); };
+    const ap = d.querySelector('[data-ap]'); if (ap) ap.onclick = async () => { if (!await window.KESP_CONFIRMA(`Aprovar o orçamento de ${x.fornecedor} (${R(x.total)})?${x.pedido_id ? '\nO pedido da unidade passa para "Aprovado".' : ''}`)) return;
+      await sb.from('orcamentos_forn').update({ situacao: 'aprovado' }).eq('id', x.id); if (x.pedido_id) { await sb.from('pedidos_material').update({ situacao: 'aprovado', numero_orc: x.numero || null }).eq('id', x.pedido_id); await sb.from('orcamentos_forn').update({ situacao: 'recusado' }).eq('pedido_id', x.pedido_id).eq('situacao', 'recebido').neq('id', x.id); }
+      d.remove(); window.KESP_TOAST('Orçamento aprovado.'); orcamentos(sb, eu); };
+  }
+  const unidadeSel = (x, U, ed) => ed ? `<label class="sm">Unidade de entrega</label> <select id="oU" style="margin-left:6px"><option value="">—</option>${U.map(u => `<option value="${u.id}"${x.unidade_id === u.id ? ' selected' : ''}>${esc(u.nome)}</option>`).join('')}</select>` : '';
+  window.KESP_DOCS = { importarNotaPdf, orcamentos, compararComPedido };
 })();
