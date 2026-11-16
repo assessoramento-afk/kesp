@@ -25,9 +25,9 @@ window.KESP_BUSCA = (function () {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const K = s => `<svg width="${s}" height="${s}" viewBox="0 0 100 100" aria-hidden="true"><rect width="35" height="100" fill="#1E1B19"/><rect x="35" width="65" height="100" fill="#F07830"/><path d="M100 0 L100 100 L35 50Z" fill="#1E1B19"/></svg>`;
   const KAI = (s, olhos) => `<svg width="${s}" height="${s * 0.9}" viewBox="20 8 80 72" aria-hidden="true"><line x1="60" y1="14" x2="60" y2="24" stroke="#9A9088" stroke-width="2"/><circle cx="60" cy="12" r="5" fill="#F07830"/><rect x="22" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="90" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="28" y="24" width="64" height="50" rx="18" fill="#F4F1EC"/><rect x="36" y="34" width="48" height="28" rx="12" fill="#2C3045"/>${olhos || '<path d="M45 50 Q50 44 55 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M65 50 Q70 44 75 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M54 55 Q60 59 66 55" stroke="#FFB070" stroke-width="2" fill="none" stroke-linecap="round"/>'}</svg>`;
-  const ICONES = { cofre: 'shield-lock', lixeira: 'trash', modelos: 'template', aprendizagem: 'school', scanner: 'scan', lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
+  const ICONES = { agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'truck', cofre: 'shield-lock', lixeira: 'trash', modelos: 'template', aprendizagem: 'school', scanner: 'scan', lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
   const ETAPAS = [['1A', 'Base essencial'], ['1B', 'Base complementar'], ['2', 'Assessoramento'], ['3', 'Kolping Estadual'], ['4', 'Controles'], ['5', 'Conciliação bancária'], ['6', 'Financeiro'], ['7', 'RH'], ['8', 'Educação Infantil'], ['9', 'Prestação de contas']];
-  const FUNCAO_MODULO = { lembretes: '*', sugestoes: '*', scanner: '*', cofre: 'cofre.usar', modelos: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
+  const FUNCAO_MODULO = { agenda: 'agenda.ver', eventos: 'eventos.ver', oficios: 'oficios.ver', documentos: 'documentos.ver', fornecedores: 'fornecedores.ver', lembretes: '*', sugestoes: '*', scanner: '*', cofre: 'cofre.usar', modelos: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
 
   let sb, eu, sair, modulos = [], perms = new Set(), avisosN = 0;
   const pode = f => eu.admin || perms.has(f);
@@ -112,6 +112,7 @@ window.KESP_BUSCA = (function () {
         <div class="cd s2" style="--c:#6E6A7C"><div class="hd"><span>A CAMINHO</span><span>${em.length} módulos</span></div><div class="acm">${grupos.map(g => `<div><span>${esc(g.n)}</span><span class="sm">etapa ${esc(g.e)}</span></div>`).join('') || '<span class="sm">Tudo pronto!</span>'}</div></div>
         <div class="cd s4" style="--c:#3B82F6"><div class="hd"><span>NOVIDADES</span></div><div id="cNov" class="sm">…</div></div>
       </div>`;
+    if (eu.admin && window.KESP_E3 && !window.__kespVenc) { window.__kespVenc = 1; window.KESP_E3.avisosVencimento(sb); }
     if (eu.admin || pode('recibos.ver')) sb.from('recibos').select('id', { count: 'exact', head: true }).eq('situacao', 'emitido').not('comunidade_id', 'is', null).is('enviado_em', null).then(r => { const n = r.count || 0, el = document.getElementById('inAvisoEnv'); if (n && el) { el.innerHTML = `<a class="pe" style="--c:#F5A524;cursor:pointer;margin:0 0 12px;text-decoration:none;color:inherit" id="inEnv"><span style="flex:1"><b style="color:#F8C46A">${n} recibo${n > 1 ? 's' : ''} não enviado${n > 1 ? 's' : ''}</b> <span class="sm">às Comunidades</span></span><span class="sm">ver ›</span></a>`; el.querySelector('#inEnv').onclick = () => { sessionStorage.setItem('kesp.naoEnviados', '1'); sessionStorage.setItem('kesp.recAba', 'historico'); location.hash = '#recibos'; }; } }, () => {});
     document.querySelectorAll('[data-ir]').forEach(c => c.onclick = e => { e.stopPropagation(); location.hash = '#' + c.dataset.ir; });
     document.querySelectorAll('[data-bv]').forEach(c => c.onclick = () => boasVindas(true));
@@ -161,7 +162,7 @@ window.KESP_BUSCA = (function () {
     if (id.startsWith('ck/')) { document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === 'comunidades')); return window.KESP_CKS.abrir(sb, eu, id.slice(3)); }
     document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === id));
     const atual = document.querySelector('.lat [data-r="' + id + '"]'); if (atual && atual.parentElement.hidden) document.getElementById('caminho').click();
-    const m = modulos.find(x => x.id === id) || modulos.find(x => x.id === 'inicio');
+    const m = modulos.find(x => x.id === id) || modulos.find(x => x.id === id.split('/')[0]) || modulos.find(x => x.id === 'inicio');
     if (!m) return pagInicio();
     if (!visivel(m)) return pagSemAcesso();
     if (m.situacao === 'em_breve') return pagEmBreve(m);
@@ -183,6 +184,8 @@ window.KESP_BUSCA = (function () {
     if (m.id === 'pedidos' && window.KESP_PEDIDOS) return window.KESP_PEDIDOS.abrir(sb, eu);
     if (m.id === 'mapa' && window.KESP_MAPA) return window.KESP_MAPA.abrir(sb, eu);
     if (m.id === 'lembretes') return window.KESP_SINO.telaLembretes(sb, eu);
+    if (['agenda', 'oficios', 'documentos', 'fornecedores'].includes(m.id)) return window.KESP_E3[m.id](sb, eu);
+    if (m.id === 'eventos') return window.KESP_E3.eventos(sb, eu, id.split('/')[1]);
     if (['cofre', 'lixeira', 'modelos', 'aprendizagem', 'scanner'].includes(m.id)) return window.KESP_1B2[m.id](sb, eu);
     if (m.id === 'sugestoes') return window.KESP_SINO.telaSugestoes(sb, eu);
     if (m.id === 'compras' && window.KESP_COMPRAS) return window.KESP_COMPRAS.abrir(sb, eu);
@@ -1372,9 +1375,10 @@ window.KESP_EVOL = (function () {
     emitindo = true; const b = document.getElementById('rEmit'); b.disabled = true; b.textContent = 'Emitindo…';
     const { data: id, error } = await sb.rpc('emitir_recibo3', { p_serie: tipo, p_ck: ck ? ck.id : null, p_pagador_nome: ck ? null : st.avulso.nome, p_pagador_doc: ck ? null : (st.avulso.doc || null), p_data: st.data, p_forma: st.forma, p_valor: c.V, p_itens: itensRecibo(c, ck), p_credito_usado: c.cu, p_credito_novo: c.cn, p_sobra: c.sb, p_referencia: texto(c, ck, st.data), p_modelo: st.modelo, p_obs: st.obs || null, p_a_receber: c.faltaEx.map(e => ({ descricao: e.desc, valor: e.falta })), p_quitar: st.quitar || [], p_acordo: c.acVal > 0 ? c.ac.a.id : null, p_acordo_valor: c.acVal });
     if (error) { emitindo = false; b.disabled = false; b.textContent = 'Emitir recibo'; alert('Não foi possível emitir: ' + error.message); return; }
-    b.textContent = 'Emitido ✓'; window.KESP_RASCUNHO.limpar('recibo'); const sub = st.substitui; novoEstado(); Object.keys(PROX).forEach(k => delete PROX[k]);
+    b.textContent = 'Emitido ✓'; window.KESP_RASCUNHO.limpar('recibo'); const sub = st.substitui, evId = st.eventoId; novoEstado(); Object.keys(PROX).forEach(k => delete PROX[k]);
     try {
       if (sub) await sb.from('recibos').update({ substitui: sub.id }).eq('id', id);
+      if (evId) await sb.from('recibos').update({ evento_id: evId }).eq('id', id);
       await B.carregar(sb, eu); await extras();
       aba = 'historico'; render(); await abrirRecibo(id);
     } catch (e) {
@@ -1580,9 +1584,12 @@ window.KESP_EVOL = (function () {
     async abrir(cliente, perfil) {
       sb = cliente; eu = perfil; B = window.KESP_CKS.base; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>';
       try { const ab = sessionStorage.getItem('kesp.recAba'); if (ab) { aba = ab; sessionStorage.removeItem('kesp.recAba'); } } catch (_) {}
+      let rEv = null; try { rEv = JSON.parse(sessionStorage.getItem('kesp.reciboEvento') || 'null'); sessionStorage.removeItem('kesp.reciboEvento'); } catch (_) {}
       await B.carregar(sb, eu); await extras(); const md0 = await window.KESP_MOD(sb); MODELO_PADRAO = md0.recibo_modelo === 'timbrado' ? 'timbrado' : 'padrao'; if (!st) { novoEstado(); const rs = window.KESP_RASCUNHO.ler('recibo'); if (rs && (rs.valor || (rs.extras || []).length) && await window.KESP_CONFIRMA('Há um recibo que você começou e não emitiu. Continuar de onde parou?')) { st = { ...st, ...rs, sel: new Set(rs.sel || []), ck: B.dados().cks.find(x => x.id === rs.ck) || null }; } else window.KESP_RASCUNHO.limpar('recibo'); }
       let pre = null; try { pre = sessionStorage.getItem('kesp.recibo.ck'); sessionStorage.removeItem('kesp.recibo.ck'); } catch (_) {}
       if (pre) { novoEstado(); st.ck = B.dados().cks.find(x => x.id === pre) || null; aba = 'emitir'; }
+      if (rEv) { novoEstado(); st.tipo = 'EV'; st.pagador = 'ck'; st.ck = B.dados().cks.find(c => c.id === rEv.ck) || null; st.eventoId = rEv.evento;
+        st.extras = rEv.jaPago > 0 ? [{ desc: 'Inscrições · ' + rEv.nome + ' (restante)', qtd: 1, unit: Math.max(0, rEv.qtd * rEv.unit - rEv.jaPago) }] : [{ desc: 'Inscrição · ' + rEv.nome, qtd: rEv.qtd, unit: rEv.unit }]; st.valorAuto = true; st.valor = Math.max(0, rEv.qtd * rEv.unit - (rEv.jaPago || 0)); aba = 'emitir'; }
       render();
     }
   };
@@ -2570,4 +2577,247 @@ window.KESP_SINO = (function () {
   const varrer = raiz => (raiz.querySelectorAll ? raiz.querySelectorAll('input[type=date],input[type=datetime-local]') : []).forEach(ligar);
   new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) { if (n.matches && n.matches('input[type=date],input[type=datetime-local]')) ligar(n); varrer(n); } }))).observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('DOMContentLoaded', () => varrer(document));
+})();
+
+// ===================== Etapa 3 · Kolping Estadual =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const R = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dBR = d => d ? new Date(String(d).slice(0, 10) + 'T12:00').toLocaleDateString('pt-BR') : '—';
+  const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const TIPOS = { reuniao: ['Reunião', '#3B82F6'], visita: ['Visita', '#8B5CF6'], evento: ['Evento', '#F07830'], prazo: ['Prazo', '#E5484D'], feriado: ['Feriado', '#22C984'], institucional: ['Institucional', '#F5A524'], outro: ['Outro', '#6E6A7C'] };
+  const base = () => location.href.split('#')[0].replace(/[^/]*$/, '');
+  let sb, eu;
+  const pode = f => eu.admin || window.KESP_PODE(f);
+  const modal = (titulo, corpo, salvar, extraBtn) => { const d = document.createElement('div'); d.className = 'conf';
+    d.innerHTML = `<div class="cx fm" style="max-width:620px;max-height:92vh;overflow-y:auto"><b>${titulo}</b>${corpo}<div style="display:flex;gap:8px;margin-top:14px">${extraBtn || ''}<button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok>Salvar</button></div></div>`;
+    document.body.appendChild(d); window.KESP_MOEDA.ligar(d); d.querySelector('[data-x]').onclick = () => d.remove(); d.querySelector('[data-ok]').onclick = () => salvar(d); return d; };
+  const timbrado = (corpo) => `<div style="max-width:700px;margin:0 auto;font-size:12.5px;line-height:1.65;color:#1E1B19;font-family:Arial,Helvetica,sans-serif">
+    <div style="height:36px;background:#F26B1D;display:flex;align-items:center;padding:0 18px;-webkit-print-color-adjust:exact;print-color-adjust:exact"><div style="background:#fff;padding:3px 6px;border-radius:2px;display:flex"><img src="${base()}logo-kolping.png" style="height:22px"></div></div>
+    <div style="padding:22px 30px 10px">${corpo}</div>
+    <div style="border-top:1px solid #CFC8C0;margin:16px 30px 0;padding:6px 0 10px;text-align:right;font-size:8.5px;color:#6E6E6E;line-height:1.5">R. Rio Branco, 36 – Cohab II – Carapicuíba-SP · CEP 06326-030<br>Fone: (11) 4183-6018 / 4183-2194 · E-mail: oke-sp@kolping.org.br · www.kolping-sp.org.br</div></div>`;
+  const assinatura = () => `<div style="margin-top:30px;text-align:center">${eu.assinatura_url ? `<img src="${esc(eu.assinatura_url)}" style="height:70px;max-width:260px;object-fit:contain;mix-blend-mode:multiply;display:block;margin:0 auto -6px">` : '<div style="height:56px"></div>'}<div style="border-top:1px solid #1E1B19;width:260px;margin:0 auto;padding-top:3px;font-weight:700">${esc(eu.nome)}</div><div style="color:#8A8078">${esc(eu.cargo || '')} · Kolping Estadual de São Paulo</div></div>`;
+
+  // ---------- Agenda ----------
+  let mesV = new Date(); mesV.setDate(1);
+  async function agenda(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg');
+    const ini = new Date(mesV.getFullYear(), mesV.getMonth(), 1), fim = new Date(mesV.getFullYear(), mesV.getMonth() + 1, 1);
+    const [a, e, d] = await Promise.all([sb.from('agenda').select('*').order('inicio'), sb.from('eventos').select('id,nome,data_ini,data_fim,local').neq('situacao', 'cancelado'), sb.from('documentos_kolping').select('id,nome,vencimento').not('vencimento', 'is', null)]);
+    const itens = [];
+    (a.data || []).forEach(x => { const d0 = new Date(x.inicio); const add = dt => itens.push({ ...x, quando: dt });
+      if (!x.repetir) add(d0); else { const t = new Date(d0); while (t < fim) { if (t >= ini) add(new Date(t)); if (x.repetir === 'semanal') t.setDate(t.getDate() + 7); else if (x.repetir === 'mensal') t.setMonth(t.getMonth() + 1); else t.setFullYear(t.getFullYear() + 1); if (t.getFullYear() > fim.getFullYear() + 1) break; } } });
+    (e.data || []).forEach(x => itens.push({ id: 'ev' + x.id, titulo: x.nome, tipo: 'evento', quando: new Date(x.data_ini + 'T09:00'), dia_todo: true, local: x.local, link: '#eventos/' + x.id }));
+    (d.data || []).forEach(x => itens.push({ id: 'dc' + x.id, titulo: 'Vence: ' + x.nome, tipo: 'prazo', quando: new Date(x.vencimento + 'T09:00'), dia_todo: true, link: '#documentos' }));
+    const doMes = itens.filter(x => x.quando >= ini && x.quando < fim);
+    const g0 = new Date(ini); g0.setDate(1 - ini.getDay()); const hj = new Date().toDateString();
+    let grade = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(x => `<div class="agh">${x}</div>`).join('');
+    for (let i = 0; i < 42; i++) { const dt = new Date(g0); dt.setDate(g0.getDate() + i); const evs = doMes.filter(x => x.quando.toDateString() === dt.toDateString());
+      grade += `<div class="agd ${dt.getMonth() !== ini.getMonth() ? 'fo' : ''} ${dt.toDateString() === hj ? 'hj' : ''}" data-dia="${dt.toISOString().slice(0, 10)}"><span class="n">${dt.getDate()}</span>${evs.slice(0, 3).map(x => `<span class="ev" style="--c:${TIPOS[x.tipo][1]}" data-it="${esc(x.id)}">${x.dia_todo ? '' : x.quando.toTimeString().slice(0, 5) + ' '}${esc(x.titulo)}</span>`).join('')}${evs.length > 3 ? `<span class="sm">+${evs.length - 3}</span>` : ''}</div>`; }
+    const prox = itens.filter(x => x.quando >= new Date(new Date().toDateString())).sort((x, y) => x.quando - y.quando).slice(0, 8);
+    pg.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><div><h1>Agenda</h1><p class="sub">Equipe da Kolping Estadual · eventos e vencimentos entram sozinhos</p></div>${pode('agenda.editar') ? '<button class="btn" id="agNovo">Novo compromisso</button>' : ''}</div>
+      <div class="ag2"><div class="cd" style="--c:#3B82F6"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><a class="lk" id="agAnt">‹</a><b style="text-transform:capitalize">${MES[ini.getMonth()]} ${ini.getFullYear()}</b><a class="lk" id="agPro">›</a></div><div class="agg">${grade}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">${Object.values(TIPOS).map(([n, c]) => `<span class="sm"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${c};margin-right:4px"></span>${n}</span>`).join('')}</div></div>
+      <div class="cd" style="--c:#F07830"><div class="hd"><span>PRÓXIMOS</span></div>${prox.map(x => `<div class="lin" style="cursor:pointer" data-it="${esc(x.id)}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${TIPOS[x.tipo][1]};margin-right:6px"></span><b>${x.quando.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</b>${x.dia_todo ? '' : ' ' + x.quando.toTimeString().slice(0, 5)} · ${esc(x.titulo)}${x.local ? `<div class="sm" style="margin-left:14px">${esc(x.local)}</div>` : ''}</div>`).join('') || '<p class="sm">Nada marcado.</p>'}</div></div>`;
+    pg.querySelector('#agAnt').onclick = () => { mesV.setMonth(mesV.getMonth() - 1); agenda(sb, eu); };
+    pg.querySelector('#agPro').onclick = () => { mesV.setMonth(mesV.getMonth() + 1); agenda(sb, eu); };
+    const nv = pg.querySelector('#agNovo'); if (nv) nv.onclick = () => compromisso(null);
+    pg.querySelectorAll('[data-it]').forEach(el => el.onclick = ev => { ev.stopPropagation(); const x = itens.find(y => String(y.id) === el.dataset.it); if (!x) return; if (x.link) { location.hash = x.link; return; } compromisso((a.data || []).find(y => y.id === x.id)); });
+    if (pode('agenda.editar')) pg.querySelectorAll('[data-dia]').forEach(el => el.ondblclick = () => compromisso(null, el.dataset.dia));
+  }
+  function compromisso(x, dia) {
+    const loc = d => { const t = new Date(d); return new Date(t.getTime() - t.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); };
+    const v = x || { tipo: 'reuniao', inicio: (dia || new Date().toISOString().slice(0, 10)) + 'T09:00' };
+    const d = modal(x ? 'Editar compromisso' : 'Novo compromisso', `<label>Título</label><input id="cT" value="${esc(v.titulo || '')}">
+      <div class="dois"><div><label>Tipo</label><select id="cTp">${Object.entries(TIPOS).map(([k, [n]]) => `<option value="${k}"${v.tipo === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div><div><label>Repetir</label><select id="cRp">${[['', 'Não repetir'], ['semanal', 'Toda semana'], ['mensal', 'Todo mês'], ['anual', 'Todo ano']].map(([k, n]) => `<option value="${k}"${(v.repetir || '') === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div></div>
+      <div class="dois"><div><label>Início</label><input id="cI" type="datetime-local" value="${x ? loc(v.inicio) : v.inicio}"></div><div><label>Fim (opcional)</label><input id="cF" type="datetime-local" value="${v.fim ? loc(v.fim) : ''}"></div></div>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="cD"${v.dia_todo ? ' checked' : ''}> Dia todo</label>
+      <label>Local</label><input id="cL" value="${esc(v.local || '')}"><label>Participantes</label><input id="cP" value="${esc(v.participantes || '')}"><label>Descrição</label><input id="cDs" value="${esc(v.descricao || '')}">`,
+      async d0 => { const g = id => d0.querySelector('#' + id).value; if (!g('cT').trim() || !g('cI')) { alert('Informe o título e o início.'); return; }
+        const reg = { titulo: g('cT').trim(), tipo: g('cTp'), repetir: g('cRp'), inicio: new Date(g('cI')).toISOString(), fim: g('cF') ? new Date(g('cF')).toISOString() : null, dia_todo: d0.querySelector('#cD').checked, local: g('cL') || null, participantes: g('cP') || null, descricao: g('cDs') || null };
+        const r = x ? await sb.from('agenda').update(reg).eq('id', x.id) : await sb.from('agenda').insert({ ...reg, criado_por: eu.id }); if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; } d0.remove(); agenda(sb, eu); },
+      x && pode('agenda.editar') ? '<button class="btn sec" data-del style="color:#FF9A9D">Apagar</button>' : '');
+    const del = d.querySelector('[data-del]'); if (del) del.onclick = async () => { if (!await window.KESP_CONFIRMA('Apagar este compromisso?')) return; await sb.from('agenda').delete().eq('id', x.id); d.remove(); agenda(sb, eu); };
+  }
+
+  // ---------- Eventos ----------
+  const SITEV = { planejamento: ['Planejamento', '#6E6A7C'], inscricoes: ['Inscrições abertas', '#3B82F6'], realizado: ['Realizado', '#22C984'], encerrado: ['Encerrado', '#8B5CF6'], cancelado: ['Cancelado', '#E5484D'] };
+  async function eventos(cli, perfil, alvo) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg'); if (alvo) return evento(alvo);
+    const { data } = await sb.from('eventos').select('*').order('data_ini', { ascending: false });
+    pg.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h1>Eventos</h1><p class="sub">Inscrições por CK, recibos, tarefas, custos e prestação de contas</p></div>${pode('eventos.editar') ? '<button class="btn" id="evNovo">Novo evento</button>' : ''}</div>
+      ${(data || []).map(x => `<div class="pe" style="--c:${SITEV[x.situacao][1]};cursor:pointer" data-ev="${x.id}"><div style="flex:1;min-width:0"><b>${esc(x.nome)}</b><div class="sm">${dBR(x.data_ini)}${x.data_fim && x.data_fim !== x.data_ini ? ' a ' + dBR(x.data_fim) : ''}${x.local ? ' · ' + esc(x.local) : ''} · inscrição ${R(x.valor_inscricao)}</div></div><span class="tg2" style="background:${SITEV[x.situacao][1]}22;color:${SITEV[x.situacao][1]}">${SITEV[x.situacao][0]}</span></div>`).join('') || '<p class="sm">Nenhum evento.</p>'}`;
+    const nv = pg.querySelector('#evNovo'); if (nv) nv.onclick = () => editarEvento(null);
+    pg.querySelectorAll('[data-ev]').forEach(el => el.onclick = () => (location.hash = '#eventos/' + el.dataset.ev));
+  }
+  function editarEvento(x) {
+    const v = x || { situacao: 'planejamento', valor_inscricao: 0 };
+    modal(x ? 'Editar evento' : 'Novo evento', `<label>Nome</label><input id="eN" value="${esc(v.nome || '')}"><div class="dois"><div><label>Início</label><input id="eI" type="date" value="${v.data_ini || ''}"></div><div><label>Fim (opcional)</label><input id="eF" type="date" value="${v.data_fim || ''}"></div></div>
+      <label>Local</label><input id="eL" value="${esc(v.local || '')}"><div class="dois"><div><label>Valor da inscrição por pessoa</label><input id="eV" data-moeda value="${R(v.valor_inscricao)}"></div><div><label>Vagas (opcional)</label><input id="eVg" type="number" min="0" value="${v.vagas || ''}"></div></div>
+      <label>Público</label><input id="eP" value="${esc(v.publico || '')}" placeholder="Ex.: diretorias das CKs"><label>Situação</label><select id="eS">${Object.entries(SITEV).map(([k, [n]]) => `<option value="${k}"${v.situacao === k ? ' selected' : ''}>${n}</option>`).join('')}</select><label>Descrição</label><input id="eD" value="${esc(v.descricao || '')}">`,
+      async d0 => { const g = id => d0.querySelector('#' + id); if (!g('eN').value.trim() || !g('eI').value) { alert('Informe o nome e a data.'); return; }
+        const reg = { nome: g('eN').value.trim(), data_ini: g('eI').value, data_fim: g('eF').value || null, local: g('eL').value || null, valor_inscricao: window.KESP_MOEDA.ler(g('eV')), vagas: +g('eVg').value || null, publico: g('eP').value || null, situacao: g('eS').value, descricao: g('eD').value || null };
+        const r = x ? await sb.from('eventos').update(reg).eq('id', x.id) : await sb.from('eventos').insert({ ...reg, criado_por: eu.id }).select().single(); if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; }
+        d0.remove(); location.hash = '#eventos/' + (x ? x.id : r.data.id); if (x) evento(x.id); });
+  }
+  let abaEv = 'insc';
+  async function evento(id) {
+    const pg = document.getElementById('pg');
+    const [e, i, t, c, rc, ck, ps] = await Promise.all([sb.from('eventos').select('*').eq('id', id).maybeSingle(), sb.from('evento_inscricoes').select('*').eq('evento_id', id), sb.from('evento_tarefas').select('*').eq('evento_id', id).order('ordem'), sb.from('evento_custos').select('*').eq('evento_id', id).order('data'), sb.from('recibos').select('id,serie,numero,ano,comunidade_id,pagador_nome,valor,itens,situacao').eq('evento_id', id).neq('situacao', 'cancelado'), sb.from('comunidades').select('id,nome').eq('ativa', true).order('nome'), sb.from('perfis').select('id,nome').eq('situacao', 'ativo')]);
+    const ev = e.data; if (!ev) { pg.innerHTML = '<p class="sm">Evento não encontrado.</p>'; return; }
+    const ins = i.data || [], tar = t.data || [], cus = c.data || [], recs = rc.data || [], cks = ck.data || [];
+    const pagoCk = cid => recs.filter(r => r.comunidade_id === cid).reduce((s, r) => s + (r.itens || []).filter(x => x.tipo === 'item').reduce((a, x) => a + Number(x.pago || 0), 0), 0);
+    const totIns = ins.reduce((s, x) => s + x.quantidade, 0), devido = totIns * Number(ev.valor_inscricao), recebido = recs.reduce((s, r) => s + Number(r.valor), 0), gasto = cus.reduce((s, x) => s + Number(x.valor), 0);
+    const ed = pode('eventos.editar');
+    pg.innerHTML = `<a class="lk" href="#eventos">‹ Eventos</a><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px"><div><h1>${esc(ev.nome)}</h1><p class="sub">${dBR(ev.data_ini)}${ev.data_fim && ev.data_fim !== ev.data_ini ? ' a ' + dBR(ev.data_fim) : ''}${ev.local ? ' · ' + esc(ev.local) : ''} · <span style="color:${SITEV[ev.situacao][1]}">${SITEV[ev.situacao][0]}</span></p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${ed ? '<button class="btn sec" id="evEd">Editar</button>' : ''}<button class="btn" id="evPc">Prestação de contas</button></div></div>
+      <div class="g4" style="margin:10px 0">${[['INSCRITOS', totIns + (ev.vagas ? ' / ' + ev.vagas : ''), '#3B82F6'], ['A RECEBER', R(devido), '#F5A524'], ['RECEBIDO', R(recebido), '#22C984'], ['CUSTOS', R(gasto), '#E5484D']].map(([a, b, c0]) => `<div class="cd" style="--c:${c0}"><div class="hd"><span>${a}</span></div><div class="big" style="font-size:20px">${b}</div></div>`).join('')}</div>
+      <div class="abas" style="grid-template-columns:repeat(3,1fr);max-width:480px">${[['insc', 'Inscrições'], ['tar', 'Tarefas'], ['cus', 'Custos']].map(([k, n]) => `<a data-ae="${k}" class="${abaEv === k ? 'on' : ''}">${n}</a>`).join('')}</div><div id="evC"></div>`;
+    const C = pg.querySelector('#evC');
+    if (abaEv === 'insc') {
+      C.innerHTML = `${ed ? '<button class="btn sec" id="inNovo" style="margin-bottom:8px">+ Inscrição</button>' : ''}${ins.map(x => { const nome = x.comunidade_id ? (cks.find(c0 => c0.id === x.comunidade_id) || {}).nome : x.nome_avulso, dv = x.quantidade * ev.valor_inscricao, pg0 = x.comunidade_id ? pagoCk(x.comunidade_id) : 0, cor = pg0 >= dv - 0.009 ? '#22C984' : pg0 > 0 ? '#F5A524' : '#E5484D';
+        return `<div class="pe" style="--c:${cor}"><div style="flex:1;min-width:0"><b>${esc(nome || '—')}</b><div class="sm">${x.quantidade} inscrição(ões)${x.nomes ? ' · ' + esc(x.nomes) : ''}</div></div><div style="text-align:right"><b>${R(dv)}</b><div class="sm" style="color:${cor}">${pg0 >= dv - 0.009 ? 'pago' : pg0 > 0 ? 'pago ' + R(pg0) : 'a receber'}</div></div><div class="ac">${x.comunidade_id && pg0 < dv - 0.009 ? `<button class="mini" data-rcb="${x.id}">Recibo</button>` : ''}${ed ? `<button class="mini neu" data-ie="${x.id}">Editar</button>` : ''}</div></div>`; }).join('') || '<p class="sm">Nenhuma inscrição.</p>'}`;
+      const ni = C.querySelector('#inNovo'); const edIns = x => { const v = x || { quantidade: 1 };
+        const d = modal(x ? 'Editar inscrição' : 'Nova inscrição', `<label>Comunidade</label><select id="iC"><option value="">— Pessoa ou empresa (digitar) —</option>${cks.map(c0 => `<option value="${c0.id}"${v.comunidade_id === c0.id ? ' selected' : ''}>${esc(c0.nome)}</option>`).join('')}</select><label>Nome (se não for CK)</label><input id="iA" value="${esc(v.nome_avulso || '')}"><label>Quantidade de inscrições</label><input id="iQ" type="number" min="1" value="${v.quantidade}"><label>Nomes dos participantes (opcional)</label><input id="iN" value="${esc(v.nomes || '')}">`,
+          async d0 => { const g = id => d0.querySelector('#' + id).value; if (!g('iC') && !g('iA').trim()) { alert('Escolha a CK ou digite o nome.'); return; }
+            const reg = { evento_id: ev.id, comunidade_id: g('iC') || null, nome_avulso: g('iC') ? null : g('iA').trim(), quantidade: Math.max(1, +g('iQ') || 1), nomes: g('iN') || null };
+            const r = x ? await sb.from('evento_inscricoes').update(reg).eq('id', x.id) : await sb.from('evento_inscricoes').insert(reg); if (r.error) { alert('Não foi possível salvar.'); return; } d0.remove(); evento(ev.id); },
+          x ? '<button class="btn sec" data-del style="color:#FF9A9D">Apagar</button>' : '');
+        const del = d.querySelector('[data-del]'); if (del) del.onclick = async () => { await sb.from('evento_inscricoes').delete().eq('id', x.id); d.remove(); evento(ev.id); }; };
+      if (ni) ni.onclick = () => edIns(null); C.querySelectorAll('[data-ie]').forEach(b => b.onclick = () => edIns(ins.find(x => x.id === b.dataset.ie)));
+      C.querySelectorAll('[data-rcb]').forEach(b => b.onclick = () => { const x = ins.find(y => y.id === b.dataset.rcb); sessionStorage.setItem('kesp.reciboEvento', JSON.stringify({ evento: ev.id, nome: ev.nome, ck: x.comunidade_id, qtd: x.quantidade, unit: Number(ev.valor_inscricao), jaPago: pagoCk(x.comunidade_id) })); location.hash = '#recibos'; });
+    } else if (abaEv === 'tar') {
+      const nome = id0 => ((ps.data || []).find(p => p.id === id0) || {}).nome || '';
+      C.innerHTML = `${ed ? '<button class="btn sec" id="taNovo" style="margin-bottom:8px">+ Tarefa</button>' : ''}${tar.map(x => `<div class="pe" style="--c:${x.feita_em ? '#22C984' : x.prazo && x.prazo < new Date().toISOString().slice(0, 10) ? '#E5484D' : '#3B82F6'}"><input type="checkbox" data-tf="${x.id}"${x.feita_em ? ' checked' : ''}><div style="flex:1;min-width:0;${x.feita_em ? 'opacity:.6;text-decoration:line-through' : ''}"><b>${esc(x.titulo)}</b><div class="sm">${esc(nome(x.responsavel))}${x.prazo ? ' · até ' + dBR(x.prazo) : ''}</div></div>${ed ? `<button class="mini neu" data-td="${x.id}">✕</button>` : ''}</div>`).join('') || '<p class="sm">Nenhuma tarefa.</p>'}`;
+      const tn = C.querySelector('#taNovo'); if (tn) tn.onclick = () => modal('Nova tarefa', `<label>Tarefa</label><input id="tT"><div class="dois"><div><label>Responsável</label><select id="tR"><option value="">—</option>${(ps.data || []).map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join('')}</select></div><div><label>Prazo</label><input id="tP" type="date"></div></div>`,
+        async d0 => { const g = id0 => d0.querySelector('#' + id0).value; if (!g('tT').trim()) return; const reg = { evento_id: ev.id, titulo: g('tT').trim(), responsavel: g('tR') || null, prazo: g('tP') || null, ordem: tar.length };
+          const r = await sb.from('evento_tarefas').insert(reg); if (r.error) { alert('Não foi possível salvar.'); return; }
+          if (reg.responsavel && reg.prazo) await sb.from('lembretes').insert({ criado_por: eu.id, para: reg.responsavel, titulo: reg.titulo + ' · ' + ev.nome, quando: reg.prazo + 'T09:00:00', link: '#eventos/' + ev.id });
+          d0.remove(); evento(ev.id); });
+      C.querySelectorAll('[data-tf]').forEach(b => b.onchange = async () => { await sb.from('evento_tarefas').update({ feita_em: b.checked ? new Date().toISOString() : null }).eq('id', b.dataset.tf); evento(ev.id); });
+      C.querySelectorAll('[data-td]').forEach(b => b.onclick = async () => { await sb.from('evento_tarefas').delete().eq('id', b.dataset.td); evento(ev.id); });
+    } else {
+      C.innerHTML = `${ed ? '<button class="btn sec" id="cuNovo" style="margin-bottom:8px">+ Custo</button>' : ''}${cus.map(x => `<div class="pe" style="--c:${x.pago ? '#22C984' : '#F5A524'}"><div style="flex:1;min-width:0"><b>${esc(x.descricao)}</b><div class="sm">${esc(x.fornecedor || '')}${x.data ? ' · ' + dBR(x.data) : ''} · ${x.pago ? 'pago' : 'a pagar'}</div></div><b>${R(x.valor)}</b>${ed ? `<button class="mini neu" data-cd="${x.id}">✕</button>` : ''}</div>`).join('') || '<p class="sm">Nenhum custo.</p>'}`;
+      const cn = C.querySelector('#cuNovo'); if (cn) cn.onclick = () => modal('Novo custo', `<label>Descrição</label><input id="uD"><div class="dois"><div><label>Valor</label><input id="uV" data-moeda></div><div><label>Data</label><input id="uDt" type="date"></div></div><label>Fornecedor</label><input id="uF"><label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="uP"> Já pago</label>`,
+        async d0 => { const g = id0 => d0.querySelector('#' + id0); const v = window.KESP_MOEDA.ler(g('uV')); if (!g('uD').value.trim() || !v) { alert('Informe a descrição e o valor.'); return; }
+          const r = await sb.from('evento_custos').insert({ evento_id: ev.id, descricao: g('uD').value.trim(), valor: v, data: g('uDt').value || null, fornecedor: g('uF').value || null, pago: g('uP').checked }); if (r.error) { alert('Não foi possível salvar.'); return; } d0.remove(); evento(ev.id); });
+      C.querySelectorAll('[data-cd]').forEach(b => b.onclick = async () => { await sb.from('evento_custos').delete().eq('id', b.dataset.cd); evento(ev.id); });
+    }
+    pg.querySelectorAll('[data-ae]').forEach(a => a.onclick = () => { abaEv = a.dataset.ae; evento(ev.id); });
+    const eE = pg.querySelector('#evEd'); if (eE) eE.onclick = () => editarEvento(ev);
+    pg.querySelector('#evPc').onclick = () => window.KESP_IMPRIMIR(window.KESP_ARQ.montar(['Prestação de contas', ev.nome]), timbrado(`<h2 style="text-align:center;margin:0 0 4px">Prestação de contas</h2><p style="text-align:center;margin:0 0 14px;color:#5A4E46">${esc(ev.nome)} · ${dBR(ev.data_ini)}${ev.local ? ' · ' + esc(ev.local) : ''}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px"><tr style="background:#FBF0E6"><th style="text-align:left;padding:5px" colspan="2">Receitas</th></tr>${recs.map(r => `<tr><td style="padding:4px;border-bottom:1px solid #EFE9E2">Recibo ${r.serie} ${r.numero}/${r.ano} · ${esc(r.pagador_nome)}</td><td style="padding:4px;border-bottom:1px solid #EFE9E2;text-align:right">${R(r.valor)}</td></tr>`).join('') || '<tr><td style="padding:4px">—</td><td></td></tr>'}<tr><td style="padding:5px;font-weight:700">Total de receitas</td><td style="padding:5px;text-align:right;font-weight:700">${R(recebido)}</td></tr>
+      <tr style="background:#FBF0E6"><th style="text-align:left;padding:5px" colspan="2">Despesas</th></tr>${cus.map(x => `<tr><td style="padding:4px;border-bottom:1px solid #EFE9E2">${esc(x.descricao)}${x.fornecedor ? ' · ' + esc(x.fornecedor) : ''}</td><td style="padding:4px;border-bottom:1px solid #EFE9E2;text-align:right">${R(x.valor)}</td></tr>`).join('') || '<tr><td style="padding:4px">—</td><td></td></tr>'}<tr><td style="padding:5px;font-weight:700">Total de despesas</td><td style="padding:5px;text-align:right;font-weight:700">${R(gasto)}</td></tr>
+      <tr style="background:${recebido - gasto >= 0 ? '#DDF5E9' : '#FBDADB'}"><td style="padding:7px;font-weight:700">Resultado</td><td style="padding:7px;text-align:right;font-weight:700">${R(recebido - gasto)}</td></tr></table>
+      <p style="margin-top:10px">Inscrições: ${totIns} · Valor da inscrição: ${R(ev.valor_inscricao)} · A receber: ${R(Math.max(0, devido - ins.filter(x => x.comunidade_id).reduce((s, x) => s + Math.min(pagoCk(x.comunidade_id), x.quantidade * ev.valor_inscricao), 0)))}</p>
+      <p style="text-align:right;margin-top:14px">Carapicuíba, ${new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>${assinatura()}`));
+  }
+
+  // ---------- Ofícios ----------
+  const TOF = { oficio: 'Ofício', procuracao: 'Procuração', declaracao: 'Declaração', recebido: 'Recebido' };
+  async function oficios(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg');
+    const { data } = await sb.from('oficios').select('*').order('criado_em', { ascending: false }).limit(200);
+    pg.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h1>Ofícios</h1><p class="sub">Ofícios, procurações e declarações numerados por ano · ofícios recebidos</p></div>${pode('oficios.emitir') ? '<div style="display:flex;gap:8px"><button class="btn sec" id="ofRec">Registrar recebido</button><button class="btn" id="ofNovo">Novo documento</button></div>' : ''}</div>
+      ${(data || []).map(x => `<div class="pe" style="--c:${x.situacao === 'cancelado' ? '#6E6A7C' : x.tipo === 'recebido' ? '#8B5CF6' : '#F07830'};cursor:pointer" data-of="${x.id}"><div style="flex:1;min-width:0"><b>${TOF[x.tipo]}${x.numero ? ' nº ' + String(x.numero).padStart(3, '0') + '/' + x.ano : ''}</b> <span class="sm">· ${dBR(x.data)}</span><div class="sm">${x.tipo === 'recebido' ? 'De: ' : 'Para: '}${esc(x.destinatario)} · ${esc(x.assunto)}</div></div>${x.situacao === 'cancelado' ? '<span class="tg2">Cancelado</span>' : ''}</div>`).join('') || '<p class="sm">Nenhum documento.</p>'}`;
+    const n = pg.querySelector('#ofNovo'); if (n) n.onclick = () => editarOficio(null);
+    const rc = pg.querySelector('#ofRec'); if (rc) rc.onclick = () => recebido();
+    pg.querySelectorAll('[data-of]').forEach(el => el.onclick = () => abrirOficio((data || []).find(x => x.id === el.dataset.of)));
+  }
+  function editarOficio(x) {
+    const v = x || { tipo: 'oficio', data: new Date().toISOString().slice(0, 10), texto: '' };
+    modal(x ? 'Editar documento' : 'Novo documento', `<div class="dois"><div><label>Tipo</label><select id="oT"${x ? ' disabled' : ''}>${['oficio', 'procuracao', 'declaracao'].map(k => `<option value="${k}"${v.tipo === k ? ' selected' : ''}>${TOF[k]}</option>`).join('')}</select></div><div><label>Data</label><input id="oD" type="date" value="${v.data}"></div></div>
+      <label>Destinatário</label><input id="oDe" value="${esc(v.destinatario || '')}" placeholder="Ex.: Prefeitura Municipal de Carapicuíba – Secretaria de Educação"><label>Assunto</label><input id="oA" value="${esc(v.assunto || '')}">
+      <label>Texto</label><textarea id="oX" rows="10" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(8,12,20,.7);color:#F2EEEA;font-family:inherit;font-size:13px;line-height:1.55">${esc(v.texto || '')}</textarea><p class="sm" style="margin:2px 0 0">O número é gerado ao salvar, em sequência por tipo e ano.</p>`,
+      async d0 => { const g = id => d0.querySelector('#' + id).value; if (!g('oDe').trim() || !g('oA').trim() || !g('oX').trim()) { alert('Preencha destinatário, assunto e texto.'); return; }
+        const tipo = x ? x.tipo : g('oT'), ano = new Date(g('oD') + 'T12:00').getFullYear(); let reg = { tipo, ano, data: g('oD'), destinatario: g('oDe').trim(), assunto: g('oA').trim(), texto: g('oX') };
+        let r; if (x) r = await sb.from('oficios').update(reg).eq('id', x.id).select().single();
+        else { for (let k = 0; k < 3; k++) { const { data: num } = await sb.rpc('proximo_oficio', { p_tipo: tipo, p_ano: ano }); r = await sb.from('oficios').insert({ ...reg, numero: num, criado_por: eu.id }).select().single(); if (!r.error || !/duplicate|unique/i.test(r.error.message)) break; } }
+        if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; } d0.remove(); oficios(sb, eu); abrirOficio(r.data); });
+  }
+  function htmlOficio(x) {
+    const num = TOF[x.tipo] + ' nº ' + String(x.numero).padStart(3, '0') + '/' + x.ano;
+    return timbrado(`<div style="display:flex;justify-content:space-between"><b>${num}</b><span>Carapicuíba, ${new Date(x.data + 'T12:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}.</span></div>
+      <p style="margin:18px 0 4px">${x.tipo === 'oficio' ? 'À' : ''}</p><p style="margin:0;font-weight:700">${esc(x.destinatario)}</p><p style="margin:12px 0"><b>Assunto:</b> ${esc(x.assunto)}</p>
+      <div style="white-space:pre-wrap;text-align:justify">${esc(x.texto)}</div>${x.tipo === 'oficio' ? '<p style="margin-top:14px">Atenciosamente,</p>' : ''}${assinatura()}`);
+  }
+  async function abrirOficio(x) {
+    if (x.tipo === 'recebido') { if (!x.arquivo) return; const { data } = await sb.storage.from('kesp-arquivos').createSignedUrl(x.arquivo, 300); if (data) window.open(data.signedUrl, '_blank'); return; }
+    const d = document.createElement('div'); d.className = 'conf'; const nomeA = window.KESP_ARQ.montar([TOF[x.tipo] + ' ' + String(x.numero).padStart(3, '0') + '-' + x.ano, x.destinatario, x.assunto]);
+    d.innerHTML = `<div class="cx" style="max-width:760px;max-height:92vh;overflow-y:auto;padding:12px"><div class="rbar"><button class="btn" data-imp>🖨 Imprimir</button><button class="btn sec" data-pdf>⬇ Baixar PDF</button>${pode('oficios.emitir') && x.situacao !== 'cancelado' ? '<button class="btn sec" data-ed>Editar</button><button class="btn sec" data-can style="color:#FF9A9D">Cancelar</button>' : ''}<button class="btn sec rx" data-x>✕</button></div><div style="background:#E9E5DF;padding:10px;border-radius:10px"><div style="background:#fff">${htmlOficio(x)}</div></div></div>`;
+    document.body.appendChild(d);
+    d.querySelector('[data-x]').onclick = () => d.remove();
+    d.querySelector('[data-imp]').onclick = () => window.KESP_IMPRIMIR(nomeA, htmlOficio(x));
+    d.querySelector('[data-pdf]').onclick = () => window.KESP_PDF(htmlOficio(x), nomeA).catch(() => alert('Use Imprimir › Salvar como PDF.'));
+    const e0 = d.querySelector('[data-ed]'); if (e0) e0.onclick = () => { d.remove(); editarOficio(x); };
+    const c0 = d.querySelector('[data-can]'); if (c0) c0.onclick = async () => { if (!await window.KESP_CONFIRMA('Cancelar este documento? O número não é reutilizado.')) return; await sb.from('oficios').update({ situacao: 'cancelado' }).eq('id', x.id); d.remove(); oficios(sb, eu); };
+  }
+  function recebido() {
+    modal('Registrar ofício recebido', `<label>De (quem enviou)</label><input id="rDe"><label>Assunto</label><input id="rA"><label>Data</label><input id="rD" type="date" value="${new Date().toISOString().slice(0, 10)}"><label>Arquivo (PDF ou foto)</label><input id="rF" type="file" accept="application/pdf,image/*">`,
+      async d0 => { const g = id => d0.querySelector('#' + id); if (!g('rDe').value.trim() || !g('rA').value.trim()) { alert('Preencha quem enviou e o assunto.'); return; }
+        let arquivo = null; const f = g('rF').files[0]; if (f) { arquivo = 'oficios/' + Date.now() + '-' + f.name.replace(/[^\w.\-]+/g, '_'); const up = await sb.storage.from('kesp-arquivos').upload(arquivo, f); if (up.error) { alert('Não foi possível enviar o arquivo: ' + up.error.message); return; } }
+        const r = await sb.from('oficios').insert({ tipo: 'recebido', ano: new Date(g('rD').value + 'T12:00').getFullYear(), data: g('rD').value, destinatario: g('rDe').value.trim(), assunto: g('rA').value.trim(), arquivo, criado_por: eu.id }); if (r.error) { alert('Não foi possível salvar.'); return; } d0.remove(); oficios(sb, eu); });
+  }
+
+  // ---------- Documentos com vencimento ----------
+  const CATD = ['CNPJ e cadastros', 'Certidões', 'Alvarás e licenças', 'Bombeiros (AVCB/CLCB)', 'Contratos', 'Atas e estatuto', 'Termos e convênios', 'Outro'];
+  const sitDoc = v => { if (!v) return ['Sem vencimento', '#6E6A7C']; const d = Math.ceil((new Date(v + 'T12:00') - new Date()) / 864e5); return d < 0 ? ['Vencido há ' + -d + ' dia(s)', '#E5484D'] : d <= 30 ? ['Vence em ' + d + ' dia(s)', '#F5A524'] : ['Vence em ' + dBR(v), '#22C984']; };
+  async function documentos(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg');
+    const { data } = await sb.from('documentos_kolping').select('*').order('vencimento', { ascending: true, nullsFirst: false });
+    const L = data || [], venc = L.filter(x => x.vencimento && x.vencimento < new Date().toISOString().slice(0, 10)).length, prox = L.filter(x => sitDoc(x.vencimento)[1] === '#F5A524').length;
+    pg.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h1>Documentos</h1><p class="sub">Documentos da Kolping com vencimento · aviso no sino 30 e 7 dias antes</p></div>${pode('documentos.editar') ? '<button class="btn" id="dkNovo">Novo documento</button>' : ''}</div>
+      <div class="g4" style="margin:10px 0">${[['VENCIDOS', venc, '#E5484D'], ['VENCEM EM 30 DIAS', prox, '#F5A524'], ['TOTAL', L.length, '#3B82F6']].map(([a, b, c0]) => `<div class="cd" style="--c:${c0}"><div class="hd"><span>${a}</span></div><div class="big">${b}</div></div>`).join('')}</div>
+      ${CATD.map(cat => { const it = L.filter(x => (x.categoria || 'Outro') === cat); return it.length ? `<p style="font-size:11px;letter-spacing:.08em;color:#A8A3B4;margin:14px 0 6px">${cat.toUpperCase()}</p>${it.map(x => { const [t, c0] = sitDoc(x.vencimento); return `<div class="pe" style="--c:${c0}"><div style="flex:1;min-width:0"><b>${esc(x.nome)}</b><div class="sm" style="color:${c0}">${t}</div>${x.observacao ? `<div class="sm">${esc(x.observacao)}</div>` : ''}</div><div class="ac">${x.arquivo ? `<button class="mini" data-ab="${x.id}">Abrir</button>` : ''}${pode('documentos.editar') ? `<button class="mini neu" data-de="${x.id}">Editar</button>` : ''}</div></div>`; }).join('')}` : ''; }).join('') || '<p class="sm">Nenhum documento cadastrado.</p>'}`;
+    const nv = pg.querySelector('#dkNovo'); if (nv) nv.onclick = () => editarDoc(null);
+    pg.querySelectorAll('[data-de]').forEach(b => b.onclick = () => editarDoc(L.find(x => x.id === b.dataset.de)));
+    pg.querySelectorAll('[data-ab]').forEach(b => b.onclick = async () => { const x = L.find(y => y.id === b.dataset.ab), { data: u } = await sb.storage.from('kesp-arquivos').createSignedUrl(x.arquivo, 300); if (u) window.open(u.signedUrl, '_blank'); });
+  }
+  function editarDoc(x) {
+    const v = x || { categoria: 'Certidões' };
+    const d = modal(x ? 'Editar documento' : 'Novo documento', `<label>Nome</label><input id="kN" value="${esc(v.nome || '')}" placeholder="Ex.: Certidão negativa municipal"><label>Categoria</label><select id="kC">${CATD.map(c0 => `<option${v.categoria === c0 ? ' selected' : ''}>${c0}</option>`).join('')}</select>
+      <div class="dois"><div><label>Emissão</label><input id="kE" type="date" value="${v.emissao || ''}"></div><div><label>Vencimento</label><input id="kV" type="date" value="${v.vencimento || ''}"></div></div>
+      <label>Arquivo (PDF ou foto)${v.arquivo ? ' · já tem arquivo; envie outro para trocar' : ''}</label><input id="kF" type="file" accept="application/pdf,image/*"><label>Observação</label><input id="kO" value="${esc(v.observacao || '')}">`,
+      async d0 => { const g = id => d0.querySelector('#' + id); if (!g('kN').value.trim()) { alert('Informe o nome.'); return; }
+        let arquivo = v.arquivo || null; const f = g('kF').files[0]; if (f) { arquivo = 'documentos/' + Date.now() + '-' + f.name.replace(/[^\w.\-]+/g, '_'); const up = await sb.storage.from('kesp-arquivos').upload(arquivo, f); if (up.error) { alert('Não foi possível enviar o arquivo: ' + up.error.message); return; } }
+        const reg = { nome: g('kN').value.trim(), categoria: g('kC').value, emissao: g('kE').value || null, vencimento: g('kV').value || null, arquivo, observacao: g('kO').value || null, atualizado_em: new Date().toISOString() };
+        const r = x ? await sb.from('documentos_kolping').update(reg).eq('id', x.id) : await sb.from('documentos_kolping').insert({ ...reg, criado_por: eu.id }); if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; } d0.remove(); documentos(sb, eu); },
+      x ? '<button class="btn sec" data-del style="color:#FF9A9D">Apagar</button>' : '');
+    const del = d.querySelector('[data-del]'); if (del) del.onclick = async () => { if (!await window.KESP_CONFIRMA('Apagar este documento? Ele fica 60 dias na lixeira.')) return; await sb.from('documentos_kolping').delete().eq('id', x.id); d.remove(); documentos(sb, eu); };
+  }
+  // avisos de vencimento (30 e 7 dias), gerados uma vez por documento e faixa
+  async function avisosVencimento(cli) {
+    try { const { data } = await cli.from('documentos_kolping').select('id,nome,vencimento').not('vencimento', 'is', null); const hoje = new Date();
+      for (const x of data || []) { const d = Math.ceil((new Date(x.vencimento + 'T12:00') - hoje) / 864e5), faixa = d < 0 ? 'vencido' : d <= 7 ? '7' : d <= 30 ? '30' : null; if (!faixa) continue;
+        const tit = (faixa === 'vencido' ? 'Documento vencido: ' : 'Documento vence em ' + d + ' dia(s): ') + x.nome, chave = '#documentos?' + x.id + ':' + faixa;
+        const { data: ja } = await cli.from('avisos').select('id').eq('link', chave).limit(1); if (ja && ja.length) continue;
+        await cli.from('avisos').insert({ destinatario: null, tipo: faixa === '30' ? 'alerta' : 'fazer', prioridade: faixa === '30' ? 'atencao' : 'urgente', titulo: tit, texto: 'Vencimento: ' + dBR(x.vencimento), link: chave, dispensavel: true }); } } catch (_) {}
+  }
+
+  // ---------- Fornecedores ----------
+  async function fornecedores(cli, perfil) {
+    sb = cli; eu = perfil; const pg = document.getElementById('pg');
+    const { data } = await sb.from('fornecedores').select('*').order('nome'); const L = data || [];
+    pg.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h1>Fornecedores</h1><p class="sub">${L.filter(x => x.ativo).length} ativos</p></div>${pode('fornecedores.editar') || pode('compras.editar') ? '<button class="btn" id="foNovo">Novo fornecedor</button>' : ''}</div>
+      <input class="in" id="foB" placeholder="Buscar por nome, CNPJ ou o que fornece" style="width:100%;margin-bottom:10px">
+      <div id="foL">${L.map(x => `<div class="pe" style="--c:${x.ativo ? '#3B82F6' : '#6E6A7C'};cursor:pointer" data-fo="${x.id}" data-n="${esc((x.nome + ' ' + (x.cnpj || '') + ' ' + (x.fornece || '') + ' ' + (x.categoria || '')).toLowerCase())}"><div style="flex:1;min-width:0"><b>${esc(x.nome)}</b>${x.ativo ? '' : ' <span class="tg2">Inativo</span>'}<div class="sm">${esc([x.categoria, x.fornece].filter(Boolean).join(' · '))}</div><div class="sm">${esc([x.contato, x.telefone, x.email].filter(Boolean).join(' · '))}</div></div>${x.telefone ? `<a class="mini neu" href="https://wa.me/55${String(x.telefone).replace(/\D/g, '')}" target="_blank" rel="noopener" onclick="event.stopPropagation()">WhatsApp</a>` : ''}</div>`).join('') || '<p class="sm">Nenhum fornecedor.</p>'}</div>`;
+    pg.querySelector('#foB').oninput = e => pg.querySelectorAll('[data-n]').forEach(el => (el.style.display = el.dataset.n.includes(e.target.value.toLowerCase()) ? '' : 'none'));
+    const nv = pg.querySelector('#foNovo'); if (nv) nv.onclick = () => editarFor(null);
+    pg.querySelectorAll('[data-fo]').forEach(el => el.onclick = () => (pode('fornecedores.editar') || pode('compras.editar')) && editarFor(L.find(x => x.id === el.dataset.fo)));
+  }
+  function editarFor(x) {
+    const v = x || { ativo: true };
+    const d = modal(x ? 'Editar fornecedor' : 'Novo fornecedor', `<div class="dois" style="grid-template-columns:1fr auto;align-items:end"><div><label>CNPJ</label><input id="fC" value="${esc(v.cnpj || '')}" placeholder="00.000.000/0000-00"></div><button class="btn sec" id="fBus" style="height:42px">Buscar CNPJ</button></div>
+      <label>Nome</label><input id="fN" value="${esc(v.nome || '')}"><div class="dois"><div><label>Categoria</label><input id="fCa" value="${esc(v.categoria || '')}" list="fCl"><datalist id="fCl"><option>Limpeza</option><option>Escritório</option><option>Pedagógico</option><option>Alimentação</option><option>Manutenção</option><option>Serviços</option><option>Eventos</option></datalist></div><div><label>O que fornece</label><input id="fF" value="${esc(v.fornece || '')}"></div></div>
+      <div class="dois"><div><label>Contato</label><input id="fCo" value="${esc(v.contato || '')}"></div><div><label>Telefone</label><input id="fT" value="${esc(v.telefone || '')}"></div></div><label>E-mail</label><input id="fE" value="${esc(v.email || '')}"><label>Endereço</label><input id="fEn" value="${esc(v.endereco || '')}"><label>Observação</label><input id="fO" value="${esc(v.observacao || '')}">
+      <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="fA"${v.ativo ? ' checked' : ''}> Ativo</label>`,
+      async d0 => { const g = id => d0.querySelector('#' + id); if (!g('fN').value.trim()) { alert('Informe o nome.'); return; }
+        const reg = { nome: g('fN').value.trim(), cnpj: g('fC').value.trim() || null, categoria: g('fCa').value || null, fornece: g('fF').value || null, contato: g('fCo').value || null, telefone: g('fT').value || null, email: g('fE').value || null, endereco: g('fEn').value || null, observacao: g('fO').value || null, ativo: g('fA').checked };
+        const r = x ? await sb.from('fornecedores').update(reg).eq('id', x.id) : await sb.from('fornecedores').insert(reg); if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; } d0.remove(); fornecedores(sb, eu); });
+    d.querySelector('#fBus').onclick = async () => { const c = d.querySelector('#fC').value.replace(/\D/g, ''); if (c.length !== 14) { alert('Digite os 14 números do CNPJ.'); return; }
+      try { const j = await (await fetch('https://brasilapi.com.br/api/cnpj/v1/' + c)).json(); if (!j.razao_social) throw 0; const s0 = (id, val) => { const el = d.querySelector('#' + id); if (val && !el.value) el.value = val; };
+        s0('fN', j.nome_fantasia || j.razao_social); s0('fT', j.ddd_telefone_1); s0('fE', j.email); s0('fEn', [j.logradouro, j.numero, j.bairro, j.municipio + '/' + j.uf].filter(Boolean).join(', ')); s0('fF', j.cnae_fiscal_descricao); window.KESP_TOAST('Dados preenchidos pela Receita.'); } catch (_) { alert('CNPJ não encontrado.'); } };
+  }
+  window.KESP_E3 = { agenda, eventos, oficios, documentos, fornecedores, avisosVencimento };
 })();
