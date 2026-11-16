@@ -300,3 +300,10 @@ label:has(>input[type=checkbox]){display:flex!important;align-items:center;gap:8
 .agd .n{font-size:11px;color:#A8A3B4}.agd.fo{opacity:.4}.agd.hj{box-shadow:inset 0 0 0 1.5px #3B82F6}.agd.hj .n{color:#93B8FF;font-weight:700}
 .agd .ev{font-size:10.5px;padding:2px 5px;border-radius:5px;background:color-mix(in srgb,var(--c) 22%,transparent);border-left:2px solid var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 @media (max-width:860px){.ag2{grid-template-columns:1fr}.agd{min-height:54px}.agd .ev{font-size:9px}}
+/* 4.1 · alinhamento geral dos formulários e espaço do topo */
+.fm .dois,.cx .dois{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}
+.fm input:not([type=checkbox]):not([type=radio]):not([type=file]),.fm select,.fm .kdt,.cx .dois input:not([type=checkbox]):not([type=file]),.cx .dois select{height:44px;min-height:44px;box-sizing:border-box;margin:0}
+.fm .dois>div>label,.cx .dois>div>label{margin:10px 0 4px}
+.topo-tela{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-bottom:14px}
+#pg>div:first-child[style*="justify-content:space-between"]{margin-bottom:14px}
+#pg>input.in{margin-top:4px}

@@ -25,9 +25,9 @@ window.KESP_BUSCA = (function () {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const K = s => `<svg width="${s}" height="${s}" viewBox="0 0 100 100" aria-hidden="true"><rect width="35" height="100" fill="#1E1B19"/><rect x="35" width="65" height="100" fill="#F07830"/><path d="M100 0 L100 100 L35 50Z" fill="#1E1B19"/></svg>`;
   const KAI = (s, olhos) => `<svg width="${s}" height="${s * 0.9}" viewBox="20 8 80 72" aria-hidden="true"><line x1="60" y1="14" x2="60" y2="24" stroke="#9A9088" stroke-width="2"/><circle cx="60" cy="12" r="5" fill="#F07830"/><rect x="22" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="90" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="28" y="24" width="64" height="50" rx="18" fill="#F4F1EC"/><rect x="36" y="34" width="48" height="28" rx="12" fill="#2C3045"/>${olhos || '<path d="M45 50 Q50 44 55 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M65 50 Q70 44 75 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M54 55 Q60 59 66 55" stroke="#FFB070" stroke-width="2" fill="none" stroke-linecap="round"/>'}</svg>`;
-  const ICONES = { agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'truck', cofre: 'shield-lock', lixeira: 'trash', modelos: 'template', aprendizagem: 'school', scanner: 'scan', lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
+  const ICONES = { conciliacao: 'building-bank', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'truck', cofre: 'shield-lock', lixeira: 'trash', modelos: 'template', aprendizagem: 'school', scanner: 'scan', lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
   const ETAPAS = [['1A', 'Base essencial'], ['1B', 'Base complementar'], ['2', 'Assessoramento'], ['3', 'Kolping Estadual'], ['4', 'Controles'], ['5', 'Conciliação bancária'], ['6', 'Financeiro'], ['7', 'RH'], ['8', 'Educação Infantil'], ['9', 'Prestação de contas']];
-  const FUNCAO_MODULO = { agenda: 'agenda.ver', eventos: 'eventos.ver', oficios: 'oficios.ver', documentos: 'documentos.ver', fornecedores: 'fornecedores.ver', lembretes: '*', sugestoes: '*', scanner: '*', cofre: 'cofre.usar', modelos: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
+  const FUNCAO_MODULO = { conciliacao: 'conciliacao.ver', agenda: 'agenda.ver', eventos: 'eventos.ver', oficios: 'oficios.ver', documentos: 'documentos.ver', fornecedores: 'fornecedores.ver', lembretes: '*', sugestoes: '*', scanner: '*', cofre: 'cofre.usar', modelos: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
 
   let sb, eu, sair, modulos = [], perms = new Set(), avisosN = 0;
   const pode = f => eu.admin || perms.has(f);
@@ -185,6 +185,7 @@ window.KESP_BUSCA = (function () {
     if (m.id === 'mapa' && window.KESP_MAPA) return window.KESP_MAPA.abrir(sb, eu);
     if (m.id === 'lembretes') return window.KESP_SINO.telaLembretes(sb, eu);
     if (['agenda', 'oficios', 'documentos', 'fornecedores'].includes(m.id)) return window.KESP_E3[m.id](sb, eu);
+    if (m.id === 'conciliacao' && window.KESP_CONCILIACAO) return window.KESP_CONCILIACAO.abrir(sb, eu);
     if (m.id === 'eventos') return window.KESP_E3.eventos(sb, eu, id.split('/')[1]);
     if (['cofre', 'lixeira', 'modelos', 'aprendizagem', 'scanner'].includes(m.id)) return window.KESP_1B2[m.id](sb, eu);
     if (m.id === 'sugestoes') return window.KESP_SINO.telaSugestoes(sb, eu);
@@ -1295,6 +1296,7 @@ window.KESP_EVOL = (function () {
     document.getElementById('cont').innerHTML = `<div class="rec3"><div>
       <div class="cd pas" style="--c:#F07830">${passo(1, '#F07830', 'Quem pagou')}
         <div class="seg-l"><div class="seg">${[['CK', 'Taxa (+ itens)'], ['EV', 'Evento'], ['RL', 'Livre']].map(([k, n]) => `<a data-tp="${k}" class="${tipo === k ? 'on' : ''}">${n}</a>`).join('')}</div>${tipo !== 'CK' ? `<div class="seg"><a data-pg="ck" class="${st.pagador !== 'avulso' ? 'on' : ''}">Comunidade Kolping</a><a data-pg="avulso" class="${st.pagador === 'avulso' ? 'on' : ''}">Pessoa ou empresa</a></div>` : ''}</div>
+        ${st.lancamentoId ? `<div style="margin:8px 0;padding:6px 10px;border-radius:9px;background:rgba(59,130,246,.14);color:#93B8FF;font-size:12px">Recibo do extrato bancário: ao emitir, o lançamento fica conciliado.</div>` : ''}
         ${st.substitui ? `<div style="margin:8px 0;padding:6px 10px;border-radius:9px;background:rgba(245,165,36,.12);color:#F8C46A;font-size:12px">Corrigindo o recibo <b>${esc(st.substitui.txt)}</b> (já cancelado). O novo recibo indicará a substituição.</div>` : ''}
         ${tipo === 'CK' || st.pagador !== 'avulso' ? `<div style="position:relative;margin-top:8px"><input id="rBus" placeholder="🔍 Digite o nome da CK ou a cidade" value="${ck ? esc(ck.nome) : ''}" autocomplete="off"${ck ? ' style="padding-right:10px"' : ''}><div id="rSug" class="sug"></div></div>
           ${ck ? `<div class="selos">${tipo === 'CK' ? chip(e.n + ' associados · ' + R(e.n * taxaSol) + '/mês', 'rgba(255,255,255,.06)', '#D8D3DE') : ''}${chip(B.NOME[e.situacao], B.COR[e.situacao] + '26', B.COR[e.situacao])}${chip('Crédito ' + R(Math.max(0, B.credito(ck.id))), 'rgba(34,201,132,.16)', '#5FE0A8', 1)}${abertosAR.length ? chip('A receber ' + R(abertosAR.reduce((x, a) => x + Number(a.valor), 0)), 'rgba(245,165,36,.16)', '#F8C46A') : ''}${c && c.ac ? chip('Acordo: saldo ' + R(c.ac.saldo), 'rgba(59,130,246,.18)', '#93B8FF', 1) : ''}</div>` : ''}`
@@ -1375,10 +1377,11 @@ window.KESP_EVOL = (function () {
     emitindo = true; const b = document.getElementById('rEmit'); b.disabled = true; b.textContent = 'Emitindo…';
     const { data: id, error } = await sb.rpc('emitir_recibo3', { p_serie: tipo, p_ck: ck ? ck.id : null, p_pagador_nome: ck ? null : st.avulso.nome, p_pagador_doc: ck ? null : (st.avulso.doc || null), p_data: st.data, p_forma: st.forma, p_valor: c.V, p_itens: itensRecibo(c, ck), p_credito_usado: c.cu, p_credito_novo: c.cn, p_sobra: c.sb, p_referencia: texto(c, ck, st.data), p_modelo: st.modelo, p_obs: st.obs || null, p_a_receber: c.faltaEx.map(e => ({ descricao: e.desc, valor: e.falta })), p_quitar: st.quitar || [], p_acordo: c.acVal > 0 ? c.ac.a.id : null, p_acordo_valor: c.acVal });
     if (error) { emitindo = false; b.disabled = false; b.textContent = 'Emitir recibo'; alert('Não foi possível emitir: ' + error.message); return; }
-    b.textContent = 'Emitido ✓'; window.KESP_RASCUNHO.limpar('recibo'); const sub = st.substitui, evId = st.eventoId; novoEstado(); Object.keys(PROX).forEach(k => delete PROX[k]);
+    b.textContent = 'Emitido ✓'; window.KESP_RASCUNHO.limpar('recibo'); const sub = st.substitui, evId = st.eventoId, lanId = st.lancamentoId; novoEstado(); Object.keys(PROX).forEach(k => delete PROX[k]);
     try {
       if (sub) await sb.from('recibos').update({ substitui: sub.id }).eq('id', id);
       if (evId) await sb.from('recibos').update({ evento_id: evId }).eq('id', id);
+      if (lanId) await sb.from('extrato_lancamentos').update({ recibo_id: id, situacao: 'conciliado' }).eq('id', lanId);
       await B.carregar(sb, eu); await extras();
       aba = 'historico'; render(); await abrirRecibo(id);
     } catch (e) {
@@ -1585,9 +1588,12 @@ window.KESP_EVOL = (function () {
       sb = cliente; eu = perfil; B = window.KESP_CKS.base; document.getElementById('pg').innerHTML = '<p class="sm">Carregando…</p>';
       try { const ab = sessionStorage.getItem('kesp.recAba'); if (ab) { aba = ab; sessionStorage.removeItem('kesp.recAba'); } } catch (_) {}
       let rEv = null; try { rEv = JSON.parse(sessionStorage.getItem('kesp.reciboEvento') || 'null'); sessionStorage.removeItem('kesp.reciboEvento'); } catch (_) {}
+      let rBc = null; try { rBc = JSON.parse(sessionStorage.getItem('kesp.reciboBanco') || 'null'); sessionStorage.removeItem('kesp.reciboBanco'); } catch (_) {}
       await B.carregar(sb, eu); await extras(); const md0 = await window.KESP_MOD(sb); MODELO_PADRAO = md0.recibo_modelo === 'timbrado' ? 'timbrado' : 'padrao'; if (!st) { novoEstado(); const rs = window.KESP_RASCUNHO.ler('recibo'); if (rs && (rs.valor || (rs.extras || []).length) && await window.KESP_CONFIRMA('Há um recibo que você começou e não emitiu. Continuar de onde parou?')) { st = { ...st, ...rs, sel: new Set(rs.sel || []), ck: B.dados().cks.find(x => x.id === rs.ck) || null }; } else window.KESP_RASCUNHO.limpar('recibo'); }
       let pre = null; try { pre = sessionStorage.getItem('kesp.recibo.ck'); sessionStorage.removeItem('kesp.recibo.ck'); } catch (_) {}
       if (pre) { novoEstado(); st.ck = B.dados().cks.find(x => x.id === pre) || null; aba = 'emitir'; }
+      if (rBc) { novoEstado(); const ck0 = rBc.ck ? B.dados().cks.find(c => c.id === rBc.ck) : null; st.tipo = ck0 ? 'CK' : rBc.ev ? 'EV' : 'RL'; st.pagador = ck0 ? 'ck' : 'avulso'; st.ck = ck0; st.avulso = ck0 ? {} : { nome: rBc.nome || '', doc: rBc.doc || '' };
+        st.valor = rBc.valor; st.valorAuto = false; st.data = rBc.data; st.forma = 'PIX'; st.lancamentoId = rBc.lan; if (rBc.ev) st.eventoId = rBc.ev; autoSelecionar(); aba = 'emitir'; }
       if (rEv) { novoEstado(); st.tipo = 'EV'; st.pagador = 'ck'; st.ck = B.dados().cks.find(c => c.id === rEv.ck) || null; st.eventoId = rEv.evento;
         st.extras = rEv.jaPago > 0 ? [{ desc: 'Inscrições · ' + rEv.nome + ' (restante)', qtd: 1, unit: Math.max(0, rEv.qtd * rEv.unit - rEv.jaPago) }] : [{ desc: 'Inscrição · ' + rEv.nome, qtd: rEv.qtd, unit: rEv.unit }]; st.valorAuto = true; st.valor = Math.max(0, rEv.qtd * rEv.unit - (rEv.jaPago || 0)); aba = 'emitir'; }
       render();
@@ -2820,4 +2826,143 @@ window.KESP_SINO = (function () {
         s0('fN', j.nome_fantasia || j.razao_social); s0('fT', j.ddd_telefone_1); s0('fE', j.email); s0('fEn', [j.logradouro, j.numero, j.bairro, j.municipio + '/' + j.uf].filter(Boolean).join(', ')); s0('fF', j.cnae_fiscal_descricao); window.KESP_TOAST('Dados preenchidos pela Receita.'); } catch (_) { alert('CNPJ não encontrado.'); } };
   }
   window.KESP_E3 = { agenda, eventos, oficios, documentos, fornecedores, avisosVencimento };
+})();
+
+// ===================== Etapa 5 · Conciliação bancária =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const R = v => (v < 0 ? '−' : '') + 'R$ ' + Math.abs(Number(v || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const so = v => String(v || '').replace(/\D/g, ''), dBR = d => new Date(d + 'T12:00').toLocaleDateString('pt-BR');
+  const num = t => { if (typeof t === 'number') return t; const s = String(t || '').trim(); if (!s) return null; const n = parseFloat(s.replace(/\./g, '').replace(',', '.').replace(/[^\d.\-]/g, '')); return isNaN(n) ? null : n; };
+  const dataIso = t => { if (t instanceof Date) return t.toISOString().slice(0, 10); const m = String(t || '').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
+  const js = h => new Promise((ok, er) => { const s = document.createElement('script'); s.src = h; s.onload = ok; s.onerror = er; document.head.appendChild(s); });
+  const SIT = { pendente: ['Pendente', '#F5A524'], sugerido: ['Sugerido', '#3B82F6'], conciliado: ['Conciliado', '#22C984'], ignorado: ['Ignorado', '#6E6A7C'] };
+  const CATS = ['Taxa de CK', 'Evento', 'Doação', 'Venda', 'Rendimento', 'Repasse/convênio', 'Tarifa bancária', 'Fornecedor', 'Folha/RH', 'Imposto', 'Outro'];
+  let sb, eu, contas = [], conta = null, filtro = 'abertos', B;
+
+  // ---------- leitura dos arquivos ----------
+  async function lerXlsx(f) {
+    if (!window.XLSX) await js('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true }), ws = wb.Sheets[wb.SheetNames[0]];
+    // alguns extratos do banco vêm com a área da planilha errada: recalcula pelo conteúdo
+    let mr = 0, mc = 0; Object.keys(ws).filter(k => k[0] !== '!').forEach(k => { const c = XLSX.utils.decode_cell(k); if (c.r > mr) mr = c.r; if (c.c > mc) mc = c.c; }); ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: mr, c: mc } });
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true });
+    const hi = rows.findIndex(r => r && r.some(c => /^data$/i.test(String(c || '').trim())) && r.some(c => /lan[çc]amento/i.test(String(c || '')))); if (hi < 0) throw new Error('Não encontrei o cabeçalho (Data, Lançamento) na planilha.');
+    const h = rows[hi].map(c => String(c || '').toLowerCase()), ix = re => h.findIndex(c => re.test(c));
+    const iD = ix(/^data/), iL = ix(/lan[çc]amento/), iN = ix(/raz[ãa]o|nome/), iC = ix(/cnpj|cpf/), iV = ix(/valor/), iS = ix(/saldo/);
+    return rows.slice(hi + 1).map(r => ({ data: dataIso(r[iD]), descricao: String(r[iL] || '').trim(), nome: iN >= 0 ? String(r[iN] || '').trim() : '', doc: iC >= 0 ? String(r[iC] || '').trim() : '', valor: num(r[iV]), saldo: iS >= 0 ? num(r[iS]) : null })).filter(x => x.data && x.valor !== null && !/^saldo/i.test(x.descricao));
+  }
+  function lerOfx(t) {
+    return [...t.matchAll(/<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi)].map(m => { const g = k => ((m[1].match(new RegExp('<' + k + '>([^<\\r\\n]*)', 'i')) || [])[1] || '').trim(); const d = g('DTPOSTED');
+      return { data: `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`, descricao: g('MEMO') || g('NAME') || g('TRNTYPE'), nome: g('NAME'), doc: '', valor: parseFloat(g('TRNAMT').replace(',', '.')), saldo: null, fitid: g('FITID') }; }).filter(x => !isNaN(x.valor));
+  }
+  async function lerPdf(f) {
+    if (!window.pdfjsLib) { await js('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'); pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }
+    const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise, itens = [];
+    for (let p = 1; p <= pdf.numPages; p++) { const tc = await (await pdf.getPage(p)).getTextContent(); tc.items.forEach(it => it.str.trim() && itens.push({ p, x: it.transform[4], y: Math.round(it.transform[5]), t: it.str.trim() })); }
+    const linhas = []; itens.sort((a, b) => a.p - b.p || b.y - a.y || a.x - b.x).forEach(it => { const l = linhas.find(l0 => l0.p === it.p && Math.abs(l0.y - it.y) <= 2); l ? l.it.push(it) : linhas.push({ p: it.p, y: it.y, it: [it] }); });
+    const cab = linhas.find(l => l.it.some(i => /^Lan[çc]amentos$/.test(i.t)) && l.it.some(i => /Raz[ãa]o/.test(i.t))); if (!cab) throw new Error('Não encontrei a tabela de lançamentos no PDF.');
+    const xs = k => (cab.it.find(i => k.test(i.t)) || {}).x, X = { l: xs(/^Lan/), n: xs(/Raz/), c: xs(/CNPJ|CPF/), v: xs(/^Valor/), s: xs(/^Saldo/) };
+    const col = x => x < X.l - 5 ? 'd' : x < X.n - 5 ? 'l' : x < X.c - 5 ? 'n' : x < X.v - 40 ? 'c' : x < X.s - 30 ? 'v' : 's';
+    const out = [], fut = [], soltas = []; let modo = 'antes';
+    for (const l of linhas) { const txt = l.it.map(i => i.t).join(' ');
+      if (l === cab) { modo = 'lan'; continue; }
+      if (/Lançamentos futuros/i.test(txt)) { modo = 'fut'; continue; } if (/^Saldo da conta corrente|^aviso:|^Data\s+Lan/i.test(txt)) { if (modo === 'lan' && /^Saldo da conta|^aviso/i.test(txt)) modo = 'fim'; continue; }
+      if (modo === 'fut') { const m = txt.match(/^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+(-?[\d.]+,\d{2})$/); if (m) fut.push({ data: dataIso(m[1]), descricao: m[2].trim(), valor: num(m[3]) }); continue; }
+      if (modo !== 'lan') continue;
+      const c = { d: '', l: '', n: '', c: '', v: '', s: '' }; l.it.forEach(i => (c[col(i.x)] += (c[col(i.x)] ? ' ' : '') + i.t));
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(c.d)) out.push({ p: l.p, y: l.y, data: dataIso(c.d), descricao: c.l, nome: c.n, doc: c.c, valor: num(c.v), saldo: num(c.s) });
+      else if (!c.d && (c.l || c.n || c.c || c.v)) soltas.push({ p: l.p, y: l.y, c }); }
+    // cada pedaço solto vai para o lançamento mais próximo na mesma página (acima ou abaixo)
+    soltas.forEach(sl => { const alvo = out.filter(o => o.p === sl.p).sort((a, b) => Math.abs(a.y - sl.y) - Math.abs(b.y - sl.y))[0]; if (!alvo) return; const antes = sl.y > alvo.y;
+      const junta = (a, b) => antes ? (b + ' ' + a).trim() : (a + ' ' + b).trim(); if (sl.c.l) alvo.descricao = junta(alvo.descricao, sl.c.l); if (sl.c.n) alvo.nome = junta(alvo.nome, sl.c.n); if (sl.c.c && !alvo.doc) alvo.doc = sl.c.c; if (sl.c.v && alvo.valor === null) alvo.valor = num(sl.c.v); });
+    return { lan: out.filter(x => x.valor !== null && !/^saldo/i.test(x.descricao)).map(({ p, y, ...x }) => x), fut };
+  }
+
+  // ---------- reconhecimento ----------
+  async function reconhecer(L) {
+    const D = B.dados(), [pc, ev] = await Promise.all([sb.from('pagadores_conhecidos').select('*'), sb.from('eventos').select('id,nome,valor_inscricao,situacao').in('situacao', ['inscricoes', 'planejamento'])]);
+    const conhecidos = pc.data || [], eventos = (ev.data || []).filter(e => Number(e.valor_inscricao) > 0);
+    return L.map(x => { const d = so(x.doc), r = { ...x };
+      if (x.valor < 0) { r.situacao = 'pendente'; r.categoria = /TAR |TARIFA/i.test(x.descricao) ? 'Tarifa bancária' : null; return r; }
+      if (/RENDIMENTO/i.test(x.descricao)) { r.situacao = 'ignorado'; r.categoria = 'Rendimento'; return r; }
+      const ck = d.length === 14 && D.cks.find(c => so(c.cnpj) === d), k = conhecidos.find(p => p.doc === d);
+      if (ck) { r.comunidade_id = ck.id; r.situacao = 'sugerido'; r.categoria = 'Taxa de CK'; }
+      else if (k && k.comunidade_id) { r.comunidade_id = k.comunidade_id; r.situacao = 'sugerido'; r.categoria = k.categoria || 'Taxa de CK'; }
+      else if (k) { r.situacao = 'sugerido'; r.categoria = k.categoria; }
+      else { const e = eventos.find(e0 => Math.abs(x.valor / Number(e0.valor_inscricao) - Math.round(x.valor / Number(e0.valor_inscricao))) < 1e-6); if (e) { r.evento_id = e.id; r.categoria = 'Evento'; r.situacao = 'sugerido'; } else r.situacao = 'pendente'; }
+      return r; });
+  }
+  // liga a recibos já emitidos (mesma CK, mesmo valor, até 5 dias de diferença)
+  async function ligarRecibosExistentes(L) {
+    const ids = [...new Set(L.filter(x => x.comunidade_id && x.situacao === 'sugerido').map(x => x.comunidade_id))]; if (!ids.length) return;
+    const { data } = await sb.from('recibos').select('id,comunidade_id,valor,data_pagamento').in('comunidade_id', ids).neq('situacao', 'cancelado');
+    const { data: usados } = await sb.from('extrato_lancamentos').select('recibo_id').not('recibo_id', 'is', null); const u = new Set((usados || []).map(x => x.recibo_id));
+    L.forEach(x => { if (x.situacao !== 'sugerido' || !x.comunidade_id) return; const r = (data || []).find(y => !u.has(y.id) && y.comunidade_id === x.comunidade_id && Math.abs(Number(y.valor) - x.valor) < 0.01 && Math.abs(new Date(y.data_pagamento) - new Date(x.data)) <= 5 * 864e5); if (r) { x.recibo_id = r.id; x.situacao = 'conciliado'; u.add(r.id); } });
+  }
+  async function importar(f) {
+    if (!conta) { alert('Escolha a conta.'); return; }
+    let lan, fut = [];
+    try { const ext = f.name.toLowerCase().split('.').pop();
+      if (ext === 'ofx') lan = lerOfx(await f.text()); else if (ext === 'pdf') ({ lan, fut } = await lerPdf(f)); else lan = await lerXlsx(f); }
+    catch (e) { alert('Não foi possível ler o arquivo: ' + (e.message || e)); return; }
+    if (!lan.length) { alert('Nenhum lançamento encontrado no arquivo.'); return; }
+    const cont = {}; lan.forEach(x => { const base = [x.data, x.valor.toFixed(2), so(x.doc), x.descricao.replace(/\s+/g, ' ').toUpperCase().slice(0, 40), x.saldo ?? ''].join('|'); cont[base] = (cont[base] || 0) + 1; x.chave = x.fitid || base + '#' + cont[base]; });
+    const L = await reconhecer(lan); await ligarRecibosExistentes(L);
+    const pre = { n: L.length, ent: L.filter(x => x.valor > 0).length, sai: L.filter(x => x.valor < 0).length, ck: L.filter(x => x.comunidade_id).length, ja: L.filter(x => x.recibo_id).length, ini: L.reduce((a, x) => a < x.data ? a : x.data, '9999'), fim: L.reduce((a, x) => a > x.data ? a : x.data, '0000') };
+    if (!await window.KESP_CONFIRMA(`Importar ${pre.n} lançamentos de ${dBR(pre.ini)} a ${dBR(pre.fim)}?\n${pre.ent} entradas e ${pre.sai} saídas · ${pre.ck} reconhecidos como CK · ${pre.ja} já com recibo emitido.${fut.length ? '\n' + fut.length + ' lançamento(s) futuro(s).' : ''}\nLançamentos já importados antes são ignorados.`)) return;
+    const reg = L.map(x => ({ conta_id: conta.id, data: x.data, descricao: x.descricao, nome: x.nome || null, doc: x.doc || null, valor: x.valor, saldo: x.saldo, chave: x.chave, situacao: x.situacao, categoria: x.categoria || null, comunidade_id: x.comunidade_id || null, evento_id: x.evento_id || null, recibo_id: x.recibo_id || null, importado_por: eu.id }));
+    const r = await sb.from('extrato_lancamentos').upsert(reg, { onConflict: 'conta_id,chave', ignoreDuplicates: true }); if (r.error) { alert('Não foi possível importar: ' + r.error.message); return; }
+    if (fut.length) await sb.from('extrato_futuros').upsert(fut.map(x => ({ conta_id: conta.id, ...x })), { onConflict: 'conta_id,data,descricao,valor', ignoreDuplicates: true });
+    window.KESP_TOAST('Extrato importado.'); tela();
+  }
+
+  // ---------- tela ----------
+  async function abrir(cli, perfil) { sb = cli; eu = perfil; B = window.KESP_CKS.base; await B.carregar(sb, eu); const { data } = await sb.from('contas_bancarias').select('*').eq('ativa', true).order('nome'); contas = data || []; conta = conta || contas[0] || null; tela(); }
+  async function tela() {
+    const pg = document.getElementById('pg'), D = B.dados(), ed = eu.admin || window.KESP_PODE('conciliacao.editar');
+    if (!conta) { pg.innerHTML = '<div class="vazio"><h1>Conciliação bancária</h1><p class="sub">Nenhuma conta cadastrada.</p></div>'; return; }
+    const [l, f] = await Promise.all([sb.from('extrato_lancamentos').select('*').eq('conta_id', conta.id).order('data', { ascending: false }).limit(1000), sb.from('extrato_futuros').select('*').eq('conta_id', conta.id).gte('data', new Date().toISOString().slice(0, 10)).order('data')]);
+    const L = l.data || [], ck = id => (D.cks.find(c => c.id === id) || {}).nome;
+    const cnt = s => L.filter(x => s(x)).length, ab = x => x.situacao === 'pendente' || x.situacao === 'sugerido';
+    const FIL = { abertos: ['A conciliar', ab], sugerido: ['Sugeridos', x => x.situacao === 'sugerido'], pendente: ['Pendentes', x => x.situacao === 'pendente' && x.valor > 0], saidas: ['Saídas', x => x.valor < 0], conciliado: ['Conciliados', x => x.situacao === 'conciliado'], todos: ['Todos', () => true] };
+    const ultSaldo = L.find(x => x.saldo !== null);
+    const lista = L.filter(FIL[filtro][1]);
+    pg.innerHTML = `<div class="topo-tela"><div><h1>Conciliação bancária</h1><p class="sub">Importe o extrato e confira o que o KESP reconheceu</p></div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${contas.length > 1 ? `<select class="in" id="cbC">${contas.map(c => `<option value="${c.id}"${c.id === conta.id ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}</select>` : `<span class="sm">${esc(conta.nome)} · Ag. ${esc(conta.agencia)} · C/C ${esc(conta.conta)}</span>`}${ed ? '<label class="btn" style="cursor:pointer">Importar extrato<input type="file" id="cbF" accept=".xlsx,.xls,.ofx,.pdf" style="display:none"></label>' : ''}</div></div>
+      <div class="g4" style="margin-bottom:12px">${[['A CONCILIAR', cnt(ab), '#F5A524'], ['SUGERIDOS', cnt(x => x.situacao === 'sugerido'), '#3B82F6'], ['CONCILIADOS', cnt(x => x.situacao === 'conciliado'), '#22C984'], ['SALDO NO EXTRATO', ultSaldo ? R(ultSaldo.saldo) : '—', '#8B5CF6']].map(([a, b, c0]) => `<div class="cd" style="--c:${c0}"><div class="hd"><span>${a}</span></div><div class="big" style="font-size:20px">${b}</div></div>`).join('')}</div>
+      ${(f.data || []).length ? `<div class="cd" style="--c:#E5484D;margin-bottom:12px"><div class="hd"><span>A SAIR (LANÇAMENTOS FUTUROS)</span></div>${f.data.map(x => `<div class="lin" style="display:flex;justify-content:space-between"><span>${dBR(x.data)} · ${esc(x.descricao)}</span><b style="color:#FF9A9D">${R(x.valor)}</b></div>`).join('')}</div>` : ''}
+      <div class="seg" style="margin-bottom:10px;max-width:760px">${Object.entries(FIL).map(([k, [n, fn]]) => `<a data-fl="${k}" class="${filtro === k ? 'on' : ''}">${n}${k !== 'todos' ? ' · ' + cnt(fn) : ''}</a>`).join('')}</div>
+      ${lista.map(x => { const [sn, sc] = SIT[x.situacao], quem = x.comunidade_id ? ck(x.comunidade_id) : null;
+        return `<div class="pe" style="--c:${x.valor < 0 ? '#E5484D' : sc}"><div style="width:74px;flex-shrink:0" class="sm">${dBR(x.data)}</div><div style="flex:1;min-width:0"><b>${esc(x.nome || x.descricao)}</b>${x.doc ? ` <span class="sm">${esc(x.doc)}</span>` : ''}<div class="sm">${esc(x.descricao)}${quem ? ` · <span style="color:#93B8FF">→ ${esc(quem)}</span>` : ''}${x.categoria ? ' · ' + esc(x.categoria) : ''}${x.recibo_id ? ' · <span style="color:#5FE0A8">recibo ligado</span>' : ''}</div></div>
+          <div style="text-align:right;min-width:110px"><b style="color:${x.valor < 0 ? '#FF9A9D' : '#F2EEEA'}">${R(x.valor)}</b><div class="sm" style="color:${sc}">${sn}</div></div>
+          ${ed ? `<div class="ac">${x.valor > 0 && x.situacao !== 'conciliado' && x.situacao !== 'ignorado' ? `<button class="mini" data-rc="${x.id}">Emitir recibo</button>` : ''}${x.situacao !== 'conciliado' ? `<button class="mini neu" data-vc="${x.id}">${x.valor > 0 ? 'Vincular' : 'Classificar'}</button>` : `<button class="mini neu" data-dc="${x.id}">Desfazer</button>`}</div>` : ''}</div>`; }).join('') || '<p class="sm">Nada aqui. Importe um extrato para começar.</p>'}`;
+    const cc = pg.querySelector('#cbC'); if (cc) cc.onchange = e => { conta = contas.find(c => c.id === e.target.value); tela(); };
+    const fi = pg.querySelector('#cbF'); if (fi) fi.onchange = () => { if (fi.files[0]) importar(fi.files[0]); };
+    pg.querySelectorAll('[data-fl]').forEach(a => a.onclick = () => { filtro = a.dataset.fl; tela(); });
+    pg.querySelectorAll('[data-rc]').forEach(b => b.onclick = () => { const x = L.find(y => y.id === b.dataset.rc);
+      sessionStorage.setItem('kesp.reciboBanco', JSON.stringify({ lan: x.id, ck: x.comunidade_id, ev: x.evento_id, valor: Number(x.valor), data: x.data, nome: x.nome, doc: x.doc })); location.hash = '#recibos'; });
+    pg.querySelectorAll('[data-dc]').forEach(b => b.onclick = async () => { if (!await window.KESP_CONFIRMA('Desfazer a conciliação deste lançamento?\nO recibo continua emitido; só a ligação com o extrato é desfeita.')) return; await sb.from('extrato_lancamentos').update({ situacao: 'pendente', recibo_id: null }).eq('id', b.dataset.dc); tela(); });
+    pg.querySelectorAll('[data-vc]').forEach(b => b.onclick = () => vincular(L.find(y => y.id === b.dataset.vc)));
+  }
+  async function vincular(x) {
+    const D = B.dados(), d0 = so(x.doc), { data: rs } = x.valor > 0 ? await sb.from('recibos').select('id,serie,numero,ano,pagador_nome,valor,data_pagamento').neq('situacao', 'cancelado').gte('data_pagamento', new Date(new Date(x.data) - 15 * 864e5).toISOString().slice(0, 10)).order('data_pagamento', { ascending: false }).limit(60) : { data: [] };
+    const d = document.createElement('div'); d.className = 'conf';
+    d.innerHTML = `<div class="cx fm" style="max-width:600px;max-height:92vh;overflow-y:auto"><b>${x.valor > 0 ? 'Vincular entrada' : 'Classificar saída'}</b><p class="sm" style="margin:4px 0 0">${dBR(x.data)} · ${esc(x.nome || x.descricao)} ${x.doc ? '· ' + esc(x.doc) : ''} · <b>${R(x.valor)}</b></p>
+      ${x.valor > 0 ? `<label>Pertence à Comunidade</label><select id="vC"><option value="">— Não é de CK —</option>${D.cks.filter(c => c.ativa).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(c => `<option value="${c.id}"${x.comunidade_id === c.id ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}</select>` : ''}
+      <label>Categoria</label><select id="vT"><option value="">—</option>${CATS.map(c => `<option${x.categoria === c ? ' selected' : ''}>${c}</option>`).join('')}</select>
+      ${x.valor > 0 && (rs || []).length ? `<label>Ou ligar a um recibo já emitido</label><select id="vR"><option value="">—</option>${rs.map(r => `<option value="${r.id}">${r.serie} ${r.numero}/${r.ano} · ${esc(r.pagador_nome)} · ${R(r.valor)} · ${dBR(r.data_pagamento)}</option>`).join('')}</select>` : ''}
+      <label>Observação</label><input id="vO" value="${esc(x.observacao || '')}">
+      ${d0 ? `<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="vM" checked> Lembrar deste ${d0.length === 14 ? 'CNPJ' : 'CPF'} nas próximas importações</label>` : ''}
+      <div style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" data-ig>Ignorar</button><button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok>Salvar</button></div></div>`;
+    document.body.appendChild(d); const g = id => d.querySelector('#' + id);
+    d.querySelector('[data-x]').onclick = () => d.remove();
+    d.querySelector('[data-ig]').onclick = async () => { await sb.from('extrato_lancamentos').update({ situacao: 'ignorado', observacao: g('vO').value || null }).eq('id', x.id); d.remove(); tela(); };
+    d.querySelector('[data-ok]').onclick = async () => { const cid = g('vC') ? g('vC').value || null : null, cat = g('vT').value || null, rid = g('vR') ? g('vR').value || null : null;
+      const sit = rid ? 'conciliado' : x.valor < 0 ? (cat ? 'conciliado' : 'pendente') : (cid || cat ? 'sugerido' : 'pendente');
+      const r = await sb.from('extrato_lancamentos').update({ comunidade_id: cid, categoria: cat || (cid ? 'Taxa de CK' : null), recibo_id: rid, situacao: sit, observacao: g('vO').value || null }).eq('id', x.id); if (r.error) { alert('Não foi possível salvar.'); return; }
+      if (d0 && g('vM') && g('vM').checked && (cid || cat)) await sb.from('pagadores_conhecidos').upsert({ doc: d0, nome: x.nome, comunidade_id: cid, categoria: cat || (cid ? 'Taxa de CK' : null) });
+      d.remove(); tela(); };
+  }
+  window.KESP_CONCILIACAO = { abrir };
 })();
