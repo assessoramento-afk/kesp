@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1622"><title>Inscrição · Kolping Estadual de São Paulo</title>
+<link rel="icon" href="favicon.ico"><link rel="stylesheet" href="kesp.css">
+<style>
+body{background:#0F1622}.wrap{max-width:620px;margin:0 auto;padding:20px 16px 60px}
+.cab{display:flex;align-items:center;gap:12px;margin-bottom:14px}.cab img{height:38px;background:#fff;border-radius:8px;padding:4px 8px}
+.pass{display:flex;gap:4px;margin:10px 0 16px}.pass i{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1)}.pass i.on{background:#F07830}
+.cx{background:linear-gradient(160deg,#1B2332,#141B27);border-radius:14px;padding:16px;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+h2{font-size:17px;margin:0 0 4px}.sub{font-size:12px;color:#A8A3B4;margin:0 0 12px}
+label{display:block;font-size:12px;color:#A8A3B4;margin:10px 0 4px}input,select{width:100%;margin:0}
+.d2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ant{font-size:11px;color:#8E899A;margin-top:3px}
+.doc{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,.07);font-size:13px}
+.doc select{width:auto}.ck{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;margin-top:12px}.ck input{width:20px;height:20px;flex-shrink:0;margin-top:2px}
+.bts{display:flex;gap:8px;margin-top:16px}.bts .botao{margin:0}.img{border:1px solid rgba(240,120,48,.35);border-radius:12px;padding:12px;margin-top:14px}
+.ok{text-align:center;padding:30px 10px}
+</style></head><body><div class="wrap">
+<div class="cab"><img src="logo-kolping.png" alt="Kolping Estadual de São Paulo"><div><b>Inscrição</b><div class="sub" style="margin:0" id="anoT"></div></div></div>
+<div id="app"><p class="sub">Carregando…</p></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){'use strict';
+const C=window.KESP_CONFIG,sb=window.supabase.createClient(C.supabaseUrl,C.supabaseKey,{auth:{persistSession:false}});
+const app=document.getElementById('app'),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const R=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}),dBR=d=>new Date(d+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+const token=new URLSearchParams(location.search).get('e');
+const msg=t=>{document.querySelector('.msg')?.remove();app.insertAdjacentHTML('afterbegin',`<div class="msg erro">${esc(t)}</div>`);window.scrollTo(0,0);};
+if(!token){app.innerHTML='<div class="cx"><h2>Link inválido</h2></div>';return;}
+(async()=>{const{data:E,error}=await sb.rpc('evento_publico',{p_token:token});
+ if(error||!E||E.erro==='link'){app.innerHTML='<div class="cx"><h2>Link inválido</h2><p class="sub">Confira o link com a Kolping Estadual de São Paulo.</p></div>';return;}
+ if(E.erro==='fechado'){app.innerHTML=`<div class="cx"><h2>Inscrições encerradas</h2><p class="sub">${esc(E.nome||'')}</p></div>`;return;}
+ document.getElementById('anoT').textContent=E.nome;
+ app.innerHTML=`<div class="cx"><h2>${esc(E.nome)}</h2><p class="sub" style="line-height:1.6">📅 ${esc(dBR(E.data_ini))}${E.data_fim&&E.data_fim!==E.data_ini?' a '+esc(dBR(E.data_fim)):''}${E.local?'<br>📍 '+esc(E.local):''}${Number(E.valor)?'<br>💰 '+R(E.valor)+' por pessoa':''}${E.vagas!==null?'<br>🎟 '+E.vagas+' vaga(s) restante(s)':''}</p>${E.descricao?`<p class="sub">${esc(E.descricao)}</p>`:''}
+  <label>Seu nome completo</label><input id="iN"><div class="d2"><div><label>Telefone (WhatsApp)</label><input id="iT" type="tel"></div><div><label>E-mail (opcional)</label><input id="iE" type="email"></div></div>
+  <label>Comunidade Kolping</label><select id="iC"><option value="">Não sou de uma Comunidade Kolping</option>${E.cks.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('')}</select>
+  <label>Quantas pessoas está inscrevendo?</label><input id="iQ" type="number" min="1" max="50" value="1"><label>Nomes dos participantes (se mais de uma)</label><input id="iP" placeholder="Separe por vírgula">
+  <div class="ck"><input type="checkbox" id="iL"><label for="iL" style="margin:0;color:#D8D3DE">Autorizo a Kolping Estadual de São Paulo a usar estes dados para organizar o evento e entrar em contato, conforme a LGPD.</label></div>
+  <div class="bts"><button class="botao" id="iOk">Fazer inscrição</button></div></div>`;
+ document.getElementById('iOk').onclick=async()=>{const g=id=>document.getElementById(id);const d={nome:g('iN').value.trim(),telefone:g('iT').value.trim(),email:g('iE').value.trim(),ck:g('iC').value,quantidade:+g('iQ').value||1,nomes:g('iP').value.trim(),lgpd:g('iL').checked};
+  if(!d.nome||!d.telefone){msg('Informe seu nome e telefone.');return;} if(!d.lgpd){msg('É preciso autorizar o uso dos dados para se inscrever.');return;}
+  const b=g('iOk');b.disabled=true;b.textContent='Enviando…';const{data:r,error:er}=await sb.rpc('evento_inscrever',{p_token:token,p_dados:d});b.disabled=false;b.textContent='Fazer inscrição';
+  if(er||!r||r.erro){msg(r&&r.erro==='vagas'?'Não há vagas suficientes. Restam '+r.restam+'.':r&&r.erro==='fechado'?'As inscrições foram encerradas.':'Não foi possível enviar agora. Tente de novo.');return;}
+  app.innerHTML=`<div class="cx ok"><h2>Inscrição feita ✓</h2><p class="sub">Obrigado, ${esc(d.nome.split(' ')[0])}! ${Number(r.total)?`Valor a pagar: <b>${R(r.total)}</b>.`:''}</p>${Number(r.total)&&E.pix?`<p class="sub">Pague por PIX para a chave:<br><b style="font-size:16px;color:#FFB070">${esc(E.pix)}</b><br>Kolping Estadual de São Paulo · CNPJ 15.766.152/0001-77</p><p class="sub">Depois, envie o comprovante para a Kolping Estadual: (11) 4183-6018.</p>`:''}</div>`;};
+})();})();
+</script></body></html>
