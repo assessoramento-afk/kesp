@@ -347,3 +347,11 @@ label:has(>input[type=checkbox]){display:flex!important;align-items:center;gap:8
 .scmira{position:absolute;inset:18% 26%;border:3px solid rgba(240,120,48,.9);border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.28);pointer-events:none}
 .sg2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}@media (max-width:860px){.sg2{grid-template-columns:1fr}}
 .sg2 .seg{margin-bottom:6px}
+/* 5.1 · mês, listas, anexos e KAI com documentos */
+.kmes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0 4px}.kmes a{height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;text-transform:capitalize}.kmes a:hover{background:rgba(255,255,255,.07)}.kmes a.hj{box-shadow:inset 0 0 0 1.5px #3B82F6}.kmes a.se{background:linear-gradient(90deg,#F07830,#FF9A4D);color:#fff;font-weight:700}
+.ksel{position:fixed;z-index:2600;background:#1B2332;border:1px solid rgba(255,255,255,.12);border-radius:12px;box-shadow:0 14px 36px rgba(0,0,0,.6);padding:6px;display:flex;flex-direction:column;max-height:340px}
+.ksb{margin:0 0 6px;height:38px;padding:0 10px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(8,12,20,.8);color:#F2EEEA}
+.ksl{overflow-y:auto}.ksl a{display:block;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px;color:#F2EEEA}.ksl a:hover{background:rgba(255,255,255,.07)}.ksl a.on{background:rgba(240,120,48,.2);color:#FFB070}.ksl a.dis{opacity:.4;cursor:default}
+.karq{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;padding:8px 12px;border-radius:10px;border:1.5px dashed rgba(255,255,255,.22);background:rgba(8,12,20,.5);cursor:pointer;color:#D8D3DE;font-size:13px}.karq:hover,.karq.sobre{border-color:rgba(240,120,48,.7);background:rgba(240,120,48,.08)}.karq.tem{border-style:solid;border-color:rgba(34,201,132,.5)}.karq a{cursor:pointer;padding:2px 6px}
+.k2-ax{display:inline-flex;gap:8px;align-items:center;margin-top:8px;padding:6px 10px;border-radius:10px;background:rgba(240,120,48,.14);color:#FFB070;font-size:13px}.k2-ax a{cursor:pointer;color:#F2EEEA}
+.k2-acao{margin-top:6px;height:36px;font-size:13px}.kai2.drop{outline:2px dashed rgba(240,120,48,.6);outline-offset:4px}

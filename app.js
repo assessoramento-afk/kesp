@@ -39,14 +39,15 @@ window.KESP_BUSCA = (function () {
   function saudacao() { const h = new Date().getHours(); return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; }
 
   async function carregar() {
+    window.__kespSb = sb; window.__kespEu = eu;
     const [m, p, a] = await Promise.all([
       sb.from('modulos').select('*').order('ordem'),
       sb.from('permissoes').select('funcao_id').eq('perfil_id', eu.id),
       sb.from('avisos').select('id,tipo,adiado_ate').is('resolvido_em', null)
     ]);
     modulos = (m.data || []).filter((x, _, L) => !(x.situacao === 'em_breve' && L.some(a => a.situacao === 'ativo' && a.nome === x.nome && a.id !== x.id))); perms = new Set((p.data || []).map(x => x.funcao_id));
-    avisosN = (a.data || []).filter(x => x.tipo !== 'informativo' && (!x.adiado_ate || new Date(x.adiado_ate) <= new Date())).length;
-    try { const l = await sb.from('lembretes').select('id', { count: 'exact', head: true }).eq('para', eu.id).is('concluido_em', null).lte('quando', new Date().toISOString()); avisosN += l.count || 0; } catch (_) {}
+    const ag0 = new Date().toISOString(); avisosN = (a.data || []).filter(x => x.tipo !== 'informativo' && (!x.adiado_ate || x.adiado_ate <= ag0)).length;
+    try { const l = await sb.from('lembretes').select('id,quando').eq('para', eu.id).is('concluido_em', null); avisosN += (l.data || []).filter(x => x.quando <= ag0).length; } catch (_) {}
   }
 
   function moldura() {
@@ -643,6 +644,23 @@ window.KESP_BUSCA = (function () {
   const conversas = () => { try { return JSON.parse(localStorage.getItem('kesp.kai.conversas') || '[]'); } catch (_) { return []; } };
   const arquivar = () => { if (!msgs.length) return; const L = conversas(); L.unshift({ em: Date.now(), titulo: (msgs.find(m => m.papel === 'eu') || {}).texto || 'Conversa', msgs }); try { localStorage.setItem('kesp.kai.conversas', JSON.stringify(L.slice(0, 10))); } catch (_) {} };
   const fmt = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|\n)[-•] (.+)/g, '$1<li>$2</li>').replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>').replace(/\n/g, '<br>').replace(/<\/li><br>/g, '</li>');
+  let anexo = null;
+  const acaoDe = t => { const m = String(t || '').match(/\[\[ACAO:(\{[\s\S]*?\})\]\]/); if (!m) return null; try { return JSON.parse(m[1]); } catch (_) { return null; } };
+  async function prepararAnexo(f) {
+    if (!f) return; if (!/^(application\/pdf|image\/)/.test(f.type)) { alert('Envie um PDF ou uma foto.'); return; }
+    if (f.size > 5 * 1024 * 1024) { alert('O arquivo passa de 5 MB. Envie um PDF menor ou uma foto.'); return; }
+    let dados, media = f.type;
+    if (f.type.startsWith('image/')) { const im = new Image(); await new Promise(r => { im.onload = r; im.src = URL.createObjectURL(f); }); const e0 = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = im.width * e0; c.height = im.height * e0; c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); dados = c.toDataURL('image/jpeg', .85).split(',')[1]; media = 'image/jpeg'; }
+    else dados = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(',')[1]); fr.readAsDataURL(f); });
+    anexo = { nome: f.name, tam: f.size, media_type: media, dados }; render();
+    if (f.size > 2 * 1024 * 1024) window.KESP_TOAST('Arquivo grande: a leitura gasta mais créditos da KAI.');
+  }
+  async function usarAcao(a0) { const d0 = a0.dados || {};
+    if (a0.tipo === 'conta_pagar') window.KESP_FIN.novaDespesa(sb, eu, { tipo: 'despesa', fornecedor: d0.fornecedor, fornecedor_doc: d0.fornecedor_doc, valor: Number(d0.valor) || null, vencimento: d0.vencimento || null, emissao: d0.emissao || null, nf_numero: d0.nf_numero || null, observacao: d0.observacao || null, grupo: 'Despesas administrativas' });
+    else if (a0.tipo === 'consumo') window.KESP_E4.novaConta(sb, eu, d0);
+    else if (a0.tipo === 'documento') window.KESP_E3.novoDoc(sb, eu, d0);
+    else if (a0.tipo === 'recibo') { const D = window.KESP_CKS.base.dados ? window.KESP_CKS.base : null; let ck = null; try { await window.KESP_CKS.base.carregar(sb, eu); const so = v => String(v || '').replace(/\D/g, ''); ck = window.KESP_CKS.base.dados().cks.find(c => (so(d0.doc).length === 14 && so(c.cnpj) === so(d0.doc)) || (d0.pagador && c.nome.toLowerCase().includes(String(d0.pagador).toLowerCase().replace(/^comunidade |^kolping /, '').slice(0, 14)))); } catch (_) {}
+      sessionStorage.setItem('kesp.reciboBanco', JSON.stringify({ ck: ck ? ck.id : null, valor: Number(d0.valor) || 0, data: d0.data || new Date().toISOString().slice(0, 10), nome: d0.pagador || '', doc: d0.doc || '' })); location.hash = '#recibos'; } }
   const atalho = t => { const x = TELAS.find(([n]) => t.includes(n)); return x && window.KESP_PODE ? x : null; };
 
   function render(estado) {
@@ -652,8 +670,9 @@ window.KESP_BUSCA = (function () {
     const pausa = estado === 'pausa';
     pg.innerHTML = `<div class="kai2"><div class="k2-top"><div class="k2-av">${robo(estado || 'acolhendo', 40)}</div><div style="flex:1"><b style="font-size:16px">KAI</b><div class="k2-st${pausa ? ' off' : ''}">${pausa ? 'Em pausa' : 'Online · Claude Haiku'}</div></div><button class="btn sec k2-b" id="kNova">＋ Nova conversa</button><button class="btn sec k2-b" id="kHist">🕘 Conversas</button></div>
       <div class="k2-msgs" id="kMsgs">${msgs.length ? '' : `<div class="k2-hero"><b>Oi, ${nome}!</b><div>Em que posso ajudar com o KESP hoje?</div></div><div class="k2-cards">${sug.map(([i, t]) => `<a class="k2-c" data-s="${esc(t)}"><i>${i}</i><span>${esc(t)}</span></a>`).join('')}</div>`}
-        ${msgs.map((m, i) => m.papel === 'eu' ? `<div class="k2-m eu"><div class="k2-bal">${esc(m.texto)}</div></div>` : `<div class="k2-m ka"><div class="k2-mini">${robo('explicando', 22)}</div><div><div class="k2-bal">${fmt(m.texto)}</div><div class="k2-act"><a data-cp="${i}">📋 Copiar</a><a data-av="${i}:1" class="${m.av === 1 ? 'on' : ''}">👍</a><a data-av="${i}:-1" class="${m.av === -1 ? 'on' : ''}">👎</a>${(t => t ? `<a data-go="${t[1]}">↗ Abrir ${esc(t[0])}</a>` : '')(atalho(m.texto))}</div></div></div>`).join('')}</div>
-      <div class="k2-in"><textarea id="kTxt" rows="1" placeholder="Pergunte à KAI…" maxlength="2000"></textarea>${'webkitSpeechRecognition' in window || 'SpeechRecognition' in window ? '<button id="kMic" class="k2-ic" title="Ditar">🎙</button>' : ''}<button id="kEnv" class="k2-ic k2-send" aria-label="Enviar">➤</button></div>
+        ${msgs.map((m, i) => m.papel === 'eu' ? `<div class="k2-m eu"><div class="k2-bal">${m.doc ? `<div style="font-size:12px;opacity:.85;margin-bottom:4px">📎 ${esc(m.doc)}</div>` : ''}${esc(m.texto)}</div></div>` : `<div class="k2-m ka"><div class="k2-mini">${robo('explicando', 22)}</div><div><div class="k2-bal">${fmt(m.texto.replace(/\[\[ACAO:[\s\S]*?\]\]/g, '').trim())}</div>${(a0 => a0 ? `<button class="btn k2-acao" data-ac="${i}">${{ conta_pagar: '➕ Lançar em Contas a pagar', consumo: '➕ Lançar em Consumo', recibo: '🧾 Abrir recibo preenchido', documento: '📁 Cadastrar em Documentos' }[a0.tipo] || 'Usar estes dados'}</button>` : '')(acaoDe(m.texto))}<div class="k2-act"><a data-cp="${i}">📋 Copiar</a><a data-av="${i}:1" class="${m.av === 1 ? 'on' : ''}">👍</a><a data-av="${i}:-1" class="${m.av === -1 ? 'on' : ''}">👎</a>${(t => t ? `<a data-go="${t[1]}">↗ Abrir ${esc(t[0])}</a>` : '')(atalho(m.texto))}</div></div></div>`).join('')}</div>
+      ${anexo ? `<div class="k2-ax">📎 ${esc(anexo.nome)} <span class="sm">${(anexo.tam / 1024 / 1024).toFixed(1).replace('.', ',')} MB</span><a id="kAxX">✕</a></div>` : ''}
+      <div class="k2-in"><label class="k2-ic" title="Anexar PDF ou foto" style="cursor:pointer">📎<input type="file" id="kArq" accept="application/pdf,image/*" style="display:none"></label><textarea id="kTxt" rows="1" placeholder="${anexo ? 'O que quer saber deste documento?' : 'Pergunte à KAI…'}" maxlength="2000"></textarea>${'webkitSpeechRecognition' in window || 'SpeechRecognition' in window ? '<button id="kMic" class="k2-ic" title="Ditar">🎙</button>' : ''}<button id="kEnv" class="k2-ic k2-send" aria-label="Enviar">➤</button></div>
       <div class="k2-ft">A KAI explica o uso do KESP; confira informações importantes antes de agir.</div></div>`;
     const txt = document.getElementById('kTxt'), env = document.getElementById('kEnv'), box = document.getElementById('kMsgs');
     box.scrollTop = box.scrollHeight;
@@ -664,6 +683,10 @@ window.KESP_BUSCA = (function () {
     box.querySelectorAll('[data-cp]').forEach(a => a.onclick = async () => { try { await navigator.clipboard.writeText(msgs[+a.dataset.cp].texto); window.KESP_TOAST('Resposta copiada.'); } catch (_) {} });
     box.querySelectorAll('[data-av]').forEach(a => a.onclick = () => { const [i, v] = a.dataset.av.split(':').map(Number); msgs[i].av = msgs[i].av === v ? 0 : v; guardar(); render(); });
     box.querySelectorAll('[data-go]').forEach(a => a.onclick = () => (location.hash = '#' + a.dataset.go));
+    box.querySelectorAll('[data-ac]').forEach(b => b.onclick = () => usarAcao(acaoDe(msgs[+b.dataset.ac].texto)));
+    document.getElementById('kArq').onchange = e => prepararAnexo(e.target.files[0]);
+    const axx = document.getElementById('kAxX'); if (axx) axx.onclick = () => { anexo = null; render(); };
+    const kz = document.querySelector('.kai2'); kz.ondragover = e => { e.preventDefault(); kz.classList.add('drop'); }; kz.ondragleave = () => kz.classList.remove('drop'); kz.ondrop = e => { e.preventDefault(); kz.classList.remove('drop'); prepararAnexo(e.dataTransfer.files[0]); };
     document.getElementById('kNova').onclick = () => { arquivar(); msgs = []; guardar(); render(); };
     document.getElementById('kHist').onclick = () => { const L = conversas(), d = document.createElement('div'); d.className = 'conf';
       d.innerHTML = `<div class="cx" style="max-width:520px"><b>Conversas anteriores</b><p class="sm" style="margin:4px 0 10px">Ficam só neste aparelho (as 10 últimas).</p>${L.map((c, i) => `<div class="pe" style="--c:#F07830;cursor:pointer" data-cv="${i}"><div style="flex:1;min-width:0"><b>${esc(c.titulo.slice(0, 70))}</b><div class="sm">${new Date(c.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${c.msgs.length} mensagens</div></div></div>`).join('') || '<p class="sm">Nenhuma conversa guardada.</p>'}<button class="btn sec" data-x style="margin-top:10px;width:100%">Fechar</button></div>`;
@@ -675,13 +698,16 @@ window.KESP_BUSCA = (function () {
   }
 
   async function enviar(texto) {
-    texto = String(texto || '').trim(); if (!texto || ocupado) return;
-    ocupado = true; msgs.push({ papel: 'eu', texto }); guardar(); render('pensando');
+    texto = String(texto || '').trim(); if ((!texto && !anexo) || ocupado) return;
+    if (!texto && anexo) texto = 'Analise este documento.';
+    if (!texto) return; const ax = anexo; anexo = null;
+    if (ax && /cpf|rg|sa[uú]de|m[eé]dic|laudo/i.test(ax.nome) && !await window.KESP_CONFIRMA('Este arquivo pode ter dados pessoais.\nEnviar mesmo assim para a KAI ler? Ele não fica guardado.')) { anexo = ax; render(); return; }
+    ocupado = true; msgs.push({ papel: 'eu', texto, doc: ax ? ax.nome : null }); guardar(); render('pensando');
     const box = document.getElementById('kMsgs'); box.insertAdjacentHTML('beforeend', `<div class="k2-m ka" id="kPens"><div class="k2-mini">${robo('pensando', 22)}</div><div class="k2-bal k2-dots"><span></span><span></span><span></span></div></div>`); box.scrollTop = box.scrollHeight;
     document.getElementById('kEnv').disabled = true;
     let estado = 'explicando', resp;
     try {
-      const { data, error } = await sb.functions.invoke('kai', { body: { mensagens: msgs } });
+      const { data, error } = await sb.functions.invoke('kai', { body: { mensagens: msgs.map(m => ({ papel: m.papel, texto: m.texto })), anexo: ax ? { media_type: ax.media_type, dados: ax.dados, nome: ax.nome } : undefined } });
       if (error) {
         let corpo = null; try { corpo = await error.context.json(); } catch (_) {}
         resp = (corpo && corpo.erro) || 'Algo não saiu como esperado. Já registrei o problema para o administrador. Tente de novo em alguns instantes.';
@@ -2343,11 +2369,18 @@ window.KESP_SINO = (function () {
     setTimeout(() => document.addEventListener('click', fora, { once: false }), 0);
     render();
   }
+  // atualiza só o número do sino, com a mesma regra do painel (ao entrar, a cada 2 minutos e ao trocar de tela)
+  async function contar() { const sb = window.__kespSb, eu = window.__kespEu; if (!sb || !eu) return; const agora = new Date().toISOString();
+    try { const [a, l] = await Promise.all([sb.from('avisos').select('tipo,adiado_ate').is('resolvido_em', null).neq('tipo', 'informativo').limit(500), sb.from('lembretes').select('quando').eq('para', eu.id).is('concluido_em', null)]);
+      const n = (a.data || []).filter(x => !x.adiado_ate || x.adiado_ate <= agora).length + (l.data || []).filter(x => x.quando <= agora).length;
+      document.querySelectorAll('#sino, .nv [data-acao="avisos"]').forEach(b => { let c = b.querySelector('.ct'); if (!n) { if (c) c.remove(); return; } if (!c) { c = document.createElement('span'); c.className = 'ct'; b.appendChild(c); } c.textContent = n; }); } catch (_) {} }
+  setInterval(contar, 120000); window.addEventListener('hashchange', () => setTimeout(contar, 800)); setTimeout(contar, 2500);
+  window.KESP_SINO_CONTAR = contar;
   function fora(e) { const p = document.getElementById('sinoP'); if (!p) { document.removeEventListener('click', fora); return; } if (!p.contains(e.target) && !e.target.closest('#sino') && !e.target.closest('[data-acao="avisos"]') && !e.target.closest('.conf')) { p.remove(); document.removeEventListener('click', fora); } }
   async function render() {
     const p = document.getElementById('sinoP'); if (!p) return; const agora = new Date().toISOString();
     const [a, l, n] = await Promise.all([
-      sb.from('avisos').select('*').is('resolvido_em', null).order('criado_em', { ascending: false }).limit(60),
+      Promise.all([sb.from('avisos').select('*').is('resolvido_em', null).neq('tipo', 'informativo').order('criado_em', { ascending: false }).limit(500), sb.from('avisos').select('*').is('resolvido_em', null).eq('tipo', 'informativo').order('criado_em', { ascending: false }).limit(30)]).then(([x, y]) => ({ data: [...(x.data || []), ...(y.data || [])] })),
       sb.from('lembretes').select('*').eq('para', eu.id).is('concluido_em', null).order('quando'),
       sb.from('novidades').select('*').order('publicado_em', { ascending: false }).limit(5)
     ]);
@@ -2609,7 +2642,21 @@ window.KESP_SINO = (function () {
   const p2 = n => String(n).padStart(2, '0'), iso = d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
   const ler = v => { if (!v) return null; const [a, m, d] = v.slice(0, 10).split('-').map(Number); return new Date(a, m - 1, d, 12); };
   const texto = (inp) => { const v = inp.value; if (!v) return '<span class="vz">Escolher data' + (inp.type === 'datetime-local' ? ' e hora' : '') + '</span>'; const d = ler(v); const t = SEM[d.getDay()].replace(/^./, c => c.toUpperCase()) + ', ' + d.getDate() + ' de ' + MES[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? ' de ' + d.getFullYear() : ''); return t + (inp.type === 'datetime-local' && v.length > 10 ? ' · ' + v.slice(11, 16) : ''); };
+  function ligarMes(inp) {
+    if (inp._kdt) return; inp._kdt = 1; const b = document.createElement('div'); b.className = 'kdt'; b.tabIndex = 0; inp.style.display = 'none'; inp.after(b);
+    const mostrar = () => { const v = inp.value; b.innerHTML = '<span>' + (v ? MES[+v.slice(5, 7) - 1].replace(/^./, c => c.toUpperCase()) + ' de ' + v.slice(0, 4) : '<span class="vz">Escolher mês</span>') + '</span><span style="color:#8E899A">📅</span>'; b.style.opacity = inp.disabled ? .5 : 1; };
+    mostrar(); inp.addEventListener('change', mostrar);
+    b.onclick = () => { if (inp.disabled) return; document.querySelectorAll('.kcal,.kcal-fundo').forEach(x => x.remove()); let ano = +(inp.value || new Date().toISOString()).slice(0, 4); const hj = new Date().toISOString().slice(0, 7);
+      const f = document.createElement('div'); f.className = 'kcal-fundo'; const c = document.createElement('div'); c.className = 'kcal'; document.body.append(f, c); const fechar = () => { f.remove(); c.remove(); }; f.onclick = fechar;
+      const r = b.getBoundingClientRect(); if (innerWidth > 860) { c.style.left = Math.min(r.left, innerWidth - 350) + 'px'; c.style.top = (r.bottom + 6 + 300 > innerHeight ? Math.max(8, r.top - 306) : r.bottom + 6) + 'px'; }
+      const des = () => { c.innerHTML = `<div class="hd"><a data-a="-1">‹</a><b>${ano}</b><a data-a="1">›</a></div><div class="kmes">${MES.map((m, i) => { const k = ano + '-' + String(i + 1).padStart(2, '0'); return `<a data-m="${k}" class="${inp.value === k ? 'se' : ''} ${k === hj ? 'hj' : ''}">${m.slice(0, 3)}</a>`; }).join('')}</div><div class="rs"><button class="btn sec" data-lp>Limpar</button><button class="btn" data-hj>Este mês</button></div>`;
+        c.querySelectorAll('[data-a]').forEach(a => a.onclick = () => { ano += +a.dataset.a; des(); });
+        const set = v => { inp.value = v; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); fechar(); };
+        c.querySelectorAll('[data-m]').forEach(a => a.onclick = () => set(a.dataset.m)); c.querySelector('[data-hj]').onclick = () => set(hj); c.querySelector('[data-lp]').onclick = () => set(''); };
+      des(); };
+  }
   function ligar(inp) {
+    if (inp.type === 'month') return ligarMes(inp);
     if (inp._kdt || inp.closest('.kcal')) return; inp._kdt = 1;
     const b = document.createElement('div'); b.className = 'kdt'; b.tabIndex = 0; inp.style.display = 'none'; inp.after(b);
     const mostrar = () => { b.innerHTML = '<span>' + texto(inp) + '</span><span style="color:#8E899A">📅</span>'; b.style.opacity = inp.disabled ? .5 : 1; };
@@ -2647,9 +2694,37 @@ window.KESP_SINO = (function () {
     const confirmar = () => { if (!sel) return; inp.value = iso(sel) + (comHora ? 'T' + hora : ''); disparar(); fechar(); };
     desenhar();
   }
-  const varrer = raiz => (raiz.querySelectorAll ? raiz.querySelectorAll('input[type=date],input[type=datetime-local]') : []).forEach(ligar);
-  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) { if (n.matches && n.matches('input[type=date],input[type=datetime-local]')) ligar(n); varrer(n); } }))).observe(document.documentElement, { childList: true, subtree: true });
-  document.addEventListener('DOMContentLoaded', () => varrer(document));
+  const SEL = 'input[type=date],input[type=datetime-local],input[type=month]';
+  const varrer = raiz => { if (!raiz.querySelectorAll) return; raiz.querySelectorAll(SEL).forEach(ligar); raiz.querySelectorAll('select:not([multiple])').forEach(ligarSel); raiz.querySelectorAll('input[type=file]').forEach(ligarArq); };
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) { if (n.matches && n.matches(SEL)) ligar(n); if (n.matches && n.matches('select:not([multiple])')) ligarSel(n); if (n.matches && n.matches('input[type=file]')) ligarArq(n); varrer(n); } }))).observe(document.documentElement, { childList: true, subtree: true });
+  // ---- listas de escolha do KESP (no computador; no celular fica a lista do aparelho) ----
+  function ligarSel(sel) {
+    if (sel._ks || !matchMedia('(pointer:fine)').matches) return; sel._ks = 1;
+    sel.addEventListener('mousedown', e => { if (sel.disabled) return; e.preventDefault(); sel.focus(); abrirSel(sel); });
+    sel.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter' || (e.altKey && e.key === 'ArrowDown')) { e.preventDefault(); abrirSel(sel); } });
+  }
+  function abrirSel(sel) {
+    document.querySelectorAll('.ksel,.kcal-fundo').forEach(x => x.remove());
+    const ops = [...sel.options], f = document.createElement('div'); f.className = 'kcal-fundo'; f.style.background = 'transparent'; const c = document.createElement('div'); c.className = 'ksel';
+    const r = sel.getBoundingClientRect(), alt = Math.min(340, ops.length * 38 + (ops.length > 10 ? 52 : 12)); c.style.left = r.left + 'px'; c.style.width = Math.max(r.width, 200) + 'px'; c.style.top = (r.bottom + 4 + alt > innerHeight ? Math.max(8, r.top - alt - 4) : r.bottom + 4) + 'px';
+    document.body.append(f, c); const fechar = () => { f.remove(); c.remove(); sel.focus(); }; f.onclick = fechar;
+    const des = q => { const L = ops.filter(o => !q || o.text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)); c.querySelector('.ksl').innerHTML = L.map(o => `<a data-v="${ops.indexOf(o)}" class="${o.selected ? 'on' : ''}${o.disabled ? ' dis' : ''}">${o.text.replace(/[&<>]/g, x => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[x])) || '&nbsp;'}</a>`).join('') || '<div class="sm" style="padding:8px">Nada encontrado.</div>';
+      c.querySelectorAll('[data-v]').forEach(a => a.onclick = () => { const o = ops[+a.dataset.v]; if (o.disabled) return; sel.selectedIndex = +a.dataset.v; sel.dispatchEvent(new Event('input', { bubbles: true })); sel.dispatchEvent(new Event('change', { bubbles: true })); fechar(); }); const on = c.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest' }); };
+    c.innerHTML = (ops.length > 10 ? '<input class="ksb" placeholder="Buscar…">' : '') + '<div class="ksl"></div>'; des('');
+    const b = c.querySelector('.ksb'); if (b) { b.oninput = () => des(b.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')); setTimeout(() => b.focus(), 10); }
+    c.onkeydown = e => { if (e.key === 'Escape') fechar(); if (e.key === 'Enter') { const a = c.querySelector('.ksl a:not(.dis)'); if (a && b && b.value) a.click(); } };
+  }
+  // ---- área de anexar arquivo ----
+  function ligarArq(inp) {
+    if (inp._ka || inp.style.display === 'none' || inp.closest('label')) return; inp._ka = 1; inp.style.display = 'none';
+    const z = document.createElement('div'); z.className = 'karq'; inp.after(z);
+    const mostrar = () => { const fs = [...(inp.files || [])]; z.classList.toggle('tem', fs.length > 0); z.innerHTML = fs.length ? `<span>📎 ${fs.map(f => f.name.replace(/[&<>]/g, '')).join(', ')}</span><a data-x title="Remover">✕</a>` : `<span>📎 Anexar arquivo${/pdf/.test(inp.accept) ? ' (PDF ou foto)' : inp.accept.startsWith('image') ? ' (foto)' : ''}</span><span class="sm">clique ou arraste aqui</span>`;
+      const x = z.querySelector('[data-x]'); if (x) x.onclick = e => { e.stopPropagation(); inp.value = ''; inp.dispatchEvent(new Event('change', { bubbles: true })); mostrar(); }; };
+    mostrar(); inp.addEventListener('change', mostrar);
+    z.onclick = () => inp.click(); z.ondragover = e => { e.preventDefault(); z.classList.add('sobre'); }; z.ondragleave = () => z.classList.remove('sobre');
+    z.ondrop = e => { e.preventDefault(); z.classList.remove('sobre'); if (!e.dataTransfer.files.length) return; const dt = new DataTransfer(); [...e.dataTransfer.files].slice(0, inp.multiple ? 10 : 1).forEach(f => dt.items.add(f)); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); };
+  }
+  document.addEventListener('DOMContentLoaded', () => varrer(document)); setTimeout(() => varrer(document), 500);
 })();
 
 // ===================== Etapa 3 · Kolping Estadual =====================
@@ -2864,8 +2939,8 @@ window.KESP_SINO = (function () {
     pg.querySelectorAll('[data-de]').forEach(b => b.onclick = () => editarDoc(L.find(x => x.id === b.dataset.de)));
     pg.querySelectorAll('[data-ab]').forEach(b => b.onclick = async () => { const x = L.find(y => y.id === b.dataset.ab), { data: u } = await sb.storage.from('kesp-arquivos').createSignedUrl(x.arquivo, 300); if (u) window.open(u.signedUrl, '_blank'); });
   }
-  function editarDoc(x) {
-    const v = x || { categoria: 'Certidões' };
+  function editarDoc(x, pre) {
+    const v = x || { categoria: 'Certidões', ...(pre || {}) };
     const d = modal(x ? 'Editar documento' : 'Novo documento', `<label>Nome</label><input id="kN" value="${esc(v.nome || '')}" placeholder="Ex.: Certidão negativa municipal"><label>Categoria</label><select id="kC">${CATD.map(c0 => `<option${v.categoria === c0 ? ' selected' : ''}>${c0}</option>`).join('')}</select>
       <div class="dois"><div><label>Emissão</label><input id="kE" type="date" value="${v.emissao || ''}"></div><div><label>Vencimento</label><input id="kV" type="date" value="${v.vencimento || ''}"></div></div>
       <label>Arquivo (PDF ou foto)${v.arquivo ? ' · já tem arquivo; envie outro para trocar' : ''}</label><input id="kF" type="file" accept="application/pdf,image/*"><label>Observação</label><input id="kO" value="${esc(v.observacao || '')}">`,
@@ -2909,7 +2984,7 @@ window.KESP_SINO = (function () {
       try { const j = await (await fetch('https://brasilapi.com.br/api/cnpj/v1/' + c)).json(); if (!j.razao_social) throw 0; const s0 = (id, val) => { const el = d.querySelector('#' + id); if (val && !el.value) el.value = val; };
         s0('fN', j.nome_fantasia || j.razao_social); s0('fT', j.ddd_telefone_1); s0('fE', j.email); s0('fEn', [j.logradouro, j.numero, j.bairro, j.municipio + '/' + j.uf].filter(Boolean).join(', ')); s0('fF', j.cnae_fiscal_descricao); window.KESP_TOAST('Dados preenchidos pela Receita.'); } catch (_) { alert('CNPJ não encontrado.'); } };
   }
-  window.KESP_E3 = { agenda, eventos, oficios, documentos, fornecedores, avisosVencimento };
+  window.KESP_E3 = { agenda, eventos, oficios, documentos, fornecedores, avisosVencimento, novoDoc(cli, perfil, d0) { sb = cli; eu = perfil; editarDoc(null, d0 || {}); } };
 })();
 
 // ===================== Etapa 5 · Conciliação bancária =====================
@@ -3160,11 +3235,11 @@ window.KESP_SINO = (function () {
     pg.querySelectorAll('[data-cv]').forEach(el => el.onclick = () => conta(L.find(x => x.id === el.dataset.cv)));
     pg.querySelectorAll('[data-ins]').forEach(a => a.onclick = async () => { const ins = (i.data || []).find(y => y.unidade_id === a.dataset.ins && y.tipo === tC); const n = await window.KESP_PERGUNTA(tC === 'gas' ? 'Tipo de botijão desta unidade (ex.: P45, P13):' : 'Número de instalação na ' + TC[tC][3] + ':', ins ? ins.numero : ''); if (n === null) return; await sb.from('instalacoes').upsert({ unidade_id: a.dataset.ins, tipo: tC, numero: n.trim() || null, empresa: TC[tC][3] || null }); consumo(sb, eu); });
   }
-  function conta(x) {
-    const v = x || { tipo: tC, unidade_id: 'sede', mes: new Date().toISOString().slice(0, 8) + '01' };
+  function conta(x, pre) {
+    const v = x || pre || { tipo: tC, unidade_id: 'sede', mes: new Date().toISOString().slice(0, 8) + '01' };
     const d = modal(x ? 'Editar conta' : 'Lançar conta', `<div class="dois"><div><label>Tipo</label><select id="kT"${x ? ' disabled' : ''}>${Object.entries(TC).map(([k, [n]]) => `<option value="${k}"${v.tipo === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div><div><label>Unidade</label><select id="kU"${x ? ' disabled' : ''}>${U.map(u => `<option value="${u.id}"${v.unidade_id === u.id ? ' selected' : ''}>${esc(uni(u.id))}</option>`).join('')}</select></div></div>
       <div class="dois"><div><label>Mês de referência</label><input id="kM" type="month" value="${v.mes.slice(0, 7)}"${x ? ' disabled' : ''}></div><div><label>Vencimento</label><input id="kV" type="date" value="${v.vencimento || ''}"></div></div>
-      <div class="dois"><div><label>Valor</label><input id="kR" data-moeda value="${x ? R(x.valor) : ''}"></div><div><label>Consumo (<span id="kUn">${TC[v.tipo][1]}</span>)</label><input id="kQ" type="number" step="0.01" min="0" value="${v.quantidade || ''}"></div></div>
+      <div class="dois"><div><label>Valor</label><input id="kR" data-moeda value="${v.valor ? R(v.valor) : ''}"></div><div><label>Consumo (<span id="kUn">${TC[v.tipo][1]}</span>)</label><input id="kQ" type="number" step="0.01" min="0" value="${v.quantidade || ''}"></div></div>
       <label>Conta (PDF ou foto)</label><input id="kF" type="file" accept="application/pdf,image/*">${v.arquivo ? '<button class="mini neu" id="kVer" style="margin-top:6px">Ver conta anexada</button>' : ''}<label>Observação</label><input id="kO" value="${esc(v.observacao || '')}">`,
       async d0 => { const g = id => d0.querySelector('#' + id), val = window.KESP_MOEDA.ler(g('kR')); if (!val) { alert('Informe o valor.'); return; }
         let arquivo = v.arquivo || null; const f = g('kF').files[0]; if (f) { try { arquivo = await subir(f, 'consumo'); } catch (_) { alert('Não foi possível enviar a conta.'); return; } }
@@ -3210,7 +3285,9 @@ window.KESP_SINO = (function () {
         d0.remove(); manutencao(sb, eu); });
     const ft = d.querySelector('#cFt'); for (const p of fotos) { const { data } = await sb.storage.from('kesp-arquivos').createSignedUrl(p, 600); if (data) ft.insertAdjacentHTML('beforeend', `<a href="${data.signedUrl}" target="_blank" rel="noopener"><img src="${data.signedUrl}" style="width:72px;height:72px;object-fit:cover;border-radius:8px"></a>`); }
   }
-  window.KESP_E4 = { patrimonio, consumo, manutencao };
+  async function novaConta(cli, perfil, d0) { sb = cli; eu = perfil; U = (await sb.from('unidades').select('id,nome').order('ordem')).data || []; const un = U.find(u => d0.unidade && uni(u.id).toLowerCase().includes(String(d0.unidade).toLowerCase().slice(0, 6))) || U[0];
+    tC = ['luz', 'agua', 'gas'].includes(d0.tipo) ? d0.tipo : 'luz'; conta(null, { tipo: tC, unidade_id: un ? un.id : 'sede', mes: (d0.mes || new Date().toISOString().slice(0, 7)) + '-01', valor: Number(d0.valor) || null, quantidade: Number(d0.quantidade) || null, vencimento: d0.vencimento || null }); }
+  window.KESP_E4 = { patrimonio, consumo, manutencao, novaConta };
 })();
 
 // ===================== Etapa 6 · Financeiro =====================
@@ -3347,5 +3424,6 @@ window.KESP_SINO = (function () {
   async function avisosContas(cli) { try { const lim = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10), { data } = await cli.from('fin_lancamentos').select('id,fornecedor,valor,vencimento').eq('tipo', 'despesa').is('pagamento', null).lte('vencimento', lim);
     for (const x of data || []) { const chave = '#fin_lancamentos?' + x.id + ':' + x.vencimento, { data: ja } = await cli.from('avisos').select('id').eq('link', chave).limit(1); if (ja && ja.length) continue;
       await cli.from('avisos').insert({ destinatario: null, tipo: x.vencimento < new Date().toISOString().slice(0, 10) ? 'fazer' : 'alerta', prioridade: x.vencimento < new Date().toISOString().slice(0, 10) ? 'urgente' : 'importante', titulo: (x.vencimento < new Date().toISOString().slice(0, 10) ? 'Conta vencida: ' : 'Conta vence em ' + dBR(x.vencimento) + ': ') + x.fornecedor, texto: R(x.valor), link: chave, dispensavel: true }); } } catch (_) {} }
-  window.KESP_FIN = { lancamentos, painel, nfp, avisosContas };
+  async function novaDespesa(cli, perfil, pre) { sb = cli; eu = perfil; await base0(); editar(null, pre); }
+  window.KESP_FIN = { lancamentos, painel, nfp, avisosContas, novaDespesa };
 })();
