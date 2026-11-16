@@ -25,9 +25,9 @@ window.KESP_BUSCA = (function () {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const K = s => `<svg width="${s}" height="${s}" viewBox="0 0 100 100" aria-hidden="true"><rect width="35" height="100" fill="#1E1B19"/><rect x="35" width="65" height="100" fill="#F07830"/><path d="M100 0 L100 100 L35 50Z" fill="#1E1B19"/></svg>`;
   const KAI = (s, olhos) => `<svg width="${s}" height="${s * 0.9}" viewBox="20 8 80 72" aria-hidden="true"><line x1="60" y1="14" x2="60" y2="24" stroke="#9A9088" stroke-width="2"/><circle cx="60" cy="12" r="5" fill="#F07830"/><rect x="22" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="90" y="38" width="8" height="18" rx="3" fill="#F07830"/><rect x="28" y="24" width="64" height="50" rx="18" fill="#F4F1EC"/><rect x="36" y="34" width="48" height="28" rx="12" fill="#2C3045"/>${olhos || '<path d="M45 50 Q50 44 55 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M65 50 Q70 44 75 50" stroke="#FFB070" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M54 55 Q60 59 66 55" stroke="#FFB070" stroke-width="2" fill="none" stroke-linecap="round"/>'}</svg>`;
-  const ICONES = { conciliacao: 'building-bank', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'truck', cofre: 'shield-lock', lixeira: 'trash', modelos: 'template', aprendizagem: 'school', scanner: 'scan', lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
+  const ICONES = { patrimonio: 'qrcode', consumo: 'bolt', manutencao: 'tool', conciliacao: 'building-bank', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'truck', cofre: 'shield-lock', lixeira: 'trash', modelos: 'template', aprendizagem: 'school', scanner: 'scan', lembretes: 'alarm', sugestoes: 'bulb', mapa: 'map-pin', inicio: 'home', agenda: 'calendar', eventos: 'confetti', oficios: 'file-text', documentos: 'folder', fornecedores: 'building-store', comunidades: 'users-group', distritos: 'map-2', recibos: 'receipt', cobranca: 'mail', recadastramento: 'clipboard-check', questionarios: 'list-check', relatorios_ass: 'chart-bar', pedidos: 'shopping-cart', manutencao: 'tool', consumo: 'flame', patrimonio: 'device-laptop', compras: 'package', contas: 'cash', conciliacao: 'building-bank', prestacao: 'file-certificate', nfp: 'receipt-tax', rh: 'id-badge-2', educacao: 'school', usuarios: 'lock', kolping: 'building', sistema: 'heartbeat', andamento: 'progress', manual: 'book', kai: 'message-chatbot' };
   const ETAPAS = [['1A', 'Base essencial'], ['1B', 'Base complementar'], ['2', 'Assessoramento'], ['3', 'Kolping Estadual'], ['4', 'Controles'], ['5', 'Conciliação bancária'], ['6', 'Financeiro'], ['7', 'RH'], ['8', 'Educação Infantil'], ['9', 'Prestação de contas']];
-  const FUNCAO_MODULO = { conciliacao: 'conciliacao.ver', agenda: 'agenda.ver', eventos: 'eventos.ver', oficios: 'oficios.ver', documentos: 'documentos.ver', fornecedores: 'fornecedores.ver', lembretes: '*', sugestoes: '*', scanner: '*', cofre: 'cofre.usar', modelos: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
+  const FUNCAO_MODULO = { patrimonio: 'patrimonio.ver', consumo: 'consumo.ver', manutencao: 'manutencao.abrir', conciliacao: 'conciliacao.ver', agenda: 'agenda.ver', eventos: 'eventos.ver', oficios: 'oficios.ver', documentos: 'documentos.ver', fornecedores: 'fornecedores.ver', lembretes: '*', sugestoes: '*', scanner: '*', cofre: 'cofre.usar', modelos: '*', mapa: 'comunidades.ver', compras: 'compras.ver', pedidos: 'pedidos.fazer', comunidades: 'comunidades.ver', recibos: 'recibos.ver', cobranca: 'cobranca.ver', recadastramento: 'recadastramento.ver', questionarios: 'questionarios.ver', relatorios_ass: 'relatorios_ass.ver', distritos: 'comunidades.ver', usuarios: 'usuarios.ver', kolping: 'kolping.ver', sistema: 'sistema.saude', inicio: 'inicio.ver', andamento: 'andamento.ver', manual: 'manual.ver', kai: 'kai.usar' };
 
   let sb, eu, sair, modulos = [], perms = new Set(), avisosN = 0;
   const pode = f => eu.admin || perms.has(f);
@@ -186,6 +186,8 @@ window.KESP_BUSCA = (function () {
     if (m.id === 'lembretes') return window.KESP_SINO.telaLembretes(sb, eu);
     if (['agenda', 'oficios', 'documentos', 'fornecedores'].includes(m.id)) return window.KESP_E3[m.id](sb, eu);
     if (m.id === 'conciliacao' && window.KESP_CONCILIACAO) return window.KESP_CONCILIACAO.abrir(sb, eu);
+    if (m.id === 'patrimonio') return window.KESP_E4.patrimonio(sb, eu, id.split('/')[1]);
+    if (m.id === 'consumo' || m.id === 'manutencao') return window.KESP_E4[m.id](sb, eu);
     if (m.id === 'eventos') return window.KESP_E3.eventos(sb, eu, id.split('/')[1]);
     if (['cofre', 'lixeira', 'modelos', 'aprendizagem', 'scanner'].includes(m.id)) return window.KESP_1B2[m.id](sb, eu);
     if (m.id === 'sugestoes') return window.KESP_SINO.telaSugestoes(sb, eu);
@@ -2319,7 +2321,9 @@ window.KESP_SINO = (function () {
     ]);
     const av = (a.data || []).filter(x => !x.adiado_ate || x.adiado_ate <= agora), lem = l.data || [];
     const fazer = [...lem.filter(x => x.quando <= agora).map(x => ({ ...x, _l: 1 })), ...av.filter(x => x.tipo === 'fazer')];
-    const alertas = av.filter(x => x.tipo === 'alerta'), info = av.filter(x => x.tipo === 'informativo');
+    const alertas = av.filter(x => x.tipo !== 'fazer' && x.tipo !== 'informativo'), info = av.filter(x => x.tipo === 'informativo');
+    // o número do sino acompanha exatamente o que aparece em "Para você fazer" e "Alertas"
+    const nS = fazer.length + alertas.length; document.querySelectorAll('#sino, .nv [data-acao="avisos"]').forEach(b => { let c = b.querySelector('.ct'); if (!nS) { if (c) c.remove(); return; } if (!c) { c = document.createElement('span'); c.className = 'ct'; b.appendChild(c); } c.textContent = nS; });
     const proximos = lem.filter(x => x.quando > agora);
     const L = { fazer, alertas, info }[aba];
     p.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px 0"><b>Avisos</b><a class="lk" id="snLem">+ Lembrete</a></div>
@@ -2965,4 +2969,159 @@ window.KESP_SINO = (function () {
       d.remove(); tela(); };
   }
   window.KESP_CONCILIACAO = { abrir };
+})();
+
+// ===================== Etapa 4 · Controles =====================
+(function () {
+  'use strict';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const R = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dBR = d => d ? new Date(String(d).slice(0, 10) + 'T12:00').toLocaleDateString('pt-BR') : '—';
+  const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const base = () => location.href.split('#')[0].replace(/[^/]*$/, '');
+  let sb, eu, U = [];
+  const pode = f => eu.admin || window.KESP_PODE(f);
+  const uni = id => ((U.find(u => u.id === id) || {}).nome || id).replace('Sede (Kolping Estadual de São Paulo)', 'Sede');
+  const modal = (titulo, corpo, salvar, extra) => { const d = document.createElement('div'); d.className = 'conf'; d.innerHTML = `<div class="cx fm" style="max-width:620px;max-height:92vh;overflow-y:auto"><b>${titulo}</b>${corpo}<div style="display:flex;gap:8px;margin-top:14px">${extra || ''}<button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok>Salvar</button></div></div>`; document.body.appendChild(d); window.KESP_MOEDA.ligar(d); d.querySelector('[data-x]').onclick = () => d.remove(); d.querySelector('[data-ok]').onclick = () => salvar(d); return d; };
+  const subir = async (f, pasta) => { const p = pasta + '/' + Date.now() + '-' + f.name.replace(/[^\w.\-]+/g, '_'), r = await sb.storage.from('kesp-arquivos').upload(p, f); if (r.error) throw r.error; return p; };
+  const abrirArq = async p => { const { data } = await sb.storage.from('kesp-arquivos').createSignedUrl(p, 300); if (data) window.open(data.signedUrl, '_blank'); };
+  async function qrLib() { if (!window.qrcode) await new Promise((ok, er) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; s.onload = ok; s.onerror = er; document.head.appendChild(s); }); }
+  const qrSvg = txt => { const q = qrcode(0, 'M'); q.addData(txt); q.make(); return q.createSvgTag({ cellSize: 3, margin: 0, scalable: true }); };
+
+  // ---------- Patrimônio ----------
+  const SIT = { em_uso: ['Em uso', '#22C984'], guardado: ['Guardado', '#3B82F6'], emprestado: ['Emprestado', '#F5A524'], conserto: ['Em conserto', '#8B5CF6'], baixado: ['Baixado', '#6E6A7C'] };
+  let fUni = '', fSit = '', fBus = '';
+  async function patrimonio(cli, perfil, alvo) {
+    sb = cli; eu = perfil; U = (await sb.from('unidades').select('id,nome').order('ordem')).data || [];
+    const { data } = await sb.from('patrimonio').select('*').order('numero'); const L = data || [];
+    if (alvo) { const x = L.find(y => y.numero === alvo || y.id === alvo); if (x) return ficha(x); }
+    const pg = document.getElementById('pg'), ed = pode('patrimonio.editar');
+    const vis = () => L.filter(x => (!fUni || x.unidade_id === fUni) && (!fSit || x.situacao === fSit) && (!fBus || [x.numero, x.tipo, x.modelo, x.imei, x.serie, x.responsavel_nome, x.local].join(' ').toLowerCase().includes(fBus)));
+    pg.innerHTML = `<div class="topo-tela"><div><h1>Patrimônio</h1><p class="sub">${L.filter(x => x.situacao !== 'baixado').length} bens ativos · leia o QR Code da etiqueta para abrir a ficha</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec" id="ptEt">Imprimir etiquetas</button>${ed ? '<button class="btn" id="ptNovo">Novo bem</button>' : ''}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><input class="in" id="ptB" placeholder="Buscar por número, modelo, IMEI, série ou responsável" style="flex:1;min-width:220px" value="${esc(fBus)}"><select class="in" id="ptU"><option value="">Todas as unidades</option>${U.map(u => `<option value="${u.id}"${fUni === u.id ? ' selected' : ''}>${esc(uni(u.id))}</option>`).join('')}</select><select class="in" id="ptS"><option value="">Todas as situações</option>${Object.entries(SIT).map(([k, [n]]) => `<option value="${k}"${fSit === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div id="ptL"></div>`;
+    const desenhar = () => { const V = vis(); pg.querySelector('#ptL').innerHTML = `<p class="sm">${V.length} bem(ns)</p>` + V.map(x => `<div class="pe" style="--c:${SIT[x.situacao][1]};cursor:pointer" data-pt="${x.id}"><div style="width:84px;flex-shrink:0"><b>${esc(x.numero)}</b></div><div style="flex:1;min-width:0"><b>${esc([x.tipo, x.modelo].filter(Boolean).join(' · '))}</b><div class="sm">${x.imei ? 'IMEI ' + esc(x.imei) : x.serie ? 'Série ' + esc(x.serie) : ''}${x.responsavel_nome ? ' · ' + esc(x.responsavel_nome) : ''} · ${esc(uni(x.unidade_id))}${x.local ? ' · ' + esc(x.local) : ''}</div></div><span class="tg2" style="background:${SIT[x.situacao][1]}22;color:${SIT[x.situacao][1]}">${SIT[x.situacao][0]}</span></div>`).join('');
+      pg.querySelectorAll('[data-pt]').forEach(el => el.onclick = () => (location.hash = '#patrimonio/' + (L.find(y => y.id === el.dataset.pt) || {}).numero)); };
+    pg.querySelector('#ptB').oninput = e => { fBus = e.target.value.toLowerCase(); desenhar(); };
+    pg.querySelector('#ptU').onchange = e => { fUni = e.target.value; desenhar(); }; pg.querySelector('#ptS').onchange = e => { fSit = e.target.value; desenhar(); };
+    const nv = pg.querySelector('#ptNovo'); if (nv) nv.onclick = () => editarBem(null);
+    pg.querySelector('#ptEt').onclick = () => etiquetas(vis());
+    desenhar();
+  }
+  async function etiquetas(L) {
+    if (!L.length) { alert('Nenhum bem na lista.'); return; } try { await qrLib(); } catch (_) { alert('Não foi possível carregar o gerador de QR Code.'); return; }
+    window.KESP_IMPRIMIR(window.KESP_ARQ.montar(['Etiquetas de patrimônio', L.length + ' bens']), `<style>@page{size:A4;margin:8mm}.et{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}.e{border:1px dashed #bbb;border-radius:3mm;padding:3mm;display:flex;gap:3mm;align-items:center;height:30mm;box-sizing:border-box;page-break-inside:avoid;font-family:Arial}.e svg{width:24mm;height:24mm;flex-shrink:0}.e b{font-size:13pt}.e small{display:block;font-size:7pt;color:#555;line-height:1.3}</style>
+      <div class="et">${L.map(x => `<div class="e">${qrSvg(base() + '#patrimonio/' + x.numero)}<div><img src="${base()}logo-kolping.png" style="height:5mm"><br><b>${esc(x.numero)}</b><small>${esc([x.tipo, x.modelo].filter(Boolean).join(' · '))}</small><small>${esc(x.imei || x.serie || '')}</small></div></div>`).join('')}</div>`);
+  }
+  function editarBem(x) {
+    const v = x || { tipo: 'Tablet', unidade_id: 'sede', situacao: 'em_uso' };
+    const d = modal(x ? 'Editar ' + esc(x.numero) : 'Novo bem', `<div class="dois"><div><label>Tipo</label><input id="bT" value="${esc(v.tipo || '')}" list="bTl"><datalist id="bTl"><option>Tablet</option><option>Notebook</option><option>Computador</option><option>Impressora</option><option>Celular</option><option>Projetor</option><option>Móvel</option><option>Eletrodoméstico</option><option>Brinquedo pedagógico</option></datalist></div><div><label>Marca</label><input id="bM" value="${esc(v.marca || '')}"></div></div>
+      <label>Modelo</label><input id="bMo" value="${esc(v.modelo || '')}"><div class="dois"><div><label>IMEI</label><input id="bI" value="${esc(v.imei || '')}"></div><div><label>Número de série</label><input id="bS" value="${esc(v.serie || '')}"></div></div>
+      <div class="dois"><div><label>Unidade</label><select id="bU">${U.map(u => `<option value="${u.id}"${v.unidade_id === u.id ? ' selected' : ''}>${esc(uni(u.id))}</option>`).join('')}</select></div><div><label>Local (sala, armário…)</label><input id="bL" value="${esc(v.local || '')}"></div></div>
+      <div class="dois"><div><label>Responsável</label><input id="bR" value="${esc(v.responsavel_nome || '')}"></div><div><label>Situação</label><select id="bSi">${Object.entries(SIT).map(([k, [n]]) => `<option value="${k}"${v.situacao === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div></div>
+      <div class="dois"><div><label>Data de compra</label><input id="bA" type="date" value="${v.aquisicao || ''}"></div><div><label>Valor de compra</label><input id="bV" data-moeda value="${v.valor ? R(v.valor) : ''}"></div></div>
+      <label>Foto</label><input id="bF" type="file" accept="image/*"><label>Observação</label><input id="bO" value="${esc(v.observacao || '')}">`,
+      async d0 => { const g = id => d0.querySelector('#' + id); if (!g('bT').value.trim()) { alert('Informe o tipo.'); return; }
+        let foto = v.foto || null; const f = g('bF').files[0]; if (f) { try { foto = await subir(f, 'patrimonio'); } catch (e) { alert('Não foi possível enviar a foto.'); return; } }
+        const reg = { tipo: g('bT').value.trim(), marca: g('bM').value || null, modelo: g('bMo').value || null, imei: g('bI').value || null, serie: g('bS').value || null, unidade_id: g('bU').value, local: g('bL').value || null, responsavel_nome: g('bR').value || null, situacao: g('bSi').value, aquisicao: g('bA').value || null, valor: window.KESP_MOEDA.ler(g('bV')) || null, foto, observacao: g('bO').value || null };
+        let r; if (x) r = await sb.from('patrimonio').update(reg).eq('id', x.id).select().single(); else { const { data: n } = await sb.rpc('proximo_patrimonio'); r = await sb.from('patrimonio').insert({ ...reg, numero: n }).select().single(); }
+        if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; }
+        await sb.from('patrimonio_mov').insert({ patrimonio_id: r.data.id, tipo: x ? 'edicao' : 'cadastro', feito_por: eu.id }); d0.remove(); location.hash = '#patrimonio/' + r.data.numero; if (x) ficha(r.data); });
+  }
+  async function ficha(x) {
+    const pg = document.getElementById('pg'), ed = pode('patrimonio.editar'); const { data: mv } = await sb.from('patrimonio_mov').select('*').eq('patrimonio_id', x.id).order('feito_em', { ascending: false });
+    const { data: ps } = await sb.from('perfis').select('id,nome'); const nome = id => ((ps || []).find(p => p.id === id) || {}).nome || '';
+    const TM = { emprestimo: 'Empréstimo', devolucao: 'Devolução', transferencia: 'Transferência', conserto: 'Conserto', baixa: 'Baixa', cadastro: 'Cadastro', edicao: 'Edição' };
+    let qr = ''; try { await qrLib(); qr = qrSvg(base() + '#patrimonio/' + x.numero); } catch (_) {}
+    pg.innerHTML = `<a class="lk" href="#patrimonio">‹ Patrimônio</a><div class="topo-tela" style="margin-top:6px"><div><h1>${esc(x.numero)} · ${esc([x.tipo, x.modelo].filter(Boolean).join(' '))}</h1><p class="sub"><span style="color:${SIT[x.situacao][1]}">${SIT[x.situacao][0]}</span> · ${esc(uni(x.unidade_id))}${x.local ? ' · ' + esc(x.local) : ''}</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${ed ? `${x.situacao === 'emprestado' ? '<button class="btn" id="fDev">Registrar devolução</button>' : x.situacao !== 'baixado' ? '<button class="btn" id="fEmp">Emprestar</button>' : ''}<button class="btn sec" id="fEd">Editar</button>${x.situacao !== 'baixado' ? '<button class="btn sec" id="fBx" style="color:#FF9A9D">Dar baixa</button>' : ''}` : ''}<button class="btn sec" id="fEt">Etiqueta</button></div></div>
+      <div class="ag2"><div class="cd" style="--c:${SIT[x.situacao][1]}"><div class="kv">${[['Marca', x.marca], ['Modelo', x.modelo], ['IMEI', x.imei], ['Número de série', x.serie], ['Responsável', x.responsavel_nome], ['Compra', x.aquisicao ? dBR(x.aquisicao) + (x.valor ? ' · ' + R(x.valor) : '') : null], ['Observação', x.observacao]].filter(y => y[1]).map(([a, b]) => `<span>${a}</span><span>${esc(b)}</span>`).join('')}</div>${x.foto ? '<button class="mini neu" id="fFoto" style="margin-top:8px">Ver foto</button>' : ''}</div>
+      <div class="cd" style="--c:#6E6A7C;text-align:center"><div style="width:140px;margin:0 auto;background:#fff;padding:8px;border-radius:8px">${qr}</div><div class="sm" style="margin-top:6px">QR Code da etiqueta</div></div></div>
+      <div class="cd" style="--c:#3B82F6;margin-top:12px"><div class="hd"><span>HISTÓRICO</span></div>${(mv || []).map(m => `<div class="lin"><b>${TM[m.tipo]}</b>${m.para ? ' · ' + esc(m.para) : ''}${m.estado ? ' · estado: ' + esc(m.estado) : ''} <span class="sm">· ${new Date(m.feito_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${m.feito_por ? ' · ' + esc(nome(m.feito_por)) : ''}</span>${m.observacao ? `<div class="sm">${esc(m.observacao)}</div>` : ''}</div>`).join('') || '<p class="sm">Sem movimentações.</p>'}</div>`;
+    const g = id => pg.querySelector('#' + id), mov = async (tipo, extra, sit) => { await sb.from('patrimonio_mov').insert({ patrimonio_id: x.id, tipo, feito_por: eu.id, ...extra }); if (sit) await sb.from('patrimonio').update(sit).eq('id', x.id); const { data } = await sb.from('patrimonio').select('*').eq('id', x.id).single(); ficha(data); };
+    if (g('fEd')) g('fEd').onclick = () => editarBem(x); if (g('fFoto')) g('fFoto').onclick = () => abrirArq(x.foto);
+    g('fEt').onclick = () => etiquetas([x]);
+    if (g('fEmp')) g('fEmp').onclick = () => modal('Emprestar ' + esc(x.numero), `<label>Para quem</label><input id="mP"><label>Observação (estado, acessórios…)</label><input id="mO" value="Em bom estado, com carregador">`, async d0 => { const p = d0.querySelector('#mP').value.trim(); if (!p) { alert('Informe para quem.'); return; } const o = d0.querySelector('#mO').value; d0.remove();
+      await mov('emprestimo', { para: p, observacao: o }, { situacao: 'emprestado', responsavel_nome: p }); if (await window.KESP_CONFIRMA('Imprimir o termo de responsabilidade para assinatura?')) termo(x, p, o); });
+    if (g('fDev')) g('fDev').onclick = () => modal('Devolução de ' + esc(x.numero), `<label>Estado na devolução</label><select id="mE"><option>Bom</option><option>Com avaria</option><option>Sem acessórios</option><option>Precisa de conserto</option></select><label>Observação</label><input id="mO">`, async d0 => { const e = d0.querySelector('#mE').value, o = d0.querySelector('#mO').value; d0.remove(); await mov('devolucao', { para: x.responsavel_nome, estado: e, observacao: o || null }, { situacao: e === 'Precisa de conserto' ? 'conserto' : 'guardado', responsavel_nome: null }); });
+    if (g('fBx')) g('fBx').onclick = async () => { const m = await window.KESP_PERGUNTA('Motivo da baixa (quebrado, perdido, doado, furtado…):'); if (!m || !m.trim()) return; await mov('baixa', { observacao: m.trim() }, { situacao: 'baixado' }); };
+  }
+  function termo(x, pessoa, obs) {
+    window.KESP_IMPRIMIR(window.KESP_ARQ.montar(['Termo de responsabilidade', x.numero, pessoa]), `<div style="max-width:680px;margin:0 auto;font:12.5px/1.7 Arial;color:#1E1B19"><div style="height:34px;background:#F26B1D;display:flex;align-items:center;padding:0 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact"><div style="background:#fff;padding:3px 6px;border-radius:2px;display:flex"><img src="${base()}logo-kolping.png" style="height:22px"></div></div>
+      <h2 style="text-align:center;margin:20px 0 10px">Termo de responsabilidade</h2><p>Eu, <b>${esc(pessoa)}</b>, recebi da <b>Kolping Estadual de São Paulo</b>, CNPJ 15.766.152/0001-77, o bem abaixo, comprometendo-me a zelar pela sua guarda e conservação, a usá-lo somente nas atividades da instituição e a devolvê-lo quando solicitado, no mesmo estado em que o recebi, ressalvado o desgaste natural do uso.</p>
+      <table style="width:100%;border-collapse:collapse;margin:10px 0">${[['Patrimônio', x.numero], ['Bem', [x.tipo, x.marca, x.modelo].filter(Boolean).join(' ')], ['IMEI / Série', x.imei || x.serie || '—'], ['Estado e acessórios', obs || '—']].map(([a, b]) => `<tr><td style="padding:5px;border:1px solid #DDD;background:#FBF0E6;width:34%"><b>${a}</b></td><td style="padding:5px;border:1px solid #DDD">${esc(b)}</td></tr>`).join('')}</table>
+      <p style="text-align:right;margin-top:16px">Carapicuíba, ${new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
+      <div style="display:flex;gap:30px;margin-top:50px"><div style="flex:1;text-align:center;border-top:1px solid #1E1B19;padding-top:3px"><b>${esc(pessoa)}</b><br><span style="color:#8A8078">Responsável pelo bem</span></div><div style="flex:1;text-align:center;border-top:1px solid #1E1B19;padding-top:3px"><b>${esc(eu.nome)}</b><br><span style="color:#8A8078">Kolping Estadual de São Paulo</span></div></div></div>`);
+  }
+
+  // ---------- Consumo ----------
+  const TC = { luz: ['Luz', 'kWh', '#F5A524', 'Enel'], agua: ['Água', 'm³', '#3B82F6', 'Sabesp'], gas: ['Gás', 'botijões', '#E5484D', ''] };
+  let tC = 'luz';
+  async function consumo(cli, perfil) {
+    sb = cli; eu = perfil; U = (await sb.from('unidades').select('id,nome').order('ordem')).data || [];
+    const [c, i] = await Promise.all([sb.from('consumo').select('*').eq('tipo', tC).order('mes'), sb.from('instalacoes').select('*')]); const L = c.data || [], ed = pode('consumo.editar');
+    const meses = [...new Set(L.map(x => x.mes))].sort().slice(-12), pg = document.getElementById('pg');
+    const media = (u, ate) => { const v = L.filter(x => x.unidade_id === u && x.mes < ate).slice(-6).map(x => Number(x.valor)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+    pg.innerHTML = `<div class="topo-tela"><div><h1>Consumo</h1><p class="sub">Contas de gás, luz e água por unidade · alerta quando passar 30% da média dos 6 meses anteriores</p></div>${ed ? '<button class="btn" id="cnNovo">Lançar conta</button>' : ''}</div>
+      <div class="seg" style="max-width:420px;margin-bottom:12px">${Object.entries(TC).map(([k, [n]]) => `<a data-tc="${k}" class="${tC === k ? 'on' : ''}">${n}</a>`).join('')}</div>
+      <div class="g4" style="margin-bottom:12px">${U.map(u => { const ul = L.filter(x => x.unidade_id === u.id).slice(-1)[0], m = ul ? media(u.id, ul.mes) : null, alto = ul && m && Number(ul.valor) > m * 1.3, ins = (i.data || []).find(y => y.unidade_id === u.id && y.tipo === tC);
+        return `<div class="cd" style="--c:${alto ? '#E5484D' : TC[tC][2]}"><div class="hd"><span>${esc(uni(u.id).toUpperCase())}</span>${ed ? `<a class="lk" data-ins="${u.id}" style="letter-spacing:0">${ins && ins.numero ? (tC === 'gas' ? esc(ins.numero) : 'nº ' + esc(ins.numero)) : '+ nº'}</a>` : ''}</div><div class="big" style="font-size:20px">${ul ? R(ul.valor) : '—'}</div><div class="sm">${ul ? MES[+ul.mes.slice(5, 7) - 1] + '/' + ul.mes.slice(0, 4) + (ul.quantidade ? ' · ' + ul.quantidade + ' ' + TC[tC][1] : '') : 'sem lançamentos'}</div>${alto ? `<div class="sm" style="color:#FF9A9D">⚠ ${Math.round((ul.valor / m - 1) * 100)}% acima da média (${R(m)})</div>` : ''}</div>`; }).join('')}</div>
+      ${meses.length ? `<div class="cd" style="--c:${TC[tC][2]};overflow-x:auto"><div class="hd"><span>ÚLTIMOS MESES (R$)</span></div><table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:#A8A3B4;font-size:11px"><td style="padding:5px">Unidade</td>${meses.map(m => `<td style="padding:5px;text-align:right">${MES[+m.slice(5, 7) - 1]}/${m.slice(2, 4)}</td>`).join('')}</tr>
+        ${U.map(u => `<tr style="border-top:1px solid rgba(255,255,255,.06)"><td style="padding:5px;white-space:nowrap">${esc(uni(u.id))}</td>${meses.map(m => { const x = L.find(y => y.unidade_id === u.id && y.mes === m), md = media(u.id, m), alto = x && md && Number(x.valor) > md * 1.3; return `<td style="padding:5px;text-align:right;white-space:nowrap;${alto ? 'color:#FF9A9D;font-weight:700' : ''}" ${x ? `data-cv="${x.id}" class="lk"` : ''}>${x ? Number(x.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '—'}</td>`; }).join('')}</tr>`).join('')}</table></div>` : '<p class="sm">Nenhuma conta lançada ainda.</p>'}`;
+    pg.querySelectorAll('[data-tc]').forEach(a => a.onclick = () => { tC = a.dataset.tc; consumo(sb, eu); });
+    const nv = pg.querySelector('#cnNovo'); if (nv) nv.onclick = () => conta(null);
+    pg.querySelectorAll('[data-cv]').forEach(el => el.onclick = () => conta(L.find(x => x.id === el.dataset.cv)));
+    pg.querySelectorAll('[data-ins]').forEach(a => a.onclick = async () => { const ins = (i.data || []).find(y => y.unidade_id === a.dataset.ins && y.tipo === tC); const n = await window.KESP_PERGUNTA(tC === 'gas' ? 'Tipo de botijão desta unidade (ex.: P45, P13):' : 'Número de instalação na ' + TC[tC][3] + ':', ins ? ins.numero : ''); if (n === null) return; await sb.from('instalacoes').upsert({ unidade_id: a.dataset.ins, tipo: tC, numero: n.trim() || null, empresa: TC[tC][3] || null }); consumo(sb, eu); });
+  }
+  function conta(x) {
+    const v = x || { tipo: tC, unidade_id: 'sede', mes: new Date().toISOString().slice(0, 8) + '01' };
+    const d = modal(x ? 'Editar conta' : 'Lançar conta', `<div class="dois"><div><label>Tipo</label><select id="kT"${x ? ' disabled' : ''}>${Object.entries(TC).map(([k, [n]]) => `<option value="${k}"${v.tipo === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div><div><label>Unidade</label><select id="kU"${x ? ' disabled' : ''}>${U.map(u => `<option value="${u.id}"${v.unidade_id === u.id ? ' selected' : ''}>${esc(uni(u.id))}</option>`).join('')}</select></div></div>
+      <div class="dois"><div><label>Mês de referência</label><input id="kM" type="month" value="${v.mes.slice(0, 7)}"${x ? ' disabled' : ''}></div><div><label>Vencimento</label><input id="kV" type="date" value="${v.vencimento || ''}"></div></div>
+      <div class="dois"><div><label>Valor</label><input id="kR" data-moeda value="${x ? R(x.valor) : ''}"></div><div><label>Consumo (<span id="kUn">${TC[v.tipo][1]}</span>)</label><input id="kQ" type="number" step="0.01" min="0" value="${v.quantidade || ''}"></div></div>
+      <label>Conta (PDF ou foto)</label><input id="kF" type="file" accept="application/pdf,image/*">${v.arquivo ? '<button class="mini neu" id="kVer" style="margin-top:6px">Ver conta anexada</button>' : ''}<label>Observação</label><input id="kO" value="${esc(v.observacao || '')}">`,
+      async d0 => { const g = id => d0.querySelector('#' + id), val = window.KESP_MOEDA.ler(g('kR')); if (!val) { alert('Informe o valor.'); return; }
+        let arquivo = v.arquivo || null; const f = g('kF').files[0]; if (f) { try { arquivo = await subir(f, 'consumo'); } catch (_) { alert('Não foi possível enviar a conta.'); return; } }
+        const reg = { tipo: g('kT').value, unidade_id: g('kU').value, mes: g('kM').value + '-01', valor: val, quantidade: +g('kQ').value || null, vencimento: g('kV').value || null, arquivo, observacao: g('kO').value || null };
+        const r = x ? await sb.from('consumo').update(reg).eq('id', x.id) : await sb.from('consumo').upsert({ ...reg, criado_por: eu.id }, { onConflict: 'unidade_id,tipo,mes' }); if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; } d0.remove(); tC = reg.tipo; consumo(sb, eu); });
+    d.querySelector('#kT').onchange = e => (d.querySelector('#kUn').textContent = TC[e.target.value][1]);
+    const vr = d.querySelector('#kVer'); if (vr) vr.onclick = () => abrirArq(v.arquivo);
+  }
+
+  // ---------- Manutenção ----------
+  const PRI = { baixa: ['Baixa', '#6E6A7C'], media: ['Média', '#3B82F6'], alta: ['Alta', '#F5A524'], urgente: ['Urgente', '#E5484D'] };
+  const SM = { aberto: ['Aberto', '#F5A524'], andamento: ['Em andamento', '#3B82F6'], aguardando: ['Aguardando peça/serviço', '#8B5CF6'], concluido: ['Concluído', '#22C984'], cancelado: ['Cancelado', '#6E6A7C'] };
+  let fM = 'abertos';
+  async function manutencao(cli, perfil) {
+    sb = cli; eu = perfil; U = (await sb.from('unidades').select('id,nome').order('ordem')).data || [];
+    const { data } = await sb.from('manutencao').select('*').order('aberto_em', { ascending: false }); const L = data || [], ed = pode('manutencao.editar');
+    const F = { abertos: x => !['concluido', 'cancelado'].includes(x.situacao), concluidos: x => x.situacao === 'concluido', todos: () => true }, pg = document.getElementById('pg');
+    const ord = { urgente: 0, alta: 1, media: 2, baixa: 3 };
+    pg.innerHTML = `<div class="topo-tela"><div><h1>Manutenção</h1><p class="sub">Chamados das unidades, com foto e acompanhamento</p></div><button class="btn" id="mnNovo">Abrir chamado</button></div>
+      <div class="seg" style="max-width:420px;margin-bottom:12px">${[['abertos', 'Em aberto'], ['concluidos', 'Concluídos'], ['todos', 'Todos']].map(([k, n]) => `<a data-fm="${k}" class="${fM === k ? 'on' : ''}">${n} · ${L.filter(F[k]).length}</a>`).join('')}</div>
+      ${L.filter(F[fM]).sort((a, b) => (fM === 'abertos' ? ord[a.prioridade] - ord[b.prioridade] : 0)).map(x => `<div class="pe" style="--c:${PRI[x.prioridade][1]};cursor:pointer" data-mn="${x.id}"><div style="flex:1;min-width:0"><b>${esc(x.titulo)}</b><div class="sm">${esc(uni(x.unidade_id))}${x.local ? ' · ' + esc(x.local) : ''} · aberto em ${dBR(x.aberto_em)}${x.fotos.length ? ' · 📷 ' + x.fotos.length : ''}</div></div><span class="tg2" style="background:${PRI[x.prioridade][1]}22;color:${PRI[x.prioridade][1]}">${PRI[x.prioridade][0]}</span><span class="tg2" style="background:${SM[x.situacao][1]}22;color:${SM[x.situacao][1]}">${SM[x.situacao][0]}</span></div>`).join('') || '<p class="sm">Nenhum chamado.</p>'}`;
+    pg.querySelectorAll('[data-fm]').forEach(a => a.onclick = () => { fM = a.dataset.fm; manutencao(sb, eu); });
+    pg.querySelector('#mnNovo').onclick = () => chamado(null, ed);
+    pg.querySelectorAll('[data-mn]').forEach(el => el.onclick = () => chamado(L.find(x => x.id === el.dataset.mn), ed));
+  }
+  async function chamado(x, ed) {
+    const { data: ps } = await sb.from('perfis').select('id,nome').eq('situacao', 'ativo'); const v = x || { prioridade: 'media', situacao: 'aberto', unidade_id: (U.find(u => u.responsavel === eu.id) || {}).id || 'sede', fotos: [] };
+    const fotos = [...(v.fotos || [])], novo = !x, podeEd = novo || ed || x.aberto_por === eu.id;
+    const d = modal(novo ? 'Abrir chamado' : 'Chamado', `<label>O que precisa ser feito</label><input id="cT" value="${esc(v.titulo || '')}"${podeEd ? '' : ' disabled'}><label>Detalhes</label><input id="cD" value="${esc(v.descricao || '')}"${podeEd ? '' : ' disabled'}>
+      <div class="dois"><div><label>Unidade</label><select id="cU">${U.map(u => `<option value="${u.id}"${v.unidade_id === u.id ? ' selected' : ''}>${esc(uni(u.id))}</option>`).join('')}</select></div><div><label>Local (sala, banheiro…)</label><input id="cL" value="${esc(v.local || '')}"></div></div>
+      <div class="dois"><div><label>Prioridade</label><select id="cP">${Object.entries(PRI).map(([k, [n]]) => `<option value="${k}"${v.prioridade === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div><div><label>Situação</label><select id="cS"${ed ? '' : ' disabled'}>${Object.entries(SM).map(([k, [n]]) => `<option value="${k}"${v.situacao === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div></div>
+      ${ed ? `<div class="dois"><div><label>Responsável</label><select id="cR"><option value="">—</option>${(ps || []).map(p => `<option value="${p.id}"${v.responsavel === p.id ? ' selected' : ''}>${esc(p.nome)}</option>`).join('')}</select></div><div><label>Custo</label><input id="cC" data-moeda value="${v.custo ? R(v.custo) : ''}"></div></div><label>Fornecedor ou quem fez</label><input id="cF" value="${esc(v.fornecedor || '')}">` : ''}
+      <label>Fotos</label><div id="cFt" style="display:flex;gap:6px;flex-wrap:wrap"></div><input id="cI" type="file" accept="image/*" multiple style="margin-top:6px">
+      ${(v.historico || []).length ? `<label>Histórico</label>${v.historico.map(h => `<div class="sm">${new Date(h.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(h.txt)}</div>`).join('')}` : ''}`,
+      async d0 => { const g = id => d0.querySelector('#' + id); if (!g('cT').value.trim()) { alert('Descreva o que precisa ser feito.'); return; }
+        for (const f of [...g('cI').files].slice(0, 6)) { try { fotos.push(await subir(f, 'manutencao')); } catch (_) {} }
+        const reg = { titulo: g('cT').value.trim(), descricao: g('cD').value || null, unidade_id: g('cU').value, local: g('cL').value || null, prioridade: g('cP').value, fotos };
+        if (ed) Object.assign(reg, { situacao: g('cS').value, responsavel: g('cR').value || null, custo: window.KESP_MOEDA.ler(g('cC')) || null, fornecedor: g('cF').value || null, concluido_em: g('cS').value === 'concluido' ? (v.concluido_em || new Date().toISOString()) : null });
+        const hist = [...(v.historico || [])]; if (!novo && reg.situacao && reg.situacao !== v.situacao) hist.push({ em: new Date().toISOString(), txt: SM[reg.situacao][0] + ' · ' + eu.nome }); reg.historico = hist;
+        const r = novo ? await sb.from('manutencao').insert({ ...reg, aberto_por: eu.id, historico: [{ em: new Date().toISOString(), txt: 'Aberto por ' + eu.nome }] }) : await sb.from('manutencao').update(reg).eq('id', x.id);
+        if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; }
+        if (!novo && reg.situacao === 'concluido' && v.situacao !== 'concluido' && x.aberto_por && x.aberto_por !== eu.id) await sb.from('avisos').insert({ destinatario: x.aberto_por, tipo: 'informativo', prioridade: 'novidade', titulo: 'Chamado concluído: ' + reg.titulo, link: '#manutencao', dispensavel: true, criado_por: eu.id });
+        d0.remove(); manutencao(sb, eu); });
+    const ft = d.querySelector('#cFt'); for (const p of fotos) { const { data } = await sb.storage.from('kesp-arquivos').createSignedUrl(p, 600); if (data) ft.insertAdjacentHTML('beforeend', `<a href="${data.signedUrl}" target="_blank" rel="noopener"><img src="${data.signedUrl}" style="width:72px;height:72px;object-fit:cover;border-radius:8px"></a>`); }
+  }
+  window.KESP_E4 = { patrimonio, consumo, manutencao };
 })();
