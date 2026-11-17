@@ -913,11 +913,23 @@ window.KESP_ARQ = {
 window.KESP_PDF = async (html, nome) => {
   if (!window.html2pdf) await new Promise((ok, er) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; s.onload = ok; s.onerror = er; document.head.appendChild(s); });
   const veu = document.createElement('div'); veu.style.cssText = 'position:fixed;inset:0;z-index:4000;background:#0F1622;display:flex;align-items:center;justify-content:center;color:#F2EEEA;font:600 15px system-ui'; veu.textContent = 'Gerando PDF…';
-  const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:0;top:0;width:760px;background:#fff;color:#1E1B19;z-index:3999'; box.innerHTML = html; document.body.append(box, veu);
-  await Promise.all([...box.querySelectorAll('img')].map(im => im.complete ? 1 : new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 4000); })));
-  await new Promise(r => setTimeout(r, 120));
-  try { await window.html2pdf().set({ margin: [8, 8, 8, 8], filename: (nome || 'documento') + '.pdf', image: { type: 'jpeg', quality: .96 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['avoid-all'] } }).from(box).save(); }
-  finally { box.remove(); veu.remove(); }
+  // folha A4 (794 px) no topo da página, fora da rolagem
+  const box = document.createElement('div'); box.style.cssText = 'position:absolute;left:0;top:0;width:794px;padding:0;background:#fff;color:#1E1B19;z-index:3999'; box.innerHTML = html;
+  const rol = [window.scrollX, window.scrollY], caixas = [...document.querySelectorAll('.cx,.conf,#pg')].map(el => [el, el.scrollTop]);
+  document.body.append(box, veu); window.scrollTo(0, 0);
+  await Promise.all([...box.querySelectorAll('img')].map(im => im.complete && im.naturalWidth ? 1 : new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 5000); })));
+  if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (_) {} }
+  await new Promise(r => setTimeout(r, 150));
+  const imprimir = () => window.KESP_IMPRIMIR(nome || 'Documento', html);
+  try {
+    const w = window.html2pdf().set({ margin: [8, 8, 8, 8], filename: (nome || 'documento') + '.pdf', image: { type: 'jpeg', quality: .96 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, windowWidth: 794, x: 0, y: 0 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['css', 'legacy'] } }).from(box);
+    const cv = await w.toCanvas().get('canvas');
+    // conferência: se a imagem saiu (quase) toda branca, não baixa um PDF vazio
+    let branco = true; try { const c2 = document.createElement('canvas'), n = 60; c2.width = n; c2.height = n; const x = c2.getContext('2d'); x.drawImage(cv, 0, 0, n, n); const px = x.getImageData(0, 0, n, n).data; let esc0 = 0; for (let i = 0; i < px.length; i += 4) if (px[i] < 235 || px[i + 1] < 235 || px[i + 2] < 235) esc0++; branco = esc0 < 25; } catch (_) { branco = false; }
+    if (!cv || !cv.width || branco) { box.remove(); veu.remove(); window.KESP_TOAST && window.KESP_TOAST('O PDF direto falhou neste aparelho: na janela que abriu, escolha "Salvar como PDF".'); imprimir(); return; }
+    await w.toPdf().save();
+  } catch (e) { box.remove(); veu.remove(); window.KESP_TOAST && window.KESP_TOAST('O PDF direto falhou: na janela que abriu, escolha "Salvar como PDF".'); imprimir(); return; }
+  finally { box.remove(); veu.remove(); window.scrollTo(rol[0], rol[1]); caixas.forEach(([el, t]) => { try { el.scrollTop = t; } catch (_) {} }); }
 };
 window.KESP_MOD = async sb => { if (window.KESP_MODELOS) return window.KESP_MODELOS; try { const { data } = await sb.from('modelos_texto').select('chave,texto'); window.KESP_MODELOS = Object.fromEntries((data || []).map(x => [x.chave, x.texto])); } catch (_) { window.KESP_MODELOS = {}; } return window.KESP_MODELOS; };
 window.KESP_PREENCHER = (t, v) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m));
@@ -1572,7 +1584,7 @@ window.KESP_EVOL = (function () {
       ${r.situacao !== 'cancelado' && r.comunidade_id ? `<div class="renv ${r.enviado_em ? 'ok' : 'pend'}">${r.enviado_em ? '✓ Enviado em ' + new Date(r.enviado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '⚠ Ainda não enviado à Comunidade'}</div>` : ''}<div style="background:#E9E5DF;padding:10px;border-radius:10px">${html}</div>${(r._vers || []).length ? `<div class="cd" style="--c:#6E6A7C;margin-top:10px"><div class="hd"><span>HISTÓRICO DE EDIÇÕES</span></div>${r._vers.map(v => `<div class="sm" style="padding:3px 0">Versão ${v.versao} · ${new Date(v.editado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(v.motivo)} · antes: ${esc(Object.entries(v.anterior).map(([k, x]) => ({ forma_pagamento: 'forma', data_pagamento: 'data', observacao: 'observação', modelo: 'modelo', referencia: 'texto', pagador_nome: 'pagador', pagador_doc: 'documento' }[k] || k) + ' = ' + (k === 'referencia' ? '(texto anterior)' : x ?? '—')).join(', '))}</div>`).join('')}</div>` : ''}</div>`;
     document.body.appendChild(dlg);
     dlg.querySelector('[data-x]').onclick = () => { dlg.remove(); if (aba === 'historico') render(); };
-    dlg.querySelector('[data-imp]').onclick = () => { const w = window.open('', '_blank'); w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(nomeArquivo(r))}</title><style>@page{size:A4;margin:12mm}body{margin:0;background:#fff}</style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`); w.document.close(); };
+    dlg.querySelector('[data-imp]').onclick = () => { const w = window.open('', '_blank'); w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(nomeArquivo(r))}</title><style>@page{size:A4;margin:12mm}body{margin:0;background:#fff}</style></head><body>${html}<script>window.onload=async()=>{await Promise.all([...document.images].map(i=>i.complete&&i.naturalWidth?1:new Promise(r=>{i.onload=i.onerror=r;setTimeout(r,5000)})));if(document.fonts&&document.fonts.ready)await document.fonts.ready;setTimeout(()=>window.print(),400)}<\/script></body></html>`); w.document.close(); };
     const dv = dlg.querySelector('[data-dev]');
     if (dv) dv.onclick = async () => { const r0 = await window.KESP_VALOR('Registrar devolução', [{ rotulo: 'Motivo da devolução', valor: '' }]); if (!r0) return; const v = r0.valor, m = r0.extras[0];
       const x = await sb.rpc('registrar_devolucao', { p_recibo: r.id, p_valor: v, p_motivo: m.trim() }); if (x.error) { alert('Não foi possível registrar: ' + x.error.message); return; }
@@ -1761,7 +1773,7 @@ window.KESP_EMAIL = function (para, assunto, corpo) {
   const a = document.createElement('a'); a.href = u; document.body.appendChild(a); a.click(); a.remove();
 };
 window.KESP_IMPRIMIR = function (titulo, html, paisagem) {
-  const w = window.open('', '_blank');
+  const w = window.open('', '_blank'); if (!w) { alert('O navegador bloqueou a janela de impressão. Permita janelas pop-up para o KESP e tente de novo.'); return; }
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo}</title><style>@page{size:A4 ${paisagem ? 'landscape' : 'portrait'};margin:12mm}body{margin:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#1E1B19}</style></head><body>${html}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
   w.document.close();
 };
