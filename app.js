@@ -911,25 +911,33 @@ window.KESP_ARQ = {
     return n.slice(0, max); }
 };
 window.KESP_PDF = async (html, nome) => {
-  if (!window.html2pdf) await new Promise((ok, er) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; s.onload = ok; s.onerror = er; document.head.appendChild(s); });
-  const veu = document.createElement('div'); veu.style.cssText = 'position:fixed;inset:0;z-index:4000;background:#0F1622;display:flex;align-items:center;justify-content:center;color:#F2EEEA;font:600 15px system-ui'; veu.textContent = 'Gerando PDF…';
-  // folha A4 (794 px) no topo da página, fora da rolagem
-  const box = document.createElement('div'); box.style.cssText = 'position:absolute;left:0;top:0;width:794px;padding:0;background:#fff;color:#1E1B19;z-index:3999'; box.innerHTML = html;
-  const rol = [window.scrollX, window.scrollY], caixas = [...document.querySelectorAll('.cx,.conf,#pg')].map(el => [el, el.scrollTop]);
-  document.body.append(box, veu); window.scrollTo(0, 0);
-  await Promise.all([...box.querySelectorAll('img')].map(im => im.complete && im.naturalWidth ? 1 : new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 5000); })));
-  if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (_) {} }
-  await new Promise(r => setTimeout(r, 150));
-  const imprimir = () => window.KESP_IMPRIMIR(nome || 'Documento', html);
+  const js = src => new Promise((ok, er) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = er; document.head.appendChild(s); });
+  const veu = document.createElement('div'); veu.style.cssText = 'position:fixed;inset:0;z-index:4000;background:#0F1622;display:flex;align-items:center;justify-content:center;color:#F2EEEA;font:600 15px system-ui'; veu.textContent = 'Gerando PDF…'; document.body.appendChild(veu);
+  const falhou = async motivo => { veu.remove(); try { if (window.__kespSb) await window.__kespSb.from('erros_sistema').insert({ tela: 'pdf', mensagem: 'PDF direto falhou: ' + motivo }); } catch (_) {} window.KESP_TOAST && window.KESP_TOAST('Na janela que abriu, escolha "Salvar como PDF".'); window.KESP_IMPRIMIR(nome || 'Documento', html); };
+  let fr;
   try {
-    const w = window.html2pdf().set({ margin: [8, 8, 8, 8], filename: (nome || 'documento') + '.pdf', image: { type: 'jpeg', quality: .96 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, windowWidth: 794, x: 0, y: 0 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['css', 'legacy'] } }).from(box);
-    const cv = await w.toCanvas().get('canvas');
-    // conferência: se a imagem saiu (quase) toda branca, não baixa um PDF vazio
-    let branco = true; try { const c2 = document.createElement('canvas'), n = 60; c2.width = n; c2.height = n; const x = c2.getContext('2d'); x.drawImage(cv, 0, 0, n, n); const px = x.getImageData(0, 0, n, n).data; let esc0 = 0; for (let i = 0; i < px.length; i += 4) if (px[i] < 235 || px[i + 1] < 235 || px[i + 2] < 235) esc0++; branco = esc0 < 25; } catch (_) { branco = false; }
-    if (!cv || !cv.width || branco) { box.remove(); veu.remove(); window.KESP_TOAST && window.KESP_TOAST('O PDF direto falhou neste aparelho: na janela que abriu, escolha "Salvar como PDF".'); imprimir(); return; }
-    await w.toPdf().save();
-  } catch (e) { box.remove(); veu.remove(); window.KESP_TOAST && window.KESP_TOAST('O PDF direto falhou: na janela que abriu, escolha "Salvar como PDF".'); imprimir(); return; }
-  finally { box.remove(); veu.remove(); window.scrollTo(rol[0], rol[1]); caixas.forEach(([el, t]) => { try { el.scrollTop = t; } catch (_) {} }); }
+    if (!window.html2canvas) await js('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    if (!window.jspdf) await js('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    // página isolada, só com o documento: sem o tema escuro do KESP e sem rolagem
+    fr = document.createElement('iframe'); fr.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:1123px;border:0;opacity:0;pointer-events:none;z-index:-1'; document.body.appendChild(fr);
+    const d = fr.contentDocument; d.open(); d.write(`<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:#fff;color:#1E1B19;font-family:Arial,Helvetica,sans-serif;width:794px}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div id="doc" style="padding:24px 26px">${html}</div></body></html>`); d.close();
+    await new Promise(r => { if (d.readyState === 'complete') r(); else fr.onload = r; setTimeout(r, 3000); });
+    await Promise.all([...d.images].map(im => im.complete && im.naturalWidth ? 1 : new Promise(r => { im.onload = im.onerror = r; setTimeout(r, 5000); })));
+    if (d.fonts && d.fonts.ready) { try { await d.fonts.ready; } catch (_) {} }
+    await new Promise(r => setTimeout(r, 150));
+    const alvo = d.getElementById('doc');
+    const cv = await window.html2canvas(alvo, { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794, scrollX: 0, scrollY: 0, logging: false });
+    // conferência rigorosa: precisa haver conteúdo visível
+    const n = 120, c2 = document.createElement('canvas'); c2.width = n; c2.height = n; const x2 = c2.getContext('2d'); x2.drawImage(cv, 0, 0, n, n);
+    const px = x2.getImageData(0, 0, n, n).data; let tinta = 0; for (let i = 0; i < px.length; i += 4) if (px[i] < 200 || px[i + 1] < 200 || px[i + 2] < 200) tinta++;
+    if (!cv.width || !cv.height || tinta < n * n * 0.004) { fr.remove(); return falhou('página em branco (' + tinta + ')'); }
+    const { jsPDF } = window.jspdf, pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' }), W = 210, H = 297, alt = cv.height * W / cv.width;
+    // fatia em páginas A4 se o documento for maior que uma folha
+    if (alt <= H + 1) pdf.addImage(cv.toDataURL('image/jpeg', .95), 'JPEG', 0, 0, W, alt);
+    else { const pxPag = Math.floor(cv.width * H / W); for (let y = 0, pg = 0; y < cv.height; y += pxPag, pg++) { const f = document.createElement('canvas'); f.width = cv.width; f.height = Math.min(pxPag, cv.height - y); const fx = f.getContext('2d'); fx.fillStyle = '#fff'; fx.fillRect(0, 0, f.width, f.height); fx.drawImage(cv, 0, y, f.width, f.height, 0, 0, f.width, f.height); if (pg) pdf.addPage(); pdf.addImage(f.toDataURL('image/jpeg', .95), 'JPEG', 0, 0, W, f.height * W / f.width); } }
+    pdf.save((nome || 'documento') + '.pdf');
+    fr.remove(); veu.remove();
+  } catch (e) { if (fr) fr.remove(); return falhou(String(e && e.message || e).slice(0, 200)); }
 };
 window.KESP_MOD = async sb => { if (window.KESP_MODELOS) return window.KESP_MODELOS; try { const { data } = await sb.from('modelos_texto').select('chave,texto'); window.KESP_MODELOS = Object.fromEntries((data || []).map(x => [x.chave, x.texto])); } catch (_) { window.KESP_MODELOS = {}; } return window.KESP_MODELOS; };
 window.KESP_PREENCHER = (t, v) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m));
