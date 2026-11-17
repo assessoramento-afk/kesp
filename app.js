@@ -1,10 +1,51 @@
+// ===================== Verificação em duas etapas (TOTP) =====================
+window.KESP_MFA = (function () {
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const caixa = h => { const d = document.createElement('div'); d.className = 'conf'; d.style.zIndex = 3500; d.innerHTML = `<div class="cx fm" style="max-width:440px">${h}</div>`; document.body.appendChild(d); return d; };
+  async function configurar(sb) {
+    const { data } = await sb.auth.mfa.listFactors(); const ok = (data && data.totp || []).filter(f => f.status === 'verified');
+    if (ok.length) { const d = caixa(`<b>Verificação em duas etapas</b><p class="sm" style="margin:6px 0 12px;line-height:1.5"><span style="color:#5FE0A8">✓ Ativada.</span> Ao entrar, o KESP pede o código de 6 números do aplicativo autenticador.</p><div style="display:flex;gap:8px"><button class="btn sec" style="flex:1;color:#FF9A9D" data-off>Desativar</button><button class="btn" style="flex:1" data-x>Fechar</button></div>`);
+      d.querySelector('[data-x]').onclick = () => d.remove(); d.querySelector('[data-off]').onclick = async () => { if (!await window.KESP_CONFIRMA('Desativar a verificação em duas etapas?\nSua conta fica protegida só pela senha.')) return; for (const f of ok) await sb.auth.mfa.unenroll({ factorId: f.id }); d.remove(); window.KESP_TOAST('Verificação desativada.'); }; return; }
+    for (const f of (data && data.all || []).filter(f => f.status !== 'verified')) { try { await sb.auth.mfa.unenroll({ factorId: f.id }); } catch (_) {} }
+    const { data: en, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'KESP ' + new Date().toISOString().slice(0, 10) });
+    if (error) { alert('Não foi possível iniciar: ' + error.message + '\nConfira se a verificação em duas etapas (TOTP) está ligada em Authentication › Sign In / Providers › Multi-Factor no Supabase.'); return; }
+    const d = caixa(`<b>Ativar verificação em duas etapas</b><ol class="sm" style="line-height:1.6;padding-left:18px;margin:8px 0"><li>Instale no celular um aplicativo autenticador (Google Authenticator ou Microsoft Authenticator).</li><li>No aplicativo, toque em <b>+</b> e leia o QR Code abaixo.</li><li>Digite o código de 6 números que aparecer.</li></ol>
+      <div style="background:#fff;width:190px;margin:8px auto;padding:8px;border-radius:10px"><img src="${en.totp.qr_code}" style="width:100%;display:block"></div><p class="sm" style="text-align:center;word-break:break-all">Sem câmera? Digite a chave: <b>${esc(en.totp.secret)}</b></p>
+      <label>Código de 6 números</label><input id="mC" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="font-size:20px;letter-spacing:6px;text-align:center"><div style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" style="flex:1" data-x>Cancelar</button><button class="btn" style="flex:1" data-ok>Ativar</button></div>`);
+    d.querySelector('[data-x]').onclick = async () => { try { await sb.auth.mfa.unenroll({ factorId: en.id }); } catch (_) {} d.remove(); };
+    d.querySelector('[data-ok]').onclick = async () => { const code = d.querySelector('#mC').value.replace(/\D/g, ''); if (code.length !== 6) { alert('Digite os 6 números.'); return; }
+      const { error: e2 } = await sb.auth.mfa.challengeAndVerify({ factorId: en.id, code }); if (e2) { alert('Código incorreto. Confira a hora do celular e tente de novo.'); return; } d.remove(); window.KESP_TOAST('Verificação em duas etapas ativada.'); };
+  }
+  // na entrada: se a conta tem o segundo fator, pede o código antes de mostrar o KESP
+  async function exigir(sb) {
+    try { const { data } = await sb.auth.mfa.getAuthenticatorAssuranceLevel(); if (!data || data.nextLevel !== 'aal2' || data.currentLevel === 'aal2') return true;
+      const { data: fs } = await sb.auth.mfa.listFactors(); const f = (fs && fs.totp || []).find(x => x.status === 'verified'); if (!f) return true;
+      return await new Promise(res => { const d = caixa(`<div style="text-align:center;font-size:30px">🔐</div><b style="display:block;text-align:center">Verificação em duas etapas</b><p class="sm" style="text-align:center">Digite o código de 6 números do seu aplicativo autenticador.</p><input id="mC" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="font-size:22px;letter-spacing:8px;text-align:center"><div style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" style="flex:1" data-sair>Sair</button><button class="btn" style="flex:1" data-ok>Entrar</button></div>`);
+        const i = d.querySelector('#mC'); setTimeout(() => i.focus(), 50); i.onkeydown = e => { if (e.key === 'Enter') d.querySelector('[data-ok]').click(); };
+        d.querySelector('[data-sair]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+        d.querySelector('[data-ok]').onclick = async () => { const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: f.id, code: i.value.replace(/\D/g, '') }); if (error) { alert('Código incorreto.'); i.value = ''; i.focus(); return; } d.remove(); res(true); }; }); }
+    catch (_) { return true; }
+  }
+  return { configurar, exigir };
+})();
+
+// consulta de CNPJ em três serviços públicos, com o formato da BrasilAPI
+window.KESP_CNPJ = async function (c) {
+  const d = String(c || '').replace(/\D/g, ''); if (d.length !== 14) return { erro: 'invalido' }; let naoExiste = 0;
+  const tenta = async (url, conv) => { try { const r = await fetch(url); if (r.status === 404 || r.status === 400) { naoExiste++; return null; } if (!r.ok) return null; const j = await r.json(); return conv(j); } catch (_) { return null; } };
+  const r = await tenta('https://brasilapi.com.br/api/cnpj/v1/' + d, j => j.razao_social ? j : null)
+    || await tenta('https://publica.cnpj.ws/cnpj/' + d, j => j.razao_social ? { razao_social: j.razao_social, nome_fantasia: (j.estabelecimento || {}).nome_fantasia, ddd_telefone_1: [(j.estabelecimento || {}).ddd1, (j.estabelecimento || {}).telefone1].filter(Boolean).join(''), email: (j.estabelecimento || {}).email, descricao_tipo_de_logradouro: (j.estabelecimento || {}).tipo_logradouro, logradouro: (j.estabelecimento || {}).logradouro, numero: (j.estabelecimento || {}).numero, bairro: (j.estabelecimento || {}).bairro, municipio: ((j.estabelecimento || {}).cidade || {}).nome, uf: ((j.estabelecimento || {}).estado || {}).sigla, cep: (j.estabelecimento || {}).cep, cnae_fiscal_descricao: ((j.estabelecimento || {}).atividade_principal || {}).descricao, descricao_situacao_cadastral: (j.estabelecimento || {}).situacao_cadastral, data_inicio_atividade: (j.estabelecimento || {}).data_inicio_atividade } : null)
+    || await tenta('https://minhareceita.org/' + d, j => j.razao_social ? j : null);
+  return r || { erro: naoExiste >= 2 ? 'nao_existe' : 'fora' };
+};
+
 // ===================== Busca de CEP e CNPJ =====================
 window.KESP_BUSCA = (function () {
   const so = v => String(v || '').replace(/\D/g, '');
   const mCEP = v => { const d = so(v).slice(0, 8); return d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; };
   const mCNPJ = v => { const d = so(v).slice(0, 14); return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2'); };
   async function cep(v) { const d = so(v); if (d.length !== 8) return null; try { const r = await fetch('https://viacep.com.br/ws/' + d + '/json/'); const j = await r.json(); return j.erro ? null : { logradouro: j.logradouro, bairro: j.bairro, cidade: j.localidade, uf: j.uf }; } catch (_) { return null; } }
-  async function cnpj(v) { const d = so(v); if (d.length !== 14) return null; try { const r = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + d); if (!r.ok) return null; const j = await r.json();
+  async function cnpj(v) { const d = so(v); if (d.length !== 14) return null; try { const j = await window.KESP_CNPJ(d); if (!j || j.erro) return null;
     const tel = String(j.ddd_telefone_1 || '').replace(/\D/g, ''); return { razao_social: j.razao_social, nome_fantasia: j.nome_fantasia || null, situacao_receita: j.descricao_situacao_cadastral, data_fundacao: j.data_inicio_atividade, natureza_juridica: j.natureza_juridica, logradouro: [j.descricao_tipo_de_logradouro, j.logradouro].filter(Boolean).join(' '), numero: j.numero, bairro: j.bairro, cidade: j.municipio, uf: j.uf, cep: mCEP(j.cep), telefone: tel.length >= 10 ? '(' + tel.slice(0, 2) + ') ' + tel.slice(2, -4) + '-' + tel.slice(-4) : null }; } catch (_) { return null; } }
   async function preencher(form, dados) {
     if (!dados) return;
@@ -84,11 +125,12 @@ window.KESP_BUSCA = (function () {
     document.getElementById('perfil').onclick = () => {
       const pop = document.getElementById('pop'); pop.style.display = 'block'; lat.classList.remove('ab');
       pop.innerHTML = `<div style="padding:8px 10px"><b>${esc(eu.nome || eu.email)}</b><div class="sm">${esc(eu.cargo || '')}${eu.admin ? ' · Administrador' : ''}</div><div class="sm" style="margin-top:4px;font-size:11px">KESP versão ${esc(window.KESP_CONFIG.versao || '')}</div></div>
-        <a class="it" id="pAss"><i class="ti ti-signature"></i>${eu.assinatura_url ? 'Trocar' : 'Cadastrar'} minha assinatura</a><a class="it" id="pBv"><i class="ti ti-sparkles"></i>Rever boas-vindas</a><a class="it" id="pSair"><i class="ti ti-logout"></i>Sair</a>`;
+        <a class="it" id="pAss"><i class="ti ti-signature"></i>${eu.assinatura_url ? 'Trocar' : 'Cadastrar'} minha assinatura</a><a class="it" id="pMfa"><i class="ti ti-shield-check"></i>Verificação em duas etapas</a><a class="it" id="pBv"><i class="ti ti-sparkles"></i>Rever boas-vindas</a><a class="it" id="pSair"><i class="ti ti-logout"></i>Sair</a>`;
       fundo.classList.add('ab');
       document.getElementById('pSair').onclick = async () => { fundo.classList.remove('ab'); await sb.auth.signOut(); };
       document.getElementById('pBv').onclick = () => { fundo.classList.remove('ab'); boasVindas(true); };
       document.getElementById('pAss').onclick = () => { fundo.classList.remove('ab'); assinatura(); };
+      document.getElementById('pMfa').onclick = () => { fundo.classList.remove('ab'); window.KESP_MFA.configurar(sb); };
     };
   }
 
@@ -113,6 +155,7 @@ window.KESP_BUSCA = (function () {
         <div class="cd s2" style="--c:#6E6A7C"><div class="hd"><span>A CAMINHO</span><span>${em.length} módulos</span></div><div class="acm">${grupos.map(g => `<div><span>${esc(g.n)}</span><span class="sm">etapa ${esc(g.e)}</span></div>`).join('') || '<span class="sm">Tudo pronto!</span>'}</div></div>
         <div class="cd s4" style="--c:#3B82F6"><div class="hd"><span>NOVIDADES</span></div><div id="cNov" class="sm">…</div></div>
       </div>`;
+    if (eu.admin && !window.__kespCp) { window.__kespCp = 1; sb.from('copias_seguranca').select('gerado_em').order('gerado_em', { ascending: false }).limit(1).then(async r => { const u = r.data && r.data[0], dias = u ? (Date.now() - new Date(u.gerado_em)) / 864e5 : 99; if (dias <= 7) return; const ch = '#sistema?copia:' + new Date().toISOString().slice(0, 10); const { data: ja } = await sb.from('avisos').select('id').eq('link', ch).limit(1); if (!ja || !ja.length) await sb.from('avisos').insert({ destinatario: eu.id, tipo: 'fazer', prioridade: 'importante', titulo: 'Fazer a cópia de segurança semanal', texto: u ? 'A última foi há ' + Math.floor(dias) + ' dias.' : 'Nenhuma cópia feita ainda.', link: ch, dispensavel: true }); }, () => {}); }
     if (eu.admin && window.KESP_E3 && !window.__kespVenc) { window.__kespVenc = 1; window.KESP_E3.avisosVencimento(sb); if (window.KESP_FIN) window.KESP_FIN.avisosContas(sb); }
     if (eu.admin || pode('recibos.ver')) sb.from('recibos').select('id', { count: 'exact', head: true }).eq('situacao', 'emitido').not('comunidade_id', 'is', null).is('enviado_em', null).then(r => { const n = r.count || 0, el = document.getElementById('inAvisoEnv'); if (n && el) { el.innerHTML = `<a class="pe" style="--c:#F5A524;cursor:pointer;margin:0 0 12px;text-decoration:none;color:inherit" id="inEnv"><span style="flex:1"><b style="color:#F8C46A">${n} recibo${n > 1 ? 's' : ''} não enviado${n > 1 ? 's' : ''}</b> <span class="sm">às Comunidades</span></span><span class="sm">ver ›</span></a>`; el.querySelector('#inEnv').onclick = () => { sessionStorage.setItem('kesp.naoEnviados', '1'); sessionStorage.setItem('kesp.recAba', 'historico'); location.hash = '#recibos'; }; } }, () => {});
     document.querySelectorAll('[data-ir]').forEach(c => c.onclick = e => { e.stopPropagation(); location.hash = '#' + c.dataset.ir; });
@@ -157,9 +200,10 @@ window.KESP_BUSCA = (function () {
   }
 
   function rota() {
-    const id = (location.hash || '#inicio').slice(1) || 'inicio';
+    const id = ((location.hash || '#inicio').slice(1) || 'inicio').split('?')[0];
     document.querySelectorAll('.conf,#sinoP').forEach(d => d.remove());
     if (window.__kespTela !== id && !id.startsWith('sugestoes')) window.__kespTelaAnt = id; window.__kespTela = id;
+    if (['cofre', 'fin_painel', 'fin_lancamentos', 'conciliacao', 'usuarios', 'rh'].includes(id.split('/')[0])) sb.from('acessos_log').insert({ perfil_id: eu.id, tela: id.split('/')[0], alvo: id.split('/')[1] || null }).then(() => {}, () => {});
     try { sb.rpc('registrar_uso', { p_modulo: id.split('/')[0] }).then(() => {}, () => {}); } catch (_) {}
     if (id.startsWith('ck/')) { document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === 'comunidades')); return window.KESP_CKS.abrir(sb, eu, id.slice(3)); }
     document.querySelectorAll('[data-r]').forEach(a => a.classList.toggle('on', a.dataset.r === id));
@@ -294,6 +338,8 @@ window.KESP_BUSCA = (function () {
   window.KESP_APP = {
     async iniciar(cliente, perfil) {
       sb = cliente; eu = perfil;
+      if (window.KESP_MFA) await window.KESP_MFA.exigir(sb);
+      if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
       try { await carregar(); } catch (e) { try { await sb.from('erros_sistema').insert({ tela: 'inicio', mensagem: String(e && e.message || e) }); } catch (_) {} }
       moldura();
       window.onhashchange = rota; rota();
@@ -555,9 +601,35 @@ window.KESP_BUSCA = (function () {
   function render() {
     const pg = document.getElementById('pg');
     pg.innerHTML = `<h1>Sistema</h1><p class="sub">Painel de Controle · saúde, módulos e cópias de segurança</p>
-      <div class="abas"><a data-a="saude" class="${aba === 'saude' ? 'on' : ''}">Saúde</a><a data-a="modulos" class="${aba === 'modulos' ? 'on' : ''}">Módulos</a><a data-a="copia" class="${aba === 'copia' ? 'on' : ''}">Cópia</a></div><div id="cont"><p class="sm">Carregando…</p></div>`;
+      <div class="abas" style="grid-template-columns:repeat(5,1fr)"><a data-a="saude" class="${aba === 'saude' ? 'on' : ''}">Saúde</a><a data-a="config" class="${aba === 'config' ? 'on' : ''}">Configuração</a><a data-a="acessos" class="${aba === 'acessos' ? 'on' : ''}">Acessos</a><a data-a="modulos" class="${aba === 'modulos' ? 'on' : ''}">Módulos</a><a data-a="copia" class="${aba === 'copia' ? 'on' : ''}">Cópia</a></div><div id="cont"><p class="sm">Carregando…</p></div>`;
     pg.querySelectorAll('[data-a]').forEach(x => x.onclick = () => { aba = x.dataset.a; render(); });
-    ({ saude: abaSaude, modulos: abaModulos, copia: abaCopia })[aba]();
+    ({ saude: abaSaude, modulos: abaModulos, copia: abaCopia, config: abaConfig, acessos: abaAcessos })[aba]();
+  }
+  // checagem do que falta configurar
+  async function abaConfig() {
+    const c = document.getElementById('cont'); c.innerHTML = '<p class="sm">Verificando…</p>';
+    const tem = async (t, col) => { try { const r = await sb.from(t).select(col || '*', { head: true, count: 'exact' }).limit(1); return !r.error; } catch (_) { return false; } };
+    const S = [['16', 'lembretes'], ['17', 'cofre_config'], ['18', 'acordos'], ['19', 'recibo_versoes'], ['20', 'comunidades', 'geo_aprox'], ['21', 'agenda'], ['22', 'extrato_lancamentos'], ['23', 'patrimonio'], ['24', 'eventos', 'token'], ['25', 'fin_lancamentos'], ['26', 'orcamentos_forn'], ['27', 'copias_seguranca']];
+    const res = []; for (const [n, t, col] of S) res.push([n, await tem(t, col)]);
+    const falta = res.filter(x => !x[1]).map(x => x[0]);
+    const [ck, un, pf, cp] = await Promise.all([sb.from('comunidades').select('id,distrito_id,ativa'), sb.from('unidades').select('id,nome,logradouro'), sb.from('perfis').select('id,nome,situacao'), sb.from('copias_seguranca').select('gerado_em').order('gerado_em', { ascending: false }).limit(1)]);
+    let kai = null; try { const { data } = await sb.functions.invoke('kai', { body: { mensagens: [{ papel: 'eu', texto: 'Responda só: ok' }], versao: window.KESP_CONFIG.versao } }); kai = !!(data && (data.texto || data.pausa)); } catch (_) { kai = false; }
+    let mfa = null; try { const { data } = await sb.auth.mfa.listFactors(); mfa = (data && data.totp || []).some(f => f.status === 'verified'); } catch (_) {}
+    const semDist = (ck.data || []).filter(x => x.ativa && !x.distrito_id).length, semEnd = (un.data || []).filter(x => !x.logradouro).length, dCp = cp.data && cp.data[0] ? Math.floor((Date.now() - new Date(cp.data[0].gerado_em)) / 864e5) : null;
+    const L = [[!falta.length, 'Scripts SQL do banco', falta.length ? 'Faltam rodar: ' + falta.map(n => 'KESP_' + n).join(', ') + ' (nesta ordem).' : 'Todos os scripts até o 27 foram aplicados.'],
+      [kai, 'Função da KAI publicada', kai ? 'A KAI está respondendo.' : 'Publique o index.ts em Edge Functions › kai.'],
+      [mfa, 'Sua verificação em duas etapas', mfa ? 'Ativada.' : 'Ative em seu perfil (círculo com as iniciais › Verificação em duas etapas).'],
+      [dCp !== null && dCp <= 7, 'Cópia de segurança semanal', dCp === null ? 'Nenhuma cópia feita ainda. Use a aba Cópia.' : 'Última há ' + dCp + ' dia(s).'],
+      [!semDist, 'Distrito de todas as CKs', semDist ? semDist + ' CK(s) sem distrito (Assessoramento › Distritos).' : 'Todas com distrito.'],
+      [!semEnd, 'Endereço das unidades', semEnd ? semEnd + ' unidade(s) sem endereço (Cadastro da Kolping).' : 'Todas com endereço.'],
+      [null, 'Google Drive', 'Depende da conta de serviço no Google (cópias e arquivos automáticos).'],
+      [null, 'Projeto antigo do Supabase', 'Pausar ou apagar o projeto do sistema anterior, se ainda existir.']];
+    c.innerHTML = '<p class="sm">O que já está pronto e o que ainda falta configurar no KESP.</p>' + L.map(([ok, t, d0]) => `<div class="pe" style="--c:${ok === null ? '#6E6A7C' : ok ? '#22C984' : '#F5A524'}"><span style="font-size:18px;width:26px">${ok === null ? '•' : ok ? '✓' : '!'}</span><div style="flex:1"><b>${t}</b><div class="sm">${esc(d0)}</div></div></div>`).join('');
+  }
+  async function abaAcessos() {
+    const c = document.getElementById('cont'); const [a, p0] = await Promise.all([sb.from('acessos_log').select('*').order('em', { ascending: false }).limit(150), sb.from('perfis').select('id,nome,email')]);
+    const nm = id => { const p1 = (p0.data || []).find(x => x.id === id); return p1 ? (p1.nome || p1.email) : '—'; };
+    c.innerHTML = '<p class="sm">Quem abriu as telas com dados sensíveis (cofre, financeiro, conciliação, usuários e RH). Últimos 150 acessos.</p>' + ((a.data || []).map(x => `<div class="lin" style="display:flex;justify-content:space-between;gap:8px"><span><b>${esc(nm(x.perfil_id))}</b> · ${esc(x.tela)}${x.alvo ? ' · ' + esc(x.alvo) : ''}</span><span class="sm">${new Date(x.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span></div>`).join('') || '<p class="sm">Nenhum acesso registrado ainda (ou o script 27 ainda não foi rodado).</p>');
   }
 
   async function abaSaude() {
@@ -570,7 +642,8 @@ window.KESP_BUSCA = (function () {
       sb.from('perfis').select('id,nome,email')
     ]);
     const nome = id => { const p = (pf.data || []).find(x => x.id === id); return p ? (p.nome || p.email) : 'sem login'; };
-    let ultima = null; try { ultima = localStorage.getItem('kesp.ultimaCopia'); } catch (_) {}
+    let ultima = null; try { const { data: cp } = await sb.from('copias_seguranca').select('gerado_em').order('gerado_em', { ascending: false }).limit(1); ultima = cp && cp[0] ? cp[0].gerado_em : localStorage.getItem('kesp.ultimaCopia'); } catch (_) { try { ultima = localStorage.getItem('kesp.ultimaCopia'); } catch (__) {} }
+    let uso = null; try { const { data: u0 } = await sb.rpc('uso_armazenamento'); uso = u0; } catch (_) {}
     const diasCopia = ultima ? Math.floor((Date.now() - new Date(ultima)) / 864e5) : null;
     const n7 = er7.count || 0;
     document.getElementById('cont').innerHTML = `<div class="g4">
@@ -578,7 +651,9 @@ window.KESP_BUSCA = (function () {
       <div class="cd" style="--c:#3B82F6"><div class="hd"><span>USUÁRIOS</span></div><div class="big">${at.count || 0}</div><div class="sm">ativos · ${ag.count || 0} aguardando</div></div>
       ${(() => { const v = window.KESP_CONFIG.kaiChaveVence, d = v ? Math.ceil((new Date(v + 'T12:00') - Date.now()) / 864e5) : null, alerta = d !== null && d <= 15;
         return `<div class="cd" style="--c:${alerta ? '#F5A524' : '#22C984'}"><div class="hd"><span>KAI</span><span class="pl" style="background:rgba(34,201,132,.15);color:#5FE0A8">Haiku 5.5</span></div><div class="big">${alerta ? 'Trocar chave' : 'Ativa'}</div><div class="sm">chave vence em ${v ? new Date(v + 'T12:00').toLocaleDateString('pt-BR') : '—'}${alerta ? ' · faltam ' + Math.max(0, d) + ' dias' : ''}</div></div>`; })()}
-      <div class="cd" style="--c:${diasCopia === null || diasCopia > 7 ? '#F5A524' : '#22C984'}"><div class="hd"><span>ÚLTIMA CÓPIA</span></div><div class="big">${diasCopia === null ? '—' : diasCopia === 0 ? 'Hoje' : diasCopia + ' dia' + (diasCopia > 1 ? 's' : '')}</div><div class="sm">${diasCopia === null || diasCopia > 7 ? 'faça uma cópia na aba Cópia' : 'neste computador'}</div></div>
+      <div class="cd" style="--c:${diasCopia === null || diasCopia > 7 ? '#F5A524' : '#22C984'}"><div class="hd"><span>ÚLTIMA CÓPIA</span></div><div class="big">${diasCopia === null ? '—' : diasCopia === 0 ? 'Hoje' : diasCopia + ' dia' + (diasCopia > 1 ? 's' : '')}</div><div class="sm">${diasCopia === null || diasCopia > 7 ? 'faça uma cópia na aba Cópia' : 'última cópia da equipe'}</div></div>
+      ${uso ? (() => { const b = uso.banco / (500 * 1048576) * 100, a = uso.arquivos / (1024 * 1048576) * 100, mx = Math.max(b, a), cor = mx >= 80 ? '#E5484D' : mx >= 60 ? '#F5A524' : '#22C984', barra = (t, v, txt) => `<div style="margin:6px 0"><div class="sm" style="display:flex;justify-content:space-between"><span>${t}</span><span>${txt}</span></div><div style="height:7px;border-radius:4px;background:rgba(255,255,255,.08)"><div style="height:100%;width:${Math.min(100, v)}%;border-radius:4px;background:${v >= 80 ? '#E5484D' : v >= 60 ? '#F5A524' : '#22C984'}"></div></div></div>`;
+        return `<div class="cd s2" style="--c:${cor}"><div class="hd"><span>ARMAZENAMENTO · PLANO GRATUITO</span>${mx >= 80 ? '<span style="color:#FF9A9D">quase cheio</span>' : ''}</div>${barra('Banco de dados', b, (uso.banco / 1048576).toFixed(0) + ' de 500 MB')}${barra('Arquivos (' + uso.qtd_arquivos + ')', a, (uso.arquivos / 1048576).toFixed(0) + ' MB de 1 GB')}<div class="sm">${mx >= 80 ? 'Hora de apagar arquivos antigos ou avaliar o plano pago do Supabase.' : 'Fotos são comprimidas antes de enviar.'}</div></div>`; })() : ''}
       <div class="cd s4" style="--c:#E5484D"><div class="hd"><span>ERROS REGISTRADOS</span><span>últimos 30</span></div>
         ${(er.data || []).map(e => `<div class="lin"><b style="font-size:13px">${esc(e.mensagem)}</b><div class="sm">${esc(e.tela || '—')} · ${esc(nome(e.perfil_id))} · ${new Date(e.criado_em).toLocaleString('pt-BR')}</div>${e.detalhe ? `<div class="sm">${esc(e.detalhe)}</div>` : ''}<a class="lk" data-exp="${esc(e.mensagem + (e.detalhe ? ' — ' + e.detalhe : '') + ' (tela: ' + (e.tela || '—') + ')')}" style="font-size:12px">Explicar com a KAI ›</a></div>`).join('') || '<p class="sm" style="margin:0">Nenhum erro registrado.</p>'}</div></div>`;
     document.querySelectorAll('[data-exp]').forEach(a => a.onclick = () => { try { sessionStorage.setItem('kesp.kai.pergunta', 'Explique este erro do KESP em palavras simples e o que devo fazer: ' + a.dataset.exp); } catch (_) {} location.hash = '#kai'; });
@@ -614,8 +689,13 @@ window.KESP_BUSCA = (function () {
       <button class="btn" id="baixar">Baixar cópia agora</button><p class="sm" id="st" style="margin:10px 0 0"></p></div>`;
     document.getElementById('baixar').onclick = async () => {
       const st = document.getElementById('st'), b = document.getElementById('baixar'); b.disabled = true;
-      const copia = { sistema: 'KESP', versao: '1A', gerado_em: new Date().toISOString(), gerado_por: eu.email, tabelas: {} };
-      for (const t of TABELAS) { st.textContent = 'Copiando ' + t + '…'; const r = await sb.from(t).select('*'); copia.tabelas[t] = r.error ? { erro: r.error.message } : r.data; }
+      const copia = { sistema: 'KESP', versao: window.KESP_CONFIG.versao, gerado_em: new Date().toISOString(), gerado_por: eu.email, tabelas: {} };
+      let lista = TABELAS; try { const { data: lt } = await sb.rpc('listar_tabelas'); if (lt && lt.length) lista = lt; } catch (_) {}
+      let regs = 0; for (const t of lista) { st.textContent = 'Copiando ' + t + '…'; let tudo = [], de = 0, erro = null;
+        while (true) { const r = await sb.from(t).select('*').range(de, de + 999); if (r.error) { erro = r.error.message; break; } tudo = tudo.concat(r.data || []); if (!r.data || r.data.length < 1000) break; de += 1000; }
+        copia.tabelas[t] = erro ? { erro } : tudo; regs += tudo.length; }
+      TABELAS.length = 0; lista.forEach(x => TABELAS.push(x));
+      try { await sb.from('copias_seguranca').insert({ gerado_por: eu.id, tabelas: lista.length, registros: regs, tamanho_kb: Math.round(JSON.stringify(copia).length / 1024) }); } catch (_) {}
       const blob = new Blob([JSON.stringify(copia, null, 2)], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'KESP_copia_' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); a.remove();
       try { localStorage.setItem('kesp.ultimaCopia', new Date().toISOString()); } catch (_) {}
@@ -759,7 +839,18 @@ window.KESP_BUSCA = (function () {
     { g: 'Administração', c: '#F07830', a: 1, t: 'Colocar um módulo em manutenção', h: '<ol><li>Painel de Controle › <b>Sistema</b>, aba <b>Módulos</b>.</li><li>Mude a situação para <b>Em manutenção</b>, escreva o motivo e a previsão de volta e toque em <b>Salvar</b>.</li><li>Quando resolver, volte para <b>Ativo</b>.</li></ol>' },
     { g: 'Administração', c: '#F07830', a: 1, t: 'Quando algo der errado', h: '<ol><li>Abra <b>Sistema › Saúde</b> e veja o erro registrado.</li><li>Toque em <b>Explicar com a KAI</b>.</li><li>Se o sistema inteiro parar, avise o Henrique e coloque o módulo afetado em manutenção.</li></ol>' },
     { g: 'Administração', c: '#F07830', a: 1, t: 'Cópia de segurança', h: '<ol><li><b>Sistema › Cópia</b> › <b>Baixar cópia agora</b>, uma vez por semana.</li><li>Guarde o arquivo na pasta <b>99 Sistema</b> do Drive.</li><li>Não envie por WhatsApp nem e-mail: ele contém dados pessoais e bancários.</li></ol>' },
-    { g: 'Administração', c: '#F07830', a: 1, t: 'Acessos importantes', h: '<p>Os acessos do Supabase, do GitHub e do Claude Console devem ficar guardados com segurança (cofre de senhas na etapa 1B). A chave da KAI vence em 10/11/2028; o KESP avisa 15 dias antes.</p>' }
+    { g: 'Administração', c: '#F07830', a: 1, t: 'Acessos importantes', h: '<p>Os acessos do Supabase, do GitHub e do Claude Console devem ficar guardados com segurança (no Cofre de senhas). A chave da KAI vence em 10/11/2028; o KESP avisa 15 dias antes.</p>' },
+    { g: 'Assessoramento', c: '#8B5CF6', t: 'Acordos de pagamento', h: '<ol><li>No perfil da CK, aba <b>Pagamentos</b> › <b>Novo acordo</b>: marque os débitos, defina a parcela e o mês da 1ª.</li><li>Na emissão do recibo, a parcela entra sozinha depois da taxa do mês; o recibo mostra o <b>saldo devedor</b>.</li><li>Pago a menos: a diferença soma no mês seguinte. Pago a mais: abate o acordo (ou vira crédito).</li></ol>' },
+    { g: 'Assessoramento', c: '#8B5CF6', t: 'Editar e corrigir recibos', h: '<ul><li><b>Mais ações › Editar</b>: data, forma, texto e observação, com motivo e histórico.</li><li><b>Mais ações › Corrigir</b>: cancela e reemite com novo número, indicando a substituição.</li><li>A faixa no topo mostra se o recibo foi <b>enviado</b>; ao voltar do Outlook, o KESP pergunta se o e-mail foi enviado.</li></ul>' },
+    { g: 'Kolping Estadual', c: '#F07830', t: 'Agenda e eventos', h: '<ul><li><b>Agenda</b>: mês, semana e lista; feriados, eventos e vencimentos entram sozinhos.</li><li><b>Eventos</b>: inscrições por CK ou pelo <b>link de inscrição</b> (com QR Code), recibo de evento, tarefas, custos e prestação de contas.</li></ul>' },
+    { g: 'Kolping Estadual', c: '#F07830', t: 'Ofícios, documentos e fornecedores', h: '<ul><li><b>Ofícios</b>: numeração automática por tipo e ano, no papel timbrado; registre também os recebidos.</li><li><b>Documentos</b>: certidões, alvarás e AVCB com aviso 30 e 7 dias antes do vencimento.</li><li><b>Fornecedores</b>: a busca pelo CNPJ preenche os dados.</li></ul>' },
+    { g: 'Controles', c: '#22C984', t: 'Patrimônio, consumo e manutenção', h: '<ul><li><b>Patrimônio</b>: imprima as etiquetas com QR Code; leia com o Leitor para abrir a ficha. Empréstimo gera o termo de responsabilidade.</li><li><b>Consumo</b>: lance as contas de luz, água e gás; o KESP avisa quando passar 30% da média.</li><li><b>Manutenção</b>: abra o chamado com foto e acompanhe.</li></ul>' },
+    { g: 'Financeiro', c: '#E5484D', t: 'Conciliação bancária', h: '<ol><li><b>Financeiro › Conciliação</b> › <b>Importar extrato</b> (Excel, OFX ou PDF do Itaú).</li><li>As CKs reconhecidas aparecem como <b>Sugerido</b>: toque em <b>Emitir recibo</b>.</li><li>Pagamentos com CPF: use <b>Vincular</b> e marque "Lembrar deste CPF".</li><li>Saídas que batem com contas a pagar dão baixa sozinhas.</li></ol>' },
+    { g: 'Financeiro', c: '#E5484D', t: 'Contas a pagar e notas', h: '<ul><li><b>Importar nota</b>: XML, PDF ou foto; a despesa abre preenchida para conferir.</li><li>Use o centro de custo, o grupo e a classificação das planilhas; <b>Pagar</b> registra a baixa com o comprovante.</li><li><b>Exportar planilha</b> gera uma por conta, no formato de vocês.</li></ul>' },
+    { g: 'Compras e unidades', c: '#22C984', t: 'Orçamentos e cotação', h: '<ul><li><b>Compras › Orçamentos</b> › <b>Importar orçamento</b> (PDF ou foto): liga ao pedido da unidade e compara item a item.</li><li><b>Mapa de cotação</b> mostra o menor preço de cada item; <b>Aprovar</b> fecha o pedido.</li><li><b>Histórico de preços</b>: busque um produto e veja os preços ao longo do tempo.</li></ul>' },
+    { g: 'Usando o sistema', c: '#3B82F6', t: 'KAI lendo documentos', h: '<p>Na KAI, toque no <b>clipe</b> (ou arraste o arquivo) e envie um PDF ou foto: ela identifica o tipo, resume e oferece lançar no KESP (contas a pagar, consumo, recibo, documentos, fornecedores). Nada é gravado sem você conferir.</p>' },
+    { g: 'Usando o sistema', c: '#3B82F6', t: 'Verificação em duas etapas', h: '<ol><li>Toque no círculo com suas iniciais › <b>Verificação em duas etapas</b>.</li><li>Leia o QR Code com o Google Authenticator ou o Microsoft Authenticator e digite o código.</li><li>A partir daí, ao entrar, o KESP pede o código de 6 números.</li></ol>' },
+    { g: 'Administração', c: '#F07830', a: 1, t: 'Configuração, armazenamento e acessos', h: '<ul><li><b>Sistema › Configuração</b>: o que falta configurar (scripts, KAI, cópia, distritos).</li><li><b>Sistema › Saúde</b>: medidor do banco (500 MB) e dos arquivos (1 GB) do plano gratuito.</li><li><b>Sistema › Acessos</b>: quem abriu as telas sensíveis.</li><li>A <b>cópia</b> agora inclui todas as tabelas; o sino lembra toda semana.</li></ul>' },
   ];
   let eu;
   function render(f) {
@@ -2723,6 +2814,12 @@ window.KESP_SINO = (function () {
     const z = document.createElement('div'); z.className = 'karq'; inp.after(z);
     const mostrar = () => { const fs = [...(inp.files || [])]; z.classList.toggle('tem', fs.length > 0); z.innerHTML = fs.length ? `<span>📎 ${fs.map(f => f.name.replace(/[&<>]/g, '')).join(', ')}</span><a data-x title="Remover">✕</a>` : `<span>📎 Anexar arquivo${/pdf/.test(inp.accept) ? ' (PDF ou foto)' : inp.accept.startsWith('image') ? ' (foto)' : ''}</span><span class="sm">clique ou arraste aqui</span>`;
       const x = z.querySelector('[data-x]'); if (x) x.onclick = e => { e.stopPropagation(); inp.value = ''; inp.dispatchEvent(new Event('change', { bubbles: true })); mostrar(); }; };
+    const comprimir = async () => { if (inp._kc) { inp._kc = 0; return; } const fs = [...(inp.files || [])]; if (!fs.some(f => f.type.startsWith('image/') && f.size > 600 * 1024 && !/gif|svg/.test(f.type))) return;
+      const dt = new DataTransfer(); for (const f of fs) { if (!f.type.startsWith('image/') || f.size <= 600 * 1024 || /gif|svg/.test(f.type)) { dt.items.add(f); continue; }
+        try { const im = new Image(); await new Promise((ok, er) => { im.onload = ok; im.onerror = er; im.src = URL.createObjectURL(f); }); const e0 = Math.min(1, 1800 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * e0); c.height = Math.round(im.height * e0); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+          const b = await new Promise(r => c.toBlob(r, 'image/jpeg', .82)); dt.items.add(b && b.size < f.size ? new File([b], f.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : f); } catch (_) { dt.items.add(f); } }
+      inp._kc = 1; inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); };
+    inp.addEventListener('change', comprimir, true);
     mostrar(); inp.addEventListener('change', mostrar);
     z.onclick = () => inp.click(); z.ondragover = e => { e.preventDefault(); z.classList.add('sobre'); }; z.ondragleave = () => z.classList.remove('sobre');
     z.ondrop = e => { e.preventDefault(); z.classList.remove('sobre'); if (!e.dataTransfer.files.length) return; const dt = new DataTransfer(); [...e.dataTransfer.files].slice(0, inp.multiple ? 10 : 1).forEach(f => dt.items.add(f)); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); };
@@ -2983,9 +3080,12 @@ window.KESP_SINO = (function () {
       async d0 => { const g = id => d0.querySelector('#' + id); if (!g('fN').value.trim()) { alert('Informe o nome.'); return; }
         const reg = { nome: g('fN').value.trim(), cnpj: g('fC').value.trim() || null, categoria: g('fCa').value || null, fornece: g('fF').value || null, contato: g('fCo').value || null, telefone: g('fT').value || null, email: g('fE').value || null, endereco: g('fEn').value || null, observacao: g('fO').value || null, ativo: g('fA').checked };
         const r = x ? await sb.from('fornecedores').update(reg).eq('id', x.id) : await sb.from('fornecedores').insert(reg); if (r.error) { alert('Não foi possível salvar: ' + r.error.message); return; } d0.remove(); fornecedores(sb, eu); });
-    d.querySelector('#fBus').onclick = async () => { const c = d.querySelector('#fC').value.replace(/\D/g, ''); if (c.length !== 14) { alert('Digite os 14 números do CNPJ.'); return; }
-      try { const j = await (await fetch('https://brasilapi.com.br/api/cnpj/v1/' + c)).json(); if (!j.razao_social) throw 0; const s0 = (id, val) => { const el = d.querySelector('#' + id); if (val && !el.value) el.value = val; };
-        s0('fN', j.nome_fantasia || j.razao_social); s0('fT', j.ddd_telefone_1); s0('fE', j.email); s0('fEn', [j.logradouro, j.numero, j.bairro, j.municipio + '/' + j.uf].filter(Boolean).join(', ')); s0('fF', j.cnae_fiscal_descricao); window.KESP_TOAST('Dados preenchidos pela Receita.'); } catch (_) { alert('CNPJ não encontrado.'); } };
+    const busca = async silencioso => { const c = d.querySelector('#fC').value.replace(/\D/g, ''); if (c.length !== 14) { if (!silencioso) alert('Digite os 14 números do CNPJ.'); return; }
+      const j = await window.KESP_CNPJ(c); if (j.erro) { if (!silencioso || j.erro === 'nao_existe') alert(j.erro === 'nao_existe' ? 'Este CNPJ não existe na Receita. Confira os números.' : 'Não foi possível consultar a Receita agora. Preencha à mão ou tente de novo em alguns minutos.'); return; }
+      const s0 = (id, val) => { const el = d.querySelector('#' + id); if (val && !el.value) el.value = val; }, cn = String(j.cnae_fiscal_descricao || '');
+      s0('fN', j.nome_fantasia || j.razao_social); s0('fT', j.ddd_telefone_1); s0('fE', j.email); s0('fEn', [[j.descricao_tipo_de_logradouro, j.logradouro].filter(Boolean).join(' '), j.numero, j.bairro, (j.municipio || '') + '/' + (j.uf || '')].filter(Boolean).join(', ')); s0('fF', cn);
+      s0('fCa', /limpeza|higien/i.test(cn) ? 'Limpeza' : /papel|escrit/i.test(cn) ? 'Escritório' : /aliment/i.test(cn) ? 'Alimentação' : /constru|manuten|el[eé]tric|hidr/i.test(cn) ? 'Manutenção' : ''); window.KESP_TOAST('Dados preenchidos pela Receita.'); };
+    d.querySelector('#fBus').onclick = () => busca(false); d.querySelector('#fC').addEventListener('blur', () => busca(true));
   }
   window.KESP_E3 = { agenda, eventos, oficios, documentos, fornecedores, avisosVencimento, novoDoc(cli, perfil, d0) { sb = cli; eu = perfil; editarDoc(null, d0 || {}); }, novoFornecedor(cli, perfil, d0) { sb = cli; eu = perfil; d0 = d0 || {}; editarFor(null, { nome: d0.nome, cnpj: d0.cnpj, telefone: d0.telefone, email: d0.email, endereco: d0.endereco, fornece: d0.fornece }); } };
 })();
