@@ -154,6 +154,10 @@ body.reveal-mode .sky{display:block}
 .restore summary{cursor:pointer;color:var(--gold)}
 .foot{text-align:center;color:var(--mut);font-size:13px;line-height:1.7;margin-top:26px}
 .foot b{color:var(--red2)}
+.desejo{text-align:left;margin:14px auto 0;max-width:420px;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(247,178,90,.35);font:14px system-ui,sans-serif;color:#fff6e3}
+.desejo b{color:#f7b25a;font-size:12px;letter-spacing:.06em}.desejo ul{margin:6px 0 0;padding-left:18px;line-height:1.6}.dsm{font-size:12px;color:#c9bfae;margin-top:4px}
+.desejo textarea{width:100%;box-sizing:border-box;margin-top:8px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:#fff6e3;padding:8px;font:14px system-ui,sans-serif}
+.dsbt{margin-top:8px;padding:9px 16px;border:0;border-radius:10px;background:linear-gradient(90deg,#f07a2e,#f7b25a);color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script><script src="config.js"></script></head>
 <body>
@@ -294,6 +298,8 @@ body.reveal-mode .sky{display:block}
     <div class="lbl">Seu amigo secreto é</div>
     <div class="who" id="rvAmigo"></div>
     <div class="info" id="rvInfo"></div>
+    <div class="desejo" id="dsAmigo"></div>
+    <div class="desejo" id="dsMeu"><b>✍️ SUA LISTA DE DESEJOS</b><div class="dsm">Quem tirou você vai ver esta lista. Um item por linha; dá para mudar até o dia da troca.</div><textarea id="dsTxt" rows="4" maxlength="1000" placeholder="Ex.: livro, caneca, chocolate…"></textarea><button type="button" class="dsbt" id="dsSalvar">Salvar minha lista</button><div class="dsm" id="dsOk"></div></div>
     <p class="secret">🤫 Guarde segredo! Não conte para ninguém até o dia da troca.</p>
     <button class="btn btn-ghost btn-sm" id="btnEsconder">Esconder</button>
   </div>
@@ -454,7 +460,13 @@ body.reveal-mode .sky{display:block}
       var d = r.data;
       if(r.error || !d || d.erro){ aviso(d && d.erro === "sem_sorteio" ? "⏳ O sorteio ainda não foi feito. Aguarde o organizador." : "⚠️ Este link não vale mais (o sorteio pode ter sido refeito). Peça o link novo ao organizador."); return; }
       var dt = d.data ? new Date(d.data + "T12:00").toLocaleDateString("pt-BR") : "";
-      $("rvConfirm").innerHTML = window.__rvOrig || ""; showReveal({ g: d.nome, r: d.amigo, e: d.evento, v: d.valor, d: dt, l: d.local, c: "" });
+      $("rvConfirm").innerHTML = window.__rvOrig || "";
+      var pri = (d.amigo || "").split(" ")[0], esc = function(x){ return String(x||"").replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); };
+      var L = String(d.amigo_desejos || "").split(/\n+/).map(function(x){ return x.trim(); }).filter(Boolean);
+      $("dsAmigo").innerHTML = "<b>🎁 O QUE " + esc(pri.toUpperCase()) + " GOSTARIA DE GANHAR</b>" + (L.length ? "<ul>" + L.map(function(x){ return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>" + (d.amigo_desejos_em ? "<div class='dsm'>Atualizado em " + new Date(d.amigo_desejos_em).toLocaleDateString("pt-BR") + "</div>" : "") : "<div class='dsm'>" + esc(pri) + " ainda não fez a lista. Volte por este mesmo link mais tarde.</div>");
+      $("dsTxt").value = d.meus_desejos || "";
+      $("dsSalvar").onclick = function(){ var b = this; b.disabled = true; b.textContent = "Salvando…"; sb.rpc("amigo_desejos_salvar", { p_token: t, p_texto: $("dsTxt").value }).then(function(r){ b.disabled = false; b.textContent = "Salvar minha lista"; $("dsOk").textContent = (r.error || (r.data && r.data.erro)) ? "Não foi possível salvar agora. Tente de novo." : "✓ Lista salva! Quem tirou você já consegue ver."; }); };
+      showReveal({ g: d.nome, r: d.amigo, e: d.evento, v: d.valor, d: dt, l: d.local, c: "" });
     }, function(){ aviso("⚠️ Sem conexão. Tente de novo em instantes."); });
   }
 
